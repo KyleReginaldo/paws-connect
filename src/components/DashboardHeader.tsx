@@ -1,5 +1,5 @@
 import React from "react";
-import danilo from "../../../public/danilo.jpg";
+import danilo from "../../public/danilo.jpg";
 import Image from "next/image";
 const DashboardHeader = () => {
   return (

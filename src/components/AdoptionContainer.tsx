@@ -1,7 +1,7 @@
 import React from "react";
-import corgi from "../../../public/corgi.jpg";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import corgi from "../../public/corgi.jpg";
 type Props = {
   adopter: string;
   timeago: string;

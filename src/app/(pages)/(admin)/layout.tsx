@@ -1,6 +1,6 @@
 "use client";
 
-import SideBarTile from "@/app/components/SideBarTile";
+import SideBarTile from "@/components/SideBarTile";
 import { Dog, HandCoins, LayoutDashboard, UsersRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 

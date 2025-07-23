@@ -1,6 +1,6 @@
 import React from "react";
-import DashboardContainer from "@/app/components/DashboardContainer";
 import { Dog, HeartHandshake, HelpingHand } from "lucide-react";
+import DashboardContainer from "./DashboardContainer";
 
 const DashboardDataOverview = () => {
   return (

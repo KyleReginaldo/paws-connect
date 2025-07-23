@@ -1,7 +1,7 @@
-import AdoptionContainer from "@/app/components/AdoptionContainer";
-import { DashboardDonationTable } from "@/app/components/DashbardDonationTable";
-import DashboardDataOverview from "@/app/components/DashboardDataOverview";
-import DashboardUserOverview from "@/app/components/DashboardUserOverview";
+import AdoptionContainer from "@/components/AdoptionContainer";
+import { DashboardDonationTable } from "@/components/DashbardDonationTable";
+import DashboardDataOverview from "@/components/DashboardDataOverview";
+import DashboardUserOverview from "@/components/DashboardUserOverview";
 import React from "react";
 
 const page = () => {
