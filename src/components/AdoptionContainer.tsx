@@ -13,7 +13,7 @@ const AdoptionContainer = (props: Props) => {
   return (
     <div className="bg-white h-fit w-fit p-[8px] rounded-[10px] flex flex-col hover:bg-gray-100 cursor-pointer transition-all">
       <Image
-        src={corgi}
+          src={corgi}
         alt="corgi"
         width={200}
         height={100}

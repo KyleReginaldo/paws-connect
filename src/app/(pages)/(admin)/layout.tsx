@@ -1,13 +1,15 @@
-"use client";
+'use client';
 
-import SideBarTile from "@/components/SideBarTile";
-import { Dog, HandCoins, LayoutDashboard, UsersRound } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import SideBarTile from '@/components/SideBarTile';
+import { Dog, HandCoins, LayoutDashboard, UsersRound } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
 }>) {
   const pathname = usePathname();
   const isActive = (path: string) => pathname === path;
@@ -23,38 +25,41 @@ export default function RootLayout({
           <SideBarTile
             title="Dashboard"
             icon={LayoutDashboard}
-            isActive={isActive("/dashboard")}
+            isActive={isActive('/dashboard')}
             onButtonClick={() => {
-              router.replace("/dashboard");
+              router.replace('/dashboard');
             }}
           />
           <SideBarTile
             title="Manage Staff"
             icon={UsersRound}
-            isActive={isActive("/manage-staff")}
+            isActive={isActive('/manage-staff')}
             onButtonClick={() => {
-              router.replace("/manage-staff");
+              router.replace('/manage-staff');
             }}
           />
           <SideBarTile
             title="Manage Pet"
             icon={Dog}
-            isActive={isActive("/manage-pet")}
+            isActive={isActive('/manage-pet')}
             onButtonClick={() => {
-              router.replace("/manage-pet");
+              router.replace('/manage-pet');
             }}
           />
           <SideBarTile
             title="Fundraising"
             icon={HandCoins}
-            isActive={isActive("/fundraising")}
+            isActive={isActive('/fundraising')}
             onButtonClick={() => {
-              router.replace("/fundraising");
+              router.replace('/fundraising');
             }}
           />
         </ul>
       </div>
-      <div className="flex-1 h-full overflow-y-auto p-4">{children}</div>
+      <div className="flex-1 h-full overflow-y-auto p-4">
+        {modal}
+        {children}
+      </div>
     </div>
   );
 }

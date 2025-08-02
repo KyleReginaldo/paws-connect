@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import DashboardHeader from "@/components/DashboardHeader";
+import DashboardHeader from '@/components/DashboardHeader';
 
 export default function DashboardLayout({
   children,
