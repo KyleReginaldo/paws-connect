@@ -1,4 +1,13 @@
 'use client';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -7,20 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
-import { PhotoViewer } from './PhotoViewer';
+import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { Pet } from '../config/types/pet';
+import { PhotoViewer } from './PhotoViewer';
 
 interface PetTableProps {
   pets: Pet[];
@@ -104,7 +104,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                       alt={pet.name}
                       className="object-cover"
                     />
-                    <AvatarFallback>{getSpeciesEmoji(pet.species)}</AvatarFallback>
+                    {/* <AvatarFallback>{getSpeciesEmoji(pet.species)}</AvatarFallback> */}
                   </Avatar>
                   <div>
                     <div className="font-medium">{pet.name}</div>
@@ -116,33 +116,26 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
               </TableCell>
               <TableCell>
                 <div>
-                  <div className="font-medium capitalize">{pet.species}</div>
                   <div className="text-sm text-muted-foreground">{pet.breed || 'Mixed breed'}</div>
                 </div>
               </TableCell>
               <TableCell>
-                {pet.birthDate ? (
+                {pet.created_at ? (
                   <div>
-                    <div className="font-medium">
-                      {Math.floor(
-                        (new Date().getTime() - pet.birthDate.getTime()) /
-                          (365.25 * 24 * 60 * 60 * 1000),
-                      )}{' '}
-                      years
-                    </div>
+                    <div className="font-medium">{pet.age} years</div>
                     <div className="text-sm text-muted-foreground">
-                      Born {format(pet.birthDate, 'MMM yyyy')}
+                      Born {format(new Date(pet.created_at), 'MMM yyyy')}
                     </div>
                   </div>
                 ) : (
                   <span className="text-muted-foreground">Unknown</span>
                 )}
               </TableCell>
-              <TableCell>{pet.weight ? `${pet.weight} lbs` : 'Not specified'}</TableCell>
-              <TableCell>{getVaccinationBadge(pet.vaccinated)}</TableCell>
+              <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
+              <TableCell>{pet.is_vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</TableCell>
               <TableCell>
                 <div className="text-sm text-muted-foreground">
-                  {format(pet.dateAdded, 'MMM d, yyyy')}
+                  {format(new Date(pet.created_at), 'MMM d, yyyy')}
                 </div>
               </TableCell>
               <TableCell>
@@ -158,7 +151,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => onDelete?.(pet.id)}
+                      onClick={() => onDelete?.(pet.id.toString())}
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />

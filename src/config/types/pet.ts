@@ -1,16 +1,24 @@
 export interface Pet {
-  id: string;
+  id: number;
+  created_at: string;
   name: string;
-  species: string;
+  type: string;
   breed: string;
   gender: string;
-  birthDate?: Date;
+  age: number;
+  date_of_birth: string;
+  size: string;
   weight: string;
-  color: string;
+  is_vaccinated: boolean;
+  is_spayed_or_neutured: boolean;
+  health_status: string;
+  good_with: string[];
+  is_trained: boolean;
+  rescue_address: string;
   description: string;
-  microchipId: string;
-  vaccinated: string;
-  photo?: string; // This will store base64 data URL
-  photoFile?: File; // Store the original file for reference
-  dateAdded: Date;
+  special_needs: string;
+  added_by: string;
+  request_status: string;
+  photo: string;
+  color: string;
 }

@@ -1,8 +1,7 @@
 'use client';
 
-import type React from 'react';
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -21,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Upload } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
+import { CalendarIcon, Upload } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import type { Pet } from '../config/types/pet';
 
 interface PetModalProps {
@@ -36,16 +36,46 @@ interface PetModalProps {
 
 export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalProps) {
   const [birthDate, setBirthDate] = useState<Date>();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    type: string;
+    breed: string;
+    gender: string;
+    age: number;
+    date_of_birth: string;
+    size: string;
+    weight: string;
+    color: string;
+    is_vaccinated: boolean;
+    is_spayed_or_neutured: boolean;
+    health_status: string;
+    good_with: string[];
+    is_trained: boolean;
+    rescue_address: string;
+    description: string;
+    special_needs: string;
+    added_by: string;
+    request_status: string;
+  }>({
     name: '',
-    species: '',
+    type: '',
     breed: '',
     gender: '',
+    age: 0,
+    date_of_birth: '',
+    size: '',
     weight: '',
     color: '',
+    is_vaccinated: false,
+    is_spayed_or_neutured: false,
+    health_status: '',
+    good_with: [],
+    is_trained: false,
+    rescue_address: '',
     description: '',
-    microchipId: '',
-    vaccinated: '',
+    special_needs: '',
+    added_by: '',
+    request_status: '',
   });
 
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -118,30 +148,50 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   useEffect(() => {
     if (editingPet) {
       setFormData({
-        name: editingPet.name,
-        species: editingPet.species,
-        breed: editingPet.breed,
-        gender: editingPet.gender,
-        weight: editingPet.weight,
-        color: editingPet.color,
-        description: editingPet.description,
-        microchipId: editingPet.microchipId,
-        vaccinated: editingPet.vaccinated,
+        name: editingPet.name || '',
+        type: editingPet.type || '',
+        breed: editingPet.breed || '',
+        gender: editingPet.gender || '',
+        age: editingPet.age || 1,
+        date_of_birth: editingPet.date_of_birth || '',
+        size: editingPet.size || '',
+        weight: editingPet.weight || '',
+        color: editingPet.color || '',
+        is_vaccinated: editingPet.is_vaccinated || false,
+        is_spayed_or_neutured: editingPet.is_spayed_or_neutured || false,
+        health_status: editingPet.health_status || '',
+        good_with: editingPet.good_with || [],
+        is_trained: editingPet.is_trained || false,
+        rescue_address: editingPet.rescue_address || '',
+        description: editingPet.description || '',
+        special_needs: editingPet.special_needs || '',
+        added_by: editingPet.added_by || '',
+        request_status: editingPet.request_status || '',
       });
-      setBirthDate(editingPet.birthDate);
+      setBirthDate(editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined);
       setPhotoPreview(editingPet.photo || '');
     } else {
       // Reset form for new pet
       setFormData({
         name: '',
-        species: '',
+        type: '',
         breed: '',
         gender: '',
+        age: 1,
+        date_of_birth: '',
+        size: '',
         weight: '',
         color: '',
+        is_vaccinated: false,
+        is_spayed_or_neutured: false,
+        health_status: '',
+        good_with: [],
+        is_trained: false,
+        rescue_address: '',
         description: '',
-        microchipId: '',
-        vaccinated: '',
+        special_needs: '',
+        added_by: '',
+        request_status: '',
       });
       setBirthDate(undefined);
       setPhotoPreview('');
@@ -151,11 +201,39 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ ...formData, birthDate, photo: photoPreview });
+    // Ensure all required fields are present and normalized
+    const now = new Date();
+    const petData = {
+      name: formData.name,
+      type: formData.type,
+      breed: formData.breed,
+      gender: formData.gender,
+      age: formData.age || 1,
+      date_of_birth: birthDate ? birthDate.toISOString().split('T')[0] : formData.date_of_birth,
+      size: formData.size,
+      weight:
+        (typeof formData.weight === 'string'
+          ? formData.weight.replace(/[^\d.]/g, '')
+          : String(formData.weight)) || '1',
+      color: formData.color || '',
+      is_vaccinated: formData.is_vaccinated,
+      is_spayed_or_neutured: formData.is_spayed_or_neutured,
+      health_status: formData.health_status || '',
+      good_with: Array.isArray(formData.good_with) ? formData.good_with : [],
+      is_trained: formData.is_trained,
+      rescue_address: formData.rescue_address || '',
+      description: formData.description || '',
+      special_needs: formData.special_needs || '',
+      added_by: formData.added_by || '',
+      request_status: formData.request_status || 'pending',
+      created_at: now.toISOString(),
+      photo: photoPreview || '',
+    };
+    onSubmit(petData);
     onOpenChange(false);
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -172,6 +250,160 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Age */}
+            <div className="space-y-2">
+              <Label htmlFor="age">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                min={1}
+                value={formData.age}
+                onChange={(e) => handleInputChange('age', Number(e.target.value))}
+              />
+            </div>
+
+            {/* Size */}
+            <div className="space-y-2">
+              <Label htmlFor="size">Size</Label>
+              <Select
+                value={formData.size}
+                onValueChange={(value) => handleInputChange('size', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Small</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="large">Large</SelectItem>
+                  <SelectItem value="giant">Giant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Health Status */}
+            <div className="space-y-2">
+              <Label htmlFor="health_status">Health Status</Label>
+              <Input
+                id="health_status"
+                placeholder="e.g., Healthy, Allergies, etc."
+                value={formData.health_status}
+                onChange={(e) => handleInputChange('health_status', e.target.value)}
+              />
+            </div>
+
+            {/* Good With */}
+            <div className="space-y-2">
+              <Label>Good With</Label>
+              <div className="flex flex-col gap-1">
+                {['dogs', 'cats', 'children', 'other'].map((option) => (
+                  <label key={option} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.good_with.includes(option)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleInputChange('good_with', [...formData.good_with, option]);
+                        } else {
+                          handleInputChange(
+                            'good_with',
+                            formData.good_with.filter((v) => v !== option),
+                          );
+                        }
+                      }}
+                    />
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Spayed/Neutered */}
+            <div className="space-y-2">
+              <Label htmlFor="is_spayed_or_neutured">Spayed/Neutered</Label>
+              <Select
+                value={formData.is_spayed_or_neutured ? 'yes' : 'no'}
+                onValueChange={(value) =>
+                  handleInputChange('is_spayed_or_neutured', value === 'yes')
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Trained */}
+            <div className="space-y-2">
+              <Label htmlFor="is_trained">Trained</Label>
+              <Select
+                value={formData.is_trained ? 'yes' : 'no'}
+                onValueChange={(value) => handleInputChange('is_trained', value === 'yes')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select training status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Rescue Address */}
+            <div className="space-y-2">
+              <Label htmlFor="rescue_address">Rescue Address</Label>
+              <Input
+                id="rescue_address"
+                placeholder="e.g., 123 Main St, City, State"
+                value={formData.rescue_address}
+                onChange={(e) => handleInputChange('rescue_address', e.target.value)}
+              />
+            </div>
+
+            {/* Special Needs */}
+            <div className="space-y-2">
+              <Label htmlFor="special_needs">Special Needs</Label>
+              <Input
+                id="special_needs"
+                placeholder="e.g., Medication, Diet, etc."
+                value={formData.special_needs}
+                onChange={(e) => handleInputChange('special_needs', e.target.value)}
+              />
+            </div>
+
+            {/* Added By */}
+            <div className="space-y-2">
+              <Label htmlFor="added_by">Added By</Label>
+              <Input
+                id="added_by"
+                placeholder="e.g., Staff Name or ID"
+                value={formData.added_by}
+                onChange={(e) => handleInputChange('added_by', e.target.value)}
+              />
+            </div>
+
+            {/* Request Status */}
+            <div className="space-y-2">
+              <Label htmlFor="request_status">Request Status</Label>
+              <Select
+                value={formData.request_status}
+                onValueChange={(value) => handleInputChange('request_status', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select request status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {/* Pet Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Pet Name *</Label>
@@ -184,16 +416,16 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               />
             </div>
 
-            {/* Species */}
+            {/* Type */}
             <div className="space-y-2">
-              <Label htmlFor="species">Species *</Label>
+              <Label htmlFor="type">Type *</Label>
               <Select
-                value={formData.species}
-                onValueChange={(value) => handleInputChange('species', value)}
+                value={formData.type}
+                onValueChange={(value) => handleInputChange('type', value)}
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select species" />
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dog">Dog</SelectItem>
@@ -290,32 +522,19 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               />
             </div>
 
-            {/* Microchip ID */}
+            {/* Vaccinated */}
             <div className="space-y-2">
-              <Label htmlFor="microchip">Microchip ID</Label>
-              <Input
-                id="microchip"
-                placeholder="e.g., 123456789012345"
-                value={formData.microchipId}
-                onChange={(e) => handleInputChange('microchipId', e.target.value)}
-              />
-            </div>
-
-            {/* Vaccination Status */}
-            <div className="space-y-2">
-              <Label htmlFor="vaccinated">Vaccination Status</Label>
+              <Label htmlFor="is_vaccinated">Vaccinated</Label>
               <Select
-                value={formData.vaccinated}
-                onValueChange={(value) => handleInputChange('vaccinated', value)}
+                value={formData.is_vaccinated ? 'yes' : 'no'}
+                onValueChange={(value) => handleInputChange('is_vaccinated', value === 'yes')}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Select vaccination status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="up-to-date">Up to date</SelectItem>
-                  <SelectItem value="partial">Partially vaccinated</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="unknown">Unknown</SelectItem>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
                 </SelectContent>
               </Select>
             </div>
