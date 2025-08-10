@@ -182,7 +182,7 @@ const Signup = () => {
               <Input
                 id="phone_number"
                 type="tel"
-                placeholder="0993 0162 099"
+                placeholder="09930162099"
                 value={formData.phone_number}
                 onChange={(e) => handleInputChange('phone_number', e.target.value)}
                 className={errors.phone_number ? 'border-red-500' : ''}

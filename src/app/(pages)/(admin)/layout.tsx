@@ -27,7 +27,7 @@ export default function RootLayout({
             icon={LayoutDashboard}
             isActive={isActive('/dashboard')}
             onButtonClick={() => {
-              router.replace('/dashboard');
+              router.push('/dashboard');
             }}
           />
           <SideBarTile
@@ -35,7 +35,7 @@ export default function RootLayout({
             icon={UsersRound}
             isActive={isActive('/manage-staff')}
             onButtonClick={() => {
-              router.replace('/manage-staff');
+              router.push('/manage-staff');
             }}
           />
           <SideBarTile
@@ -43,7 +43,7 @@ export default function RootLayout({
             icon={Dog}
             isActive={isActive('/manage-pet')}
             onButtonClick={() => {
-              router.replace('/manage-pet');
+              router.push('/manage-pet');
             }}
           />
           <SideBarTile
@@ -51,7 +51,7 @@ export default function RootLayout({
             icon={HandCoins}
             isActive={isActive('/fundraising')}
             onButtonClick={() => {
-              router.replace('/fundraising');
+              router.push('/fundraising');
             }}
           />
         </ul>
