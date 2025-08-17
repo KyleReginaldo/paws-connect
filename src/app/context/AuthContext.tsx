@@ -1,20 +1,23 @@
 'use client';
+import { User } from '@/config/models/users';
+import axios, { AxiosError } from 'axios';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase/supabase';
-import axios, { AxiosError } from 'axios';
-import { User } from '@/config/models/users';
 
 export enum AuthStatus {
+  loading,
   authenticated,
   unauthenticated,
   error,
   authenticating,
 }
-type AuthContextType = {
-  onLogin: (email: string, password: string) => void;
-  status: AuthStatus | undefined;
-  errorMessage: string | undefined;
 
+type AuthContextType = {
+  userId: string | null;
+  onLogin: (email: string, password: string) => void;
+  status: AuthStatus;
+  errorMessage: string | undefined;
   onSignup: (
     email: string,
     password: string,
@@ -29,14 +32,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
-  const [status, setStatus] = useState<AuthStatus | undefined>(undefined);
+  const [status, setStatus] = useState<AuthStatus>(AuthStatus.loading);
   const [user, setUser] = useState<User | null>(null);
   const [errorMessage, setError] = useState<string | undefined>(undefined);
-  const _handleListenAuth = () => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
-  };
+  const router = useRouter();
+  const pathname = usePathname();
+
   const onLogin = async (email: string, password: string) => {
     setStatus(AuthStatus.authenticating);
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -50,6 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setStatus(AuthStatus.authenticated);
     }
   };
+
   const onSignup = async (
     email: string,
     password: string,
@@ -75,10 +77,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    _handleListenAuth();
-  });
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, 'Session:', !!session?.user);
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          setUserId(session.user.id);
+          setStatus(AuthStatus.authenticated);
+        } else {
+          setUserId(null);
+          setStatus(AuthStatus.unauthenticated);
+        }
+      } else if (event === 'SIGNED_IN') {
+        setUserId(session?.user?.id || null);
+        setStatus(AuthStatus.authenticated);
+
+        router.replace('/dashboard');
+      } else if (event === 'SIGNED_OUT') {
+        setUserId(null);
+        setStatus(AuthStatus.unauthenticated);
+
+        router.replace('/auth/signin');
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe?.();
+    };
+  }, [router]);
+
   return (
-    <AuthContext.Provider value={{ onLogin, status, errorMessage, onSignup, user }}>
+    <AuthContext.Provider value={{ userId, onLogin, status, errorMessage, onSignup, user }}>
       {children}
     </AuthContext.Provider>
   );

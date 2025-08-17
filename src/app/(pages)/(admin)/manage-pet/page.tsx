@@ -1,16 +1,16 @@
 'use client';
 
+import { usePets } from '@/app/context/PetsContext';
 import { PetModal } from '@/components/PetModal';
 import { PetTable } from '@/components/PetTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pet } from '@/config/types/pet';
-import axios from 'axios';
-import { Plus, Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Plus, Search, X } from 'lucide-react';
+import { useState } from 'react';
 
 export default function PetManagement() {
-  const [pets, setPets] = useState<Pet[] | null>(null);
+  const { pets, status, addPet, updatePet, deletePet: deletePetFromContext } = usePets();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -25,18 +25,23 @@ export default function PetManagement() {
     setModalOpen(true);
   };
 
-  useEffect(() => {
-    const onFetchPets = async () => {
-      try {
-        const response = await axios.get('/api/v1/pets');
-        setPets(response.data['data']);
-      } catch (error) {
-        // Optionally handle error UI
-        console.error('Error fetching pets:', error);
-      }
-    };
-    onFetchPets();
-  }, []);
+  const handleDeletePet = async (id: number) => {
+    console.log('Deleting pet with id:', id);
+    await deletePetFromContext(id);
+  };
+
+  // Filter pets based on search query
+  const filteredPets =
+    pets?.filter((pet) => {
+      if (!searchQuery) return true;
+
+      const query = searchQuery.toLowerCase().trim();
+      return (
+        pet.name.toLowerCase().includes(query) ||
+        pet.type.toLowerCase().includes(query) ||
+        (pet.breed && pet.breed.toLowerCase().includes(query))
+      );
+    }) || [];
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -52,11 +57,19 @@ export default function PetManagement() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder="Search pets by name, species, breed, or color..."
+            placeholder="Search pets by name, type, or breed..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 pr-10"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <Button onClick={openAddModal} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -69,31 +82,62 @@ export default function PetManagement() {
           <div className="text-2xl font-bold">{pets ? pets.length : 0}</div>
           <div className="text-sm text-muted-foreground">Total Pets</div>
         </div>
+
         <div className="bg-card rounded-lg border p-4">
-          {/* TODO: Replace 'test' with actual vaccination stats */}
-          <div className="text-2xl font-bold">-</div>
-          <div className="text-sm text-muted-foreground">Up-to-date Vaccinations</div>
-        </div>
-        <div className="bg-card rounded-lg border p-4">
-          {/* TODO: Replace 'test' with actual species stats */}
-          <div className="text-2xl font-bold">-</div>
-          <div className="text-sm text-muted-foreground">Different Species</div>
+          <div className="text-2xl font-bold">
+            {pets ? [...new Set(pets.map((pet) => pet.type))].length : 0}
+          </div>
+          <div className="text-sm text-muted-foreground">Pet Types</div>
         </div>
       </div>
 
-      {pets && <PetTable pets={pets} onEdit={openEditModal} onDelete={() => {}} />}
+      {pets && filteredPets.length > 0 && (
+        <PetTable pets={filteredPets} onEdit={openEditModal} onDelete={handleDeletePet} />
+      )}
+
+      {pets && filteredPets.length === 0 && searchQuery && (
+        <div className="text-center py-12">
+          <div className="text-lg font-medium text-muted-foreground mb-2">
+            No pets found matching "{searchQuery}"
+          </div>
+          <div className="text-sm text-muted-foreground mb-4">
+            Try searching by a different name, type, or breed
+          </div>
+          <Button onClick={() => setSearchQuery('')} variant="outline">
+            Clear Search
+          </Button>
+        </div>
+      )}
+
+      {pets && pets.length === 0 && !searchQuery && (
+        <div className="text-center py-12">
+          <div className="text-lg font-medium text-muted-foreground mb-2">No pets yet</div>
+          <div className="text-sm text-muted-foreground mb-4">
+            Get started by adding your first pet
+          </div>
+          <Button onClick={openAddModal} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Your First Pet
+          </Button>
+        </div>
+      )}
 
       <PetModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         onSubmit={async (petData) => {
           if (!editingPet) {
-            try {
-              const response = await axios.post('/api/v1/pets', petData);
-              console.log(response.data);
-              setPets((prev) => (prev ? [...prev, response.data.data] : [response.data.data]));
-            } catch (error) {
-              console.error('Error adding pet:', error);
+            // Adding a new pet
+            const newPet = await addPet(petData);
+            if (newPet) {
+              console.log('Pet added successfully:', newPet);
+            }
+          } else {
+            // Updating existing pet
+            console.log(`editing pet:${editingPet.id}`);
+            const updatedPet = await updatePet(editingPet.id, petData);
+            if (updatedPet) {
+              console.log('Pet updated successfully:', updatedPet);
             }
           }
         }}

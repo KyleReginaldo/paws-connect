@@ -1,15 +1,15 @@
 'use client';
 
 import { AuthStatus, useAuth } from '@/app/context/AuthContext';
-import type React from 'react';
-import { useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState } from 'react';
 interface FormData {
   email: string;
   password: string;
@@ -43,14 +43,12 @@ const Signup = () => {
   const validateForm = () => {
     const newErrors: FormErrors = {};
 
-    // Email validation
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
@@ -60,14 +58,12 @@ const Signup = () => {
         'Password must contain at least one uppercase letter, one lowercase letter, and one number';
     }
 
-    // Confirm password validation
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    // Username validation
     if (!formData.username) {
       newErrors.username = 'Username is required';
     } else if (formData.username.length < 3) {
@@ -76,7 +72,6 @@ const Signup = () => {
       newErrors.username = 'Username can only contain letters, numbers, and underscores';
     }
 
-    // Phone number validation
     if (!formData.phone_number) {
       newErrors.phone_number = 'Phone number is required';
     } else if (!/^\+?[\d\s\-$$$$]{10,}$/.test(formData.phone_number)) {
@@ -89,7 +84,7 @@ const Signup = () => {
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
+
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
