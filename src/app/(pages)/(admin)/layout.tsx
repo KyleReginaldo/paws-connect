@@ -6,10 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 
 export default function RootLayout({
   children,
-  modal,
 }: Readonly<{
   children: React.ReactNode;
-  modal: React.ReactNode;
 }>) {
   const pathname = usePathname();
   const isActive = (path: string) => pathname === path;
@@ -56,10 +54,7 @@ export default function RootLayout({
           />
         </ul>
       </div>
-      <div className="flex-1 h-full overflow-y-auto p-4">
-        {modal}
-        {children}
-      </div>
+      <div className="flex-1 h-full overflow-y-auto p-4">{children}</div>
     </div>
   );
 }

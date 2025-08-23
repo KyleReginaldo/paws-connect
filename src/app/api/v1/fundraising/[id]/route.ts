@@ -2,10 +2,10 @@ import { supabase } from '@/app/supabase/supabase';
 import { updateFundraisingSchema } from '@/config/schema/fundraisingSchema';
 import { NextRequest } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   console.log(request.url);
   try {
-    const { id } = params;
+    const { id } = await params;
     const fundraisingId = parseInt(id);
 
     if (isNaN(fundraisingId)) {
@@ -45,9 +45,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const fundraisingId = parseInt(id);
 
     if (isNaN(fundraisingId)) {
@@ -108,9 +108,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const fundraisingId = parseInt(id);
 
     if (isNaN(fundraisingId)) {

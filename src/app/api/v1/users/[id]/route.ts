@@ -1,11 +1,11 @@
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   console.log(request.url);
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
 
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Remove password from update if it's empty
@@ -85,10 +85,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   console.log(request.url);
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // First delete from auth
     const { error: authError } = await supabase.auth.admin.deleteUser(id);
