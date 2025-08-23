@@ -139,7 +139,7 @@ const ManageStaff = () => {
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🔍</div>
           <div className="text-lg font-medium text-muted-foreground mb-2">
-            No users found matching "{searchQuery}"
+            No users found matching &quot;{searchQuery}&quot;
           </div>
           <div className="text-sm text-muted-foreground mb-4">
             Try searching by a different name, email, phone, or status

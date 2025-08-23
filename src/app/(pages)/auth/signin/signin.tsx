@@ -117,7 +117,7 @@ const Signin = () => {
           </div>
 
           <div className="mt-2 text-center text-sm text-gray-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <a
               className="text-blue-600 hover:underline"
               onClick={() => {

@@ -10,7 +10,7 @@ import { Plus, Search, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function PetManagement() {
-  const { pets, status, addPet, updatePet, deletePet: deletePetFromContext } = usePets();
+  const { pets, addPet, updatePet, deletePet: deletePetFromContext } = usePets();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -98,7 +98,7 @@ export default function PetManagement() {
       {pets && filteredPets.length === 0 && searchQuery && (
         <div className="text-center py-12">
           <div className="text-lg font-medium text-muted-foreground mb-2">
-            No pets found matching "{searchQuery}"
+            No pets found matching &quot;{searchQuery}&quot;
           </div>
           <div className="text-sm text-muted-foreground mb-4">
             Try searching by a different name, type, or breed
