@@ -10,7 +10,7 @@ import { Plus, Search, Shield, UserCheck, Users, X } from 'lucide-react';
 import { useState } from 'react';
 
 const ManageStaff = () => {
-  const { users, status, addUser, updateUser, deleteUser, updateUserStatus } = useUsers();
+  const { users, addUser, updateUser, deleteUser, updateUserStatus } = useUsers();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);

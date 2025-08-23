@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useState } from 'react';
 interface FormData {
@@ -27,7 +26,6 @@ interface FormErrors {
 }
 
 const Signup = () => {
-  const router = useRouter();
   const { onSignup, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

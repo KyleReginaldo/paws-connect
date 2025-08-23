@@ -2,6 +2,8 @@ import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(request.url);
+
   try {
     const { id } = params;
 
@@ -84,6 +86,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(request.url);
   try {
     const { id } = params;
 

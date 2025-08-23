@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
-import { type Fundraising } from '@/config/types/fundraising';
+import { type Fundraising, type FundraisingStatus } from '@/config/types/fundraising';
 import {
   DollarSign,
   Edit,
@@ -52,8 +52,8 @@ const Fundraising = () => {
     }
   };
 
-  const handleStatusChange = async (campaignId: number, newStatus: string) => {
-    const result = await updateCampaign(campaignId, { status: newStatus as any });
+  const handleStatusChange = async (campaignId: number, newStatus: FundraisingStatus) => {
+    const result = await updateCampaign(campaignId, { status: newStatus });
     if (result.success) {
       console.log('Campaign status updated successfully');
     } else {

@@ -1,17 +1,15 @@
 'use client';
 
 import { AuthStatus, useAuth } from '@/app/context/AuthContext';
-import type React from 'react';
-import { useEffect, useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/app/supabase/supabase';
-import { Session } from '@supabase/supabase-js';
+import type React from 'react';
+import { useState } from 'react';
 const Signin = () => {
   const router = useRouter();
   const { onLogin, status } = useAuth();

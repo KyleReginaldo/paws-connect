@@ -2,6 +2,7 @@ import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
+  console.log(request.url);
   try {
     // Get total campaigns count
     const { count: totalCampaigns, error: totalError } = await supabase

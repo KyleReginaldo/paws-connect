@@ -4,6 +4,8 @@ import { updatePetSchema } from '@/config/schema/petSchema';
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: number }> }) {
   const { id } = await params;
   const { error } = await supabase.from('pets').delete().eq('id', id);
+  console.log(req.url);
+
   if (error) {
     return new Response(
       JSON.stringify({

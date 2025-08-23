@@ -1,11 +1,9 @@
 'use client';
-import { supabase } from '@/app/supabase/supabase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Session } from '@supabase/supabase-js';
 import {
   Activity,
   ArrowUpRight,
@@ -17,22 +15,8 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
-const page = () => {
-  const [session, setSession] = useState<Session | null>(null);
-
-  const kunwariGetSession = async () => {
-    const response = await supabase.auth.getSession();
-    const session = response.data.session;
-    setSession(session);
-    console.log('session', session);
-  };
-
-  useEffect(() => {
-    kunwariGetSession();
-  }, [session]);
-
+const Page = () => {
   // Mock data - replace with real data from your APIs
   const stats = [
     {
@@ -136,7 +120,7 @@ const page = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
-            Welcome back! Here's what's happening with Paws Connect today.
+            Welcome back! Here&apos;s what&apos;s happening with Paws Connect today.
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -302,4 +286,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
