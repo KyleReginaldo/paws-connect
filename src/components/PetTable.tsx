@@ -1,13 +1,5 @@
 'use client';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Table,
   TableBody,
@@ -16,50 +8,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format } from 'date-fns';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { Pet } from '../config/types/pet';
 import { PhotoViewer } from './PhotoViewer';
+import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 interface PetTableProps {
   pets: Pet[];
   onEdit?: (pet: Pet) => void;
-  onDelete?: (petId: string) => void;
+  onDelete?: (petId: number) => void;
 }
 
 export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
+
+  // Debug logging to see what's in the pets data
+  console.log('PetTable received pets:', pets);
+  if (pets.length > 0) {
+    console.log('First pet data:', pets);
+  }
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; petName: string } | null>(null);
-
-  const getVaccinationBadge = (status: string) => {
-    const variants = {
-      'up-to-date': 'default',
-      partial: 'secondary',
-      overdue: 'destructive',
-      unknown: 'outline',
-    } as const;
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'outline'}>
-        {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-      </Badge>
-    );
-  };
-
-  const getSpeciesEmoji = (species: string) => {
-    const emojis = {
-      dog: '🐕',
-      cat: '🐱',
-      bird: '🐦',
-      rabbit: '🐰',
-      hamster: '🐹',
-      fish: '🐠',
-      reptile: '🦎',
-      other: '🐾',
-    };
-    return emojis[species as keyof typeof emojis] || '🐾';
-  };
 
   const openPhotoViewer = (photoUrl: string, petName: string) => {
     setSelectedPhoto({ url: photoUrl, petName });
@@ -82,11 +57,17 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Pet</TableHead>
-            <TableHead>Species & Breed</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Breed</TableHead>
+            <TableHead>Gender</TableHead>
             <TableHead>Age</TableHead>
+            <TableHead>Size</TableHead>
             <TableHead>Weight</TableHead>
-            <TableHead>Vaccination</TableHead>
-            <TableHead>Added</TableHead>
+            <TableHead>Vaccination status</TableHead>
+            <TableHead>Spayed/Neutered</TableHead>
+            <TableHead>Health status</TableHead>
+            <TableHead>Actions</TableHead>
+
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -95,49 +76,32 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
             <TableRow key={pet.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar
-                    className="h-10 w-10 cursor-pointer"
-                    onClick={() => pet.photo && openPhotoViewer(pet.photo, pet.name)}
-                  >
-                    <AvatarImage
-                      src={pet.photo || '/placeholder.svg?height=40&width=40&query=pet'}
-                      alt={pet.name}
-                      className="object-cover"
-                    />
-                    {/* <AvatarFallback>{getSpeciesEmoji(pet.species)}</AvatarFallback> */}
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={pet.photo} alt={pet.name} className="object-cover" />
+                    <AvatarFallback className="bg-muted">
+                      {pet.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <div className="font-medium">{pet.name}</div>
-                    <div className="text-sm text-muted-foreground capitalize">
-                      {pet.gender} • {pet.color}
-                    </div>
-                  </div>
+                  <div className="font-medium">{pet.name}</div>
                 </div>
               </TableCell>
+              <TableCell>{pet.type}</TableCell>
+              <TableCell>{pet.breed}</TableCell>
+              <TableCell>{pet.gender}</TableCell>
+              <TableCell>{pet.age} years old</TableCell>
               <TableCell>
-                <div>
-                  <div className="text-sm text-muted-foreground">{pet.breed || 'Mixed breed'}</div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {pet.created_at ? (
-                  <div>
-                    <div className="font-medium">{pet.age} years</div>
-                    <div className="text-sm text-muted-foreground">
-                      Born {format(new Date(pet.created_at), 'MMM yyyy')}
-                    </div>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">Unknown</span>
-                )}
+                {pet.size}
+                {/* <div className="text-sm text-muted-foreground">
+                  {format(new Date(pet.created_at), 'MMM d, yyyy')}
+                </div> */}
               </TableCell>
               <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
               <TableCell>{pet.is_vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</TableCell>
               <TableCell>
-                <div className="text-sm text-muted-foreground">
-                  {format(new Date(pet.created_at), 'MMM d, yyyy')}
-                </div>
+                {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}
               </TableCell>
+              <TableCell>{pet.health_status || 'Unknown'}</TableCell>
+
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -151,7 +115,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => onDelete?.(pet.id.toString())}
+                      onClick={() => onDelete?.(pet.id)}
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />

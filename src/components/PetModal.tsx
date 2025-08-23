@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/app/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -36,6 +37,7 @@ interface PetModalProps {
 
 export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalProps) {
   const [birthDate, setBirthDate] = useState<Date>();
+  const { userId } = useAuth();
   const [formData, setFormData] = useState<{
     name: string;
     type: string;
@@ -45,7 +47,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     date_of_birth: string;
     size: string;
     weight: string;
-    color: string;
     is_vaccinated: boolean;
     is_spayed_or_neutured: boolean;
     health_status: string;
@@ -56,6 +57,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     special_needs: string;
     added_by: string;
     request_status: string;
+    photo: string;
   }>({
     name: '',
     type: '',
@@ -65,7 +67,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     date_of_birth: '',
     size: '',
     weight: '',
-    color: '',
     is_vaccinated: false,
     is_spayed_or_neutured: false,
     health_status: '',
@@ -74,8 +75,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     rescue_address: '',
     description: '',
     special_needs: '',
-    added_by: '',
+    added_by: userId || '',
     request_status: '',
+    photo: '',
   });
 
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -109,6 +111,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setPhotoPreview(result);
+      // Also update the form data
+      handleInputChange('photo', result);
     };
     reader.readAsDataURL(file);
   };
@@ -143,9 +147,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const removePhoto = () => {
     setPhotoPreview('');
     setUploadError('');
+    // Also clear the form data
+    handleInputChange('photo', '');
   };
 
   useEffect(() => {
+    console.log(`user in modal: ${userId}`);
     if (editingPet) {
       setFormData({
         name: editingPet.name || '',
@@ -156,7 +163,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         date_of_birth: editingPet.date_of_birth || '',
         size: editingPet.size || '',
         weight: editingPet.weight || '',
-        color: editingPet.color || '',
         is_vaccinated: editingPet.is_vaccinated || false,
         is_spayed_or_neutured: editingPet.is_spayed_or_neutured || false,
         health_status: editingPet.health_status || '',
@@ -165,8 +171,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         rescue_address: editingPet.rescue_address || '',
         description: editingPet.description || '',
         special_needs: editingPet.special_needs || '',
-        added_by: editingPet.added_by || '',
+        added_by: editingPet.added_by || userId || '',
         request_status: editingPet.request_status || '',
+        photo: editingPet.photo || '',
       });
       setBirthDate(editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined);
       setPhotoPreview(editingPet.photo || '');
@@ -181,7 +188,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         date_of_birth: '',
         size: '',
         weight: '',
-        color: '',
         is_vaccinated: false,
         is_spayed_or_neutured: false,
         health_status: '',
@@ -190,8 +196,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         rescue_address: '',
         description: '',
         special_needs: '',
-        added_by: '',
+        added_by: userId || '',
         request_status: '',
+        photo: '',
       });
       setBirthDate(undefined);
       setPhotoPreview('');
@@ -215,7 +222,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         (typeof formData.weight === 'string'
           ? formData.weight.replace(/[^\d.]/g, '')
           : String(formData.weight)) || '1',
-      color: formData.color || '',
       is_vaccinated: formData.is_vaccinated,
       is_spayed_or_neutured: formData.is_spayed_or_neutured,
       health_status: formData.health_status || '',
@@ -224,10 +230,10 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       rescue_address: formData.rescue_address || '',
       description: formData.description || '',
       special_needs: formData.special_needs || '',
-      added_by: formData.added_by || '',
+      added_by: formData.added_by || userId || '',
       request_status: formData.request_status || 'pending',
       created_at: now.toISOString(),
-      photo: photoPreview || '',
+      photo: photoPreview || formData.photo || '',
     };
     onSubmit(petData);
     onOpenChange(false);
@@ -376,18 +382,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               />
             </div>
 
-            {/* Added By */}
-            <div className="space-y-2">
-              <Label htmlFor="added_by">Added By</Label>
-              <Input
-                id="added_by"
-                placeholder="e.g., Staff Name or ID"
-                value={formData.added_by}
-                onChange={(e) => handleInputChange('added_by', e.target.value)}
-              />
-            </div>
-
-            {/* Request Status */}
             <div className="space-y-2">
               <Label htmlFor="request_status">Request Status</Label>
               <Select
@@ -428,14 +422,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="dog">Dog</SelectItem>
-                  <SelectItem value="cat">Cat</SelectItem>
-                  <SelectItem value="bird">Bird</SelectItem>
-                  <SelectItem value="rabbit">Rabbit</SelectItem>
-                  <SelectItem value="hamster">Hamster</SelectItem>
-                  <SelectItem value="fish">Fish</SelectItem>
-                  <SelectItem value="reptile">Reptile</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="Dog">Dog</SelectItem>
+                  <SelectItem value="Cat">Cat</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -462,9 +450,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="unknown">Unknown</SelectItem>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -509,17 +496,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   lbs
                 </div>
               </div>
-            </div>
-
-            {/* Color */}
-            <div className="space-y-2">
-              <Label htmlFor="color">Color/Markings</Label>
-              <Input
-                id="color"
-                placeholder="e.g., Brown and white"
-                value={formData.color}
-                onChange={(e) => handleInputChange('color', e.target.value)}
-              />
             </div>
 
             {/* Vaccinated */}

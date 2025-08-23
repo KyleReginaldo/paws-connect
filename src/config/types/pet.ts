@@ -20,5 +20,4 @@ export interface Pet {
   added_by: string;
   request_status: string;
   photo: string;
-  color: string;
 }

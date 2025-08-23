@@ -4,7 +4,7 @@ import { createPetSchema } from '@/config/schema/petSchema';
 export async function GET() {
   const { data, error } = await supabase
     .from('pets')
-    .select()
+    .select('*, photo')
     .order('created_at', { ascending: false });
   if (error) {
     return new Response(
