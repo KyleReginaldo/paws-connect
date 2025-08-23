@@ -31,15 +31,15 @@ export default function RootLayout({
             }}
           />
           <SideBarTile
-            title="Manage Staff"
+            title="Manage Users"
             icon={UsersRound}
-            isActive={isActive('/manage-staff')}
+            isActive={isActive('/manage-users')}
             onButtonClick={() => {
-              router.push('/manage-staff');
+              router.push('/manage-users');
             }}
           />
           <SideBarTile
-            title="Manage Pet"
+            title="Manage Pets"
             icon={Dog}
             isActive={isActive('/manage-pet')}
             onButtonClick={() => {

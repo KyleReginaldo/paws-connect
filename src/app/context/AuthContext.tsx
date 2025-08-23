@@ -1,7 +1,7 @@
 'use client';
 import { User } from '@/config/models/users';
 import axios, { AxiosError } from 'axios';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase/supabase';
 
@@ -36,11 +36,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [errorMessage, setError] = useState<string | undefined>(undefined);
   const router = useRouter();
-  const pathname = usePathname();
 
   const onLogin = async (email: string, password: string) => {
     setStatus(AuthStatus.authenticating);
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });

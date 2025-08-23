@@ -2,7 +2,9 @@
 import RouteGuard from '@/components/RouteGuard';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { AuthProvider } from './context/AuthContext';
+import { FundraisingProvider } from './context/FundraisingContext';
 import { PetsProvider } from './context/PetsContext';
+import { UsersProvider } from './context/UsersContext';
 import './globals.css';
 
 const geistSans = Geist({
@@ -25,7 +27,11 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           <PetsProvider>
-            <RouteGuard>{children}</RouteGuard>
+            <UsersProvider>
+              <FundraisingProvider>
+                <RouteGuard>{children}</RouteGuard>
+              </FundraisingProvider>
+            </UsersProvider>
           </PetsProvider>
         </AuthProvider>
       </body>

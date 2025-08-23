@@ -9,9 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import type { Pet } from '../config/types/pet';
-import { PhotoViewer } from './PhotoViewer';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -27,19 +25,11 @@ interface PetTableProps {
 }
 
 export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
-  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
-
   // Debug logging to see what's in the pets data
   console.log('PetTable received pets:', pets);
   if (pets.length > 0) {
     console.log('First pet data:', pets);
   }
-  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; petName: string } | null>(null);
-
-  const openPhotoViewer = (photoUrl: string, petName: string) => {
-    setSelectedPhoto({ url: photoUrl, petName });
-    setPhotoViewerOpen(true);
-  };
 
   if (pets.length === 0) {
     return (
@@ -128,14 +118,6 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
           ))}
         </TableBody>
       </Table>
-      {selectedPhoto && (
-        <PhotoViewer
-          open={photoViewerOpen}
-          onOpenChange={setPhotoViewerOpen}
-          photoUrl={selectedPhoto.url}
-          petName={selectedPhoto.petName}
-        />
-      )}
     </div>
   );
 }

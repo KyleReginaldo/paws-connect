@@ -2,8 +2,8 @@
 
 import type React from 'react';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -23,10 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Upload } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
+import { CalendarIcon, Plus, Upload } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Component() {
   const [open, setOpen] = useState(false);
@@ -80,7 +80,7 @@ export default function Component() {
           <DialogHeader>
             <DialogTitle>Add New Pet</DialogTitle>
             <DialogDescription>
-              Enter your pet's information to add them to your profile.
+              Enter your pet&apos;s information to add them to your profile.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">

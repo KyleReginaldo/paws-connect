@@ -24,6 +24,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
+import Image from 'next/image';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import type { Pet } from '../config/types/pet';
@@ -204,7 +205,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setPhotoPreview('');
     }
     setUploadError('');
-  }, [editingPet, open]);
+  }, [editingPet, open, userId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +240,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     onOpenChange(false);
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -522,9 +523,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
             {photoPreview ? (
               <div className="space-y-3">
                 <div className="relative inline-block">
-                  <img
+                  <Image
                     src={photoPreview || '/placeholder.svg'}
                     alt="Pet preview"
+                    width={128}
+                    height={128}
                     className="w-32 h-32 object-cover rounded-lg border"
                   />
                   <Button
