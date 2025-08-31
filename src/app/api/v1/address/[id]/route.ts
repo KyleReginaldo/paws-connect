@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -10,9 +11,10 @@ async function parseJson(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, context: any) {
   try {
-    const pathId = Number(((await params) as { id: string }).id);
+    const params = await context.params;
+    const pathId = Number((params as { id: string }).id);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
@@ -31,9 +33,10 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: any) {
   try {
-    const pathId = Number(((await params) as { id: string }).id);
+    const params = await context.params;
+    const pathId = Number((params as { id: string }).id);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
@@ -97,9 +100,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, context: any) {
   try {
-    const id = Number(((await params) as { id: string }).id);
+    const params = await context.params;
+    const id = Number((params as { id: string }).id);
     if (Number.isNaN(id))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 

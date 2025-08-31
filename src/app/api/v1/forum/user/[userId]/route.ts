@@ -1,9 +1,10 @@
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 
-export async function GET(_request: NextRequest, { params }: { params: { userId: string } }) {
+export async function GET(_request: NextRequest, context: any) {
   try {
-    const userId = ((await params) as { userId: string }).userId;
+    const params = await context.params;
+    const userId = (params as { userId: string }).userId;
     if (!userId)
       return new Response(JSON.stringify({ error: 'Missing userId param' }), { status: 400 });
 
