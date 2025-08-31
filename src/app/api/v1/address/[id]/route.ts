@@ -12,11 +12,11 @@ async function parseJson(request: NextRequest) {
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number(params.id);
-    if (Number.isNaN(id))
+    const pathId = Number(((await params) as { id: string }).id);
+    if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
-    const { data, error } = await supabase.from('address').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('address').select('*').eq('id', pathId).single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
     return new Response(JSON.stringify({ data }), {
@@ -33,8 +33,8 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number(params.id);
-    if (Number.isNaN(id))
+    const pathId = Number(((await params) as { id: string }).id);
+    if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
     const body = await parseJson(request);
@@ -54,6 +54,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       .strict();
 
     const parsed = addressUpdateSchema.safeParse(body);
+    type AddressUpdate = z.infer<typeof addressUpdateSchema>;
     if (!parsed.success) {
       return new Response(
         JSON.stringify({ error: 'Validation error', details: parsed.error.issues }),
@@ -64,23 +65,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const validated = parsed.data;
+    const validated: AddressUpdate = parsed.data;
 
-    if (validated.id !== undefined && validated.id !== id) {
+    if (validated.id !== undefined && validated.id !== pathId) {
       return new Response(JSON.stringify({ error: 'ID mismatch between path and payload' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
     // Omit id from the update payload
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id: _maybeId, ...updatePayload } = validated as any;
+    const { id: payloadId, ...updatePayload } = validated;
+    void payloadId;
 
     const { data, error } = await supabase
       .from('address')
       .update(updatePayload)
-      .eq('id', id)
+      .eq('id', pathId)
       .select()
       .single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number(params.id);
+    const id = Number(((await params) as { id: string }).id);
     if (Number.isNaN(id))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 

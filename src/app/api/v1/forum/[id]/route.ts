@@ -12,11 +12,11 @@ async function parseJson(request: NextRequest) {
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number(((await params) as any).id);
-    if (Number.isNaN(id))
+    const pathId = Number(((await params) as { id: string }).id);
+    if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
-    const { data, error } = await supabase.from('forum').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('forum').select('*').eq('id', pathId).single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
     return new Response(JSON.stringify({ data }), {
@@ -35,8 +35,8 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number(((await params) as any).id);
-    if (Number.isNaN(id))
+    const pathId = Number(((await params) as { id: string }).id);
+    if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
     const body = await parseJson(request);
@@ -53,6 +53,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       .strict();
 
     const parsed = forumUpdateSchema.safeParse(body);
+    type ForumUpdate = z.infer<typeof forumUpdateSchema>;
     if (!parsed.success) {
       return new Response(
         JSON.stringify({ error: 'Validation error', details: parsed.error.issues }),
@@ -63,19 +64,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const validated = parsed.data;
-    if (validated.id !== undefined && validated.id !== id) {
+    const validated: ForumUpdate = parsed.data;
+    if (validated.id !== undefined && validated.id !== pathId) {
       return new Response(JSON.stringify({ error: 'ID mismatch between path and payload' }), {
         status: 400,
       });
     }
 
-    const { id: _maybeId, ...updatePayload } = validated as any;
+    const { id: payloadId, ...updatePayload } = validated;
+    void payloadId;
 
     const { data, error } = await supabase
       .from('forum')
       .update(updatePayload)
-      .eq('id', id)
+      .eq('id', pathId)
       .select()
       .single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -96,11 +98,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number(((await params) as any).id);
-    if (Number.isNaN(id))
+    const pathId = Number(((await params) as { id: string }).id);
+    if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
-    const { data, error } = await supabase.from('forum').delete().eq('id', id).select().single();
+    const { data, error } = await supabase
+      .from('forum')
+      .delete()
+      .eq('id', pathId)
+      .select()
+      .single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
     return new Response(JSON.stringify({ data }), {

@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 
 export async function GET(_request: NextRequest, { params }: { params: { userId: string } }) {
   try {
-    const userId = ((await params) as any).userId;
+    const userId = ((await params) as { userId: string }).userId;
     if (!userId)
       return new Response(JSON.stringify({ error: 'Missing userId param' }), { status: 400 });
 

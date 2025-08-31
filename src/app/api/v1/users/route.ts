@@ -62,6 +62,10 @@ export async function POST(request: NextRequest) {
       email,
       password,
       email_confirm: true,
+      user_metadata: {
+        role: role,
+        username: username,
+      },
     });
     if (error) {
       return new Response(JSON.stringify({ error: 'Bad Request', message: error.message }), {
