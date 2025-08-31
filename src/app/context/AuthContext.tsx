@@ -82,19 +82,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           setUserId(session.user.id);
           setStatus(AuthStatus.authenticated);
+          router.replace('/dashboard');
         } else {
           setUserId(null);
           setStatus(AuthStatus.unauthenticated);
+          router.replace('/auth/signin');
         }
       } else if (event === 'SIGNED_IN') {
         setUserId(session?.user?.id || null);
         setStatus(AuthStatus.authenticated);
-
         router.replace('/dashboard');
       } else if (event === 'SIGNED_OUT') {
         setUserId(null);
         setStatus(AuthStatus.unauthenticated);
-
         router.replace('/auth/signin');
       }
     });
