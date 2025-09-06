@@ -491,7 +491,7 @@ const Fundraising = () => {
                   <div className="w-full h-44 bg-gray-100 relative overflow-hidden">
                     <Image
                       src={String(campaign.images[0])}
-                      alt={campaign.title || 'campaign image'}
+                      alt={campaign.images[0] || 'campaign image'}
                       fill
                       className="object-cover"
                     />
