@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 
@@ -274,9 +275,20 @@ const Page = () => {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No recent adoption applications found.
-              </p>
+              <div className="text-center">
+                <div className="mb-4 flex justify-center">
+                  <Image
+                    src="/empty_pet.png"
+                    alt="No recent adoptions"
+                    width={96}
+                    height={96}
+                    className="w-24 h-24"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No recent adoption applications found.
+                </p>
+              </div>
             )}
             <Button variant="outline" className="w-full">
               <ArrowUpRight className="mr-2 h-4 w-4" />

@@ -593,7 +593,9 @@ const Fundraising = () => {
       {/* Empty State */}
       {filteredCampaigns.length === 0 && (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">💰</div>
+          <div className="mb-4 flex justify-center">
+            <Image src="/empty.png" alt="No campaigns" width={120} height={120} />
+          </div>
           <h3 className="text-lg font-semibold mb-2">
             {searchQuery ? 'No campaigns found' : 'No campaigns yet'}
           </h3>
