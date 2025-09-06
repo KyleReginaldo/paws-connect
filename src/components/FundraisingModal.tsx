@@ -77,8 +77,10 @@ export function FundraisingModal({
         description: '',
         target_amount: 1000,
         created_by: currentUserId || '',
+        images: [],
         status: 'PENDING',
       });
+      setImagePreviews([]);
     }
     // Clear error when modal opens/closes or campaign changes
     setError(null);
@@ -90,6 +92,24 @@ export function FundraisingModal({
     setError(null);
 
     try {
+      // Validate required fields before submission
+      if (!formData.title || formData.title.length < 2) {
+        setError('Title must be at least 2 characters');
+        return;
+      }
+      if (!formData.description || formData.description.length < 10) {
+        setError('Description must be at least 10 characters');
+        return;
+      }
+      if (!formData.target_amount || formData.target_amount < 100) {
+        setError('Target amount must be at least ₱100');
+        return;
+      }
+      if (!formData.created_by) {
+        setError('User ID is required');
+        return;
+      }
+
       let result;
       if (editingCampaign) {
         // For editing, we don't need created_by
@@ -97,7 +117,14 @@ export function FundraisingModal({
         const { created_by, ...updateData } = formData;
         result = await onSubmit(updateData);
       } else {
-        result = await onSubmit(formData);
+        // Ensure proper data types for create
+        const submitData = {
+          ...formData,
+          target_amount: Number(formData.target_amount),
+          images: formData.images || [],
+        };
+        console.log('Submitting campaign data:', submitData);
+        result = await onSubmit(submitData);
       }
 
       if (result.success) {
@@ -120,28 +147,58 @@ export function FundraisingModal({
     }));
   };
 
-  const handleImageFiles = (files: FileList | null) => {
+  const handleImageFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const arr: string[] = [];
-    const readers: Promise<void>[] = [];
+
+    setError(null); // Clear any previous errors
+    const uploadedUrls: string[] = [];
+    const localPreviews: string[] = [];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const reader = new FileReader();
-      const p = new Promise<void>((resolve) => {
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          arr.push(result);
-          resolve();
-        };
-      });
-      readers.push(p);
-      reader.readAsDataURL(file);
+
+      // create local preview
+      const localUrl = URL.createObjectURL(file);
+      localPreviews.push(localUrl);
+
+      try {
+        console.log(`Uploading file: ${file.name}`);
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/v1/fundraising/upload', {
+          method: 'POST',
+          body: fd,
+        });
+        const json = await res.json();
+        console.log(`Upload response for ${file.name}:`, json);
+
+        if (!res.ok) {
+          const details = json?.details || json?.error || 'Unknown';
+          console.error('Upload failed for file', file.name, details);
+          setError(`Failed to upload ${file.name}: ${details}`);
+          continue;
+        }
+
+        if (json?.url) {
+          uploadedUrls.push(json.url);
+          console.log(`Successfully uploaded ${file.name}, URL: ${json.url}`);
+        } else {
+          console.error('Upload did not return a url for file', file.name, json);
+          setError(`Upload did not return a url for ${file.name}`);
+        }
+      } catch (err) {
+        console.error('Error uploading file', err);
+        setError(`Error uploading ${file.name}. See console for details.`);
+      }
     }
 
-    Promise.all(readers).then(() => {
-      setFormData((prev) => ({ ...prev, images: [...(prev.images || []), ...arr] }));
-      setImagePreviews((prev) => [...prev, ...arr]);
-    });
+    console.log('All uploads completed. URLs:', uploadedUrls);
+    // Add uploaded URLs to form and show local previews while uploading
+    setFormData((prev) => ({
+      ...prev,
+      images: [...(prev.images || []), ...uploadedUrls],
+    }));
+    setImagePreviews((prev) => [...prev, ...localPreviews]);
   };
 
   return (

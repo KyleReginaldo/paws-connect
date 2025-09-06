@@ -15,7 +15,7 @@ export const createFundraisingSchema = z.object({
     .number()
     .min(100, 'Target amount must be at least ₱100')
     .max(10000000, 'Target amount cannot exceed ₱10,000,000'),
-  created_by: z.uuid(),
+  created_by: z.string().min(1, 'User ID is required'),
   images: z.array(z.string()).optional(),
   status: statusEnum.optional().default('PENDING'),
 });

@@ -92,8 +92,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log('Received fundraising POST body:', body);
+
     const result = createFundraisingSchema.safeParse(body);
     if (!result.success) {
+      console.log('Validation failed:', result.error.issues);
       return new Response(
         JSON.stringify({
           error: 'Invalid request data',
@@ -119,6 +122,15 @@ export async function POST(request: NextRequest) {
     };
     const { title, description, created_by, target_amount, status, images } = parsed;
 
+    console.log('Creating fundraising campaign with:', {
+      title,
+      description,
+      created_by,
+      target_amount,
+      status,
+      images,
+    });
+
     const { data, error } = await supabase
       .from('fundraising')
       .insert({
@@ -139,7 +151,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.log(error.message);
+      console.log('Supabase insert error:', error.message);
       return new Response(
         JSON.stringify({ error: 'Failed to create fundraising campaign', message: error.message }),
         {
@@ -149,6 +161,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Successfully created campaign:', data);
     return new Response(
       JSON.stringify({
         message: 'Fundraising campaign created successfully',
@@ -160,7 +173,7 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (err) {
-    console.log(err);
+    console.log('POST fundraising error:', err);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
       { status: 500 },
