@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/app/context/AuthContext';
+import { supabase } from '@/app/supabase/supabase';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -22,12 +23,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Pet } from '@/config/types/pet';
 import { format } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
 import Image from 'next/image';
-import type React from 'react';
-import { useEffect, useState } from 'react';
-import type { Pet } from '../config/types/pet';
+import React, { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 interface PetModalProps {
   open: boolean;
@@ -86,6 +87,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
     const maxSize = 5 * 1024 * 1024; // 5MB
@@ -102,28 +105,59 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return null;
   };
 
-  const handleFileUpload = (file: File) => {
+  // Change this to your actual Supabase bucket name if not 'files'
+  const SUPABASE_BUCKET = 'files';
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+
+    // Required fields validation
+    if (!formData.name.trim()) {
+      errors.name = 'Pet name is required';
+    }
+    if (!formData.type) {
+      errors.type = 'Pet type is required';
+    }
+    if (!photoPreview && !formData.photo) {
+      errors.photo = 'Pet photo is required';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleFileUpload = async (file: File) => {
     const error = validateFile(file);
     if (error) {
       setUploadError(error);
       return;
     }
-
     setUploadError('');
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setPhotoPreview(result);
-      // Also update the form data
-      handleInputChange('photo', result);
-    };
-    reader.readAsDataURL(file);
+    // Upload to Supabase storage
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${uuidv4()}.${fileExt}`;
+    const filePath = `pets/${fileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+    if (uploadError) {
+      setUploadError(`Failed to upload image: ${uploadError.message}`);
+      return;
+    }
+    // Get public URL
+    const { data: urlData } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
+    const publicUrl = urlData?.publicUrl || '';
+    setPhotoPreview(publicUrl);
+    handleInputChange('photo', publicUrl);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileUpload(file);
+      await handleFileUpload(file);
     }
   };
 
@@ -150,7 +184,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const removePhoto = () => {
     setPhotoPreview('');
     setUploadError('');
-    // Also clear the form data
     handleInputChange('photo', '');
   };
 
@@ -208,6 +241,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setPhotoPreview('');
     }
     setUploadError('');
+    setValidationErrors((prev) => ({ ...prev, photo: '' })); // Clear photo error when image is uploaded
     // Load draft from session storage if exists (only for new pet)
     try {
       if (!editingPet) {
@@ -233,6 +267,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+
     // Ensure all required fields are present and normalized
     const now = new Date();
     const petData = {
@@ -266,6 +306,10 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
   const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear validation error for this field
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => ({ ...prev, [field]: '' }));
+    }
   };
 
   return (
@@ -290,7 +334,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 required
+                className={validationErrors.name ? 'border-red-500' : ''}
               />
+              {validationErrors.name && (
+                <p className="text-sm text-red-500">{validationErrors.name}</p>
+              )}
             </div>
 
             {/* Type */}
@@ -301,7 +349,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 onValueChange={(value) => handleInputChange('type', value)}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className={validationErrors.type ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,6 +357,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectItem value="Cat">Cat</SelectItem>
                 </SelectContent>
               </Select>
+              {validationErrors.type && (
+                <p className="text-sm text-red-500">{validationErrors.type}</p>
+              )}
             </div>
 
             {/* Breed */}
@@ -537,7 +588,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
           {/* Photo Upload */}
           <div className="space-y-2">
-            <Label>Pet Photo</Label>
+            <Label>Pet Photo *</Label>
             {photoPreview ? (
               <div className="space-y-3">
                 <div className="relative inline-block">
@@ -567,6 +618,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                   isDragOver
                     ? 'border-primary bg-primary/5'
+                    : validationErrors.photo
+                    ? 'border-red-500 bg-red-50'
                     : 'border-muted-foreground/25 hover:border-muted-foreground/50'
                 }`}
                 onDrop={handleDrop}
@@ -580,20 +633,29 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 <p className="text-xs text-muted-foreground mb-3">
                   Supports JPEG, PNG, WebP up to 5MB
                 </p>
-                <div className="relative">
-                  <Button type="button" variant="outline" size="sm">
+                <div className="relative flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     Choose File
                   </Button>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleFileSelect}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    style={{ display: 'none' }}
                   />
                 </div>
               </div>
             )}
             {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
+            {validationErrors.photo && (
+              <p className="text-sm text-red-500">{validationErrors.photo}</p>
+            )}
           </div>
 
           {/* Description */}

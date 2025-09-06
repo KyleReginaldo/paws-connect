@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     special_needs,
     type,
     weight,
+    photo,
   } = result.data;
   const { data, error } = await supabase
     .from('pets')
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
       special_needs,
       type,
       weight,
+      photo,
     })
     .select()
     .single();

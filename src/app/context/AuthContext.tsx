@@ -88,6 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Auth state changed:', event, 'Session:', !!session?.user);
 
       if (event === 'INITIAL_SESSION') {
+        router.replace('/auth/signin');
         if (session?.user) {
           setUserId(session.user.id);
           setStatus(AuthStatus.authenticated);

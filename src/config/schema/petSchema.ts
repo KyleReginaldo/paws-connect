@@ -19,6 +19,7 @@ export const createPetSchema = z.object({
   description: z.string(),
   special_needs: z.string(),
   added_by: z.uuid(),
+  photo: z.string().min(1, 'Photo is required'),
 });
 
 export type CreatePetDto = z.infer<typeof createPetSchema>;
