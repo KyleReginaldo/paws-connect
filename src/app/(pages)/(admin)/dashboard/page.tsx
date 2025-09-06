@@ -1,13 +1,19 @@
 'use client';
+import { useFundraising } from '@/app/context/FundraisingContext';
+import { usePets } from '@/app/context/PetsContext';
+import { useUsers } from '@/app/context/UsersContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { Fundraising } from '@/config/types/fundraising';
 import {
   Activity,
   ArrowUpRight,
-  Calendar,
+  Calendar as CalendarIcon,
   Dog,
   DollarSign,
   Heart,
@@ -15,103 +21,126 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 
 const Page = () => {
-  // Mock data - replace with real data from your APIs
+  const { pets } = usePets();
+  const { campaigns, stats: fundraisingStats } = useFundraising();
+  const { users } = useUsers();
+
+  type Adoption = {
+    id: number | string;
+    petName: string;
+    petType: string;
+    adopter: string;
+    timeAgo: string;
+    status: string;
+    image: string;
+  };
+
+  const [recentAdoptions, setRecentAdoptions] = useState<Adoption[] | null>(null);
+  const [adoptionsLoading, setAdoptionsLoading] = useState(false);
+  const [adoptionsError, setAdoptionsError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchAdoptions = async () => {
+      setAdoptionsLoading(true);
+      try {
+        // build optional query params for date range
+        const params: Record<string, string> = {};
+        if (dateRange?.from) params.from = new Date(dateRange.from).toISOString();
+        if (dateRange?.to) params.to = new Date(dateRange.to).toISOString();
+        const url = new URL('/api/v1/adoption', window.location.origin);
+        Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error('Failed to fetch adoptions');
+        const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
+        if (!mounted) return;
+        // Take the most recent 5
+        const data = Array.isArray(json.data) ? json.data.slice(0, 5) : [];
+        const parsed = data.map((d: Record<string, unknown>) => {
+          const id = (d['id'] as number) ?? String(Math.random()).slice(2, 8);
+          const petName = (d['pet_name'] as string) || (d['pet'] as string) || 'Unknown';
+          const petType = (d['pet_type'] as string) || 'N/A';
+          const adopter = (d['user_name'] as string) || (d['user'] as string) || 'Anonymous';
+          const createdAt = (d['created_at'] as string) || new Date().toISOString();
+          const status = (d['status'] as string) || 'pending';
+          const image = (d['photo'] as string) || '/corgi.jpg';
+          return {
+            id,
+            petName,
+            petType,
+            adopter,
+            timeAgo: new Date(createdAt).toLocaleString(),
+            status,
+            image,
+          } as Adoption;
+        });
+        setRecentAdoptions(parsed);
+      } catch (err: unknown) {
+        console.error(err);
+        const msg = err instanceof Error ? err.message : String(err);
+        setAdoptionsError(msg || 'Failed to load adoptions');
+      } finally {
+        setAdoptionsLoading(false);
+      }
+    };
+    fetchAdoptions();
+    return () => {
+      mounted = false;
+    };
+  }, [dateRange]);
+
+  // Build stats using available contexts
   const stats = [
     {
       title: 'Total Pets',
-      value: '127',
-      change: '+12%',
-      changeType: 'positive' as const,
+      value: pets ? String(pets.length) : '—',
+      change: '+0% ',
+      changeType: 'neutral' as const,
       icon: Dog,
       description: 'Available for adoption',
     },
     {
-      title: 'Successful Adoptions',
-      value: '89',
-      change: '+23%',
-      changeType: 'positive' as const,
+      title: 'Adoptions',
+      value: fundraisingStats ? String(fundraisingStats.total_campaigns || 0) : '—',
+      change: '+0% ',
+      changeType: 'neutral' as const,
       icon: Heart,
       description: 'This month',
     },
     {
       title: 'Total Donations',
-      value: '₱245,678',
-      change: '+8%',
-      changeType: 'positive' as const,
+      value: fundraisingStats ? `₱${(fundraisingStats.total_raised || 0).toLocaleString()}` : '—',
+      change: '+0% ',
+      changeType: 'neutral' as const,
       icon: DollarSign,
       description: 'Raised this month',
     },
     {
       title: 'Active Users',
-      value: '1,234',
-      change: '+5%',
-      changeType: 'positive' as const,
+      value: users ? String(users.length) : '—',
+      change: '+0% ',
+      changeType: 'neutral' as const,
       icon: Users,
       description: 'Registered users',
     },
   ];
 
-  const recentAdoptions = [
-    {
-      id: 1,
-      petName: 'Luna',
-      petType: 'Dog',
-      adopter: 'Kyle Reginaldo',
-      timeAgo: '2 hours ago',
-      status: 'completed',
-      image: '/corgi.jpg',
-    },
-    {
-      id: 2,
-      petName: 'Max',
-      petType: 'Cat',
-      adopter: 'Aljhon Balmes',
-      timeAgo: '5 hours ago',
-      status: 'pending',
-      image: '/corgi.jpg',
-    },
-    {
-      id: 3,
-      petName: 'Bella',
-      petType: 'Dog',
-      adopter: 'Patrick Allen',
-      timeAgo: '1 day ago',
-      status: 'completed',
-      image: '/corgi.jpg',
-    },
-  ];
-
-  const ongoingCampaigns = [
-    {
-      id: 1,
-      title: 'Medical Fund for Luna',
-      description: 'Surgery and medication needed',
-      target: 25000,
-      raised: 18500,
-      daysLeft: 12,
-      supporters: 45,
-    },
-    {
-      id: 2,
-      title: 'Shelter Renovation',
-      description: 'Improving living conditions',
-      target: 50000,
-      raised: 32000,
-      daysLeft: 25,
-      supporters: 78,
-    },
-    {
-      id: 3,
-      title: 'Vaccination Drive',
-      description: 'Free vaccines for street animals',
-      target: 15000,
-      raised: 8900,
-      daysLeft: 18,
-      supporters: 23,
-    },
-  ];
+  const ongoingCampaigns =
+    campaigns?.map((c: Fundraising) => ({
+      id: c.id,
+      title: c.title ?? '',
+      description: c.description ?? '',
+      target: c.target_amount ?? 0,
+      raised: c.raised_amount ?? 0,
+      daysLeft: 0,
+      supporters: 0,
+    })) || [];
 
   return (
     <div className="flex-1 space-y-8 p-8 pt-6">
@@ -124,10 +153,60 @@ const Page = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
-            <Calendar className="mr-2 h-4 w-4" />
-            Today
-          </Button>
+          <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from
+                  ? dateRange.to
+                    ? `${new Date(dateRange.from).toLocaleDateString()} - ${new Date(
+                        dateRange.to,
+                      ).toLocaleDateString()}`
+                    : `${new Date(dateRange.from).toLocaleDateString()}`
+                  : 'Today'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <div className="p-2">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    const maybe = range as { from?: Date | null; to?: Date | null };
+                    if (!maybe?.from) {
+                      setDateRange(undefined);
+                      return;
+                    }
+                    const newRange: DateRange = { from: maybe.from as Date };
+                    if (maybe.to) newRange.to = maybe.to as Date;
+                    setDateRange(newRange);
+                    // close popover automatically if user picked both from & to
+                    if (newRange.from && newRange.to) setPickerOpen(false);
+                  }}
+                />
+                <div className="flex gap-2 mt-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDateRange(undefined);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setPickerOpen(false);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -162,31 +241,43 @@ const Page = () => {
             <CardDescription>Latest adoption requests and their current status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentAdoptions.map((adoption) => (
-              <div key={adoption.id} className="flex items-center justify-between space-x-4">
-                <div className="flex items-center space-x-4">
-                  <Avatar>
-                    <AvatarImage src={adoption.image} alt={adoption.petName} />
-                    <AvatarFallback>{adoption.petName[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium leading-none">
-                      {adoption.petName} • {adoption.petType}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Adopter: {adoption.adopter}</p>
+            {adoptionsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading recent adoptions…</p>
+            ) : adoptionsError ? (
+              <p className="text-sm text-red-600">{adoptionsError}</p>
+            ) : recentAdoptions && recentAdoptions.length > 0 ? (
+              recentAdoptions.map((adoption) => (
+                <div key={adoption.id} className="flex items-center justify-between space-x-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar>
+                      <AvatarImage src={adoption.image} alt={adoption.petName} />
+                      <AvatarFallback>{adoption.petName?.[0] ?? 'P'}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium leading-none">
+                        {adoption.petName} • {adoption.petType}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Adopter: {adoption.adopter}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      variant={adoption.status === 'completed' ? 'default' : 'secondary'}
+                      className={
+                        adoption.status === 'completed' ? 'bg-green-100 text-green-800' : ''
+                      }
+                    >
+                      {adoption.status === 'completed' ? 'Completed' : 'Pending'}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{adoption.timeAgo}</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge
-                    variant={adoption.status === 'completed' ? 'default' : 'secondary'}
-                    className={adoption.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
-                  >
-                    {adoption.status === 'completed' ? 'Completed' : 'Pending'}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{adoption.timeAgo}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No recent adoption applications found.
+              </p>
+            )}
             <Button variant="outline" className="w-full">
               <ArrowUpRight className="mr-2 h-4 w-4" />
               View All Applications

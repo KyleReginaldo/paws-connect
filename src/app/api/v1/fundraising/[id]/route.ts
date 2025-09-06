@@ -55,10 +55,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json();
+    console.log('[fundraising PUT] request body:', JSON.stringify(body));
 
     // Validate the request body
     const result = updateFundraisingSchema.safeParse(body);
     if (!result.success) {
+      console.error('[fundraising PUT] validation failed:', JSON.stringify(result.error.issues));
       return new Response(
         JSON.stringify({
           error: 'Invalid request data',

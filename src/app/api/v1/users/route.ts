@@ -56,7 +56,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password, username, phone_number, role } = result.data;
+    const parsed = result.data as {
+      email: string;
+      password?: string;
+      username: string;
+      phone_number: string;
+      role: number;
+    };
+    let { password, phone_number } = parsed;
+    const { email, username, role } = parsed;
+
+    // sanitize phone: remove non-digits
+    phone_number = String(phone_number).replace(/\D/g, '');
+    if (phone_number.length !== 11) {
+      return new Response(JSON.stringify({ error: 'Invalid phone number' }), { status: 400 });
+    }
+
+    // If no password provided or too weak/short, generate a default strong password
+    if (!password || String(password).length < 8) {
+      // Default pattern: 1 upper, 1 lower, 1 digit, 1 symbol + random digits
+      const rand = Math.random().toString(36).slice(2, 8);
+      password = `A@${rand}1`; // ensures complexity, e.g., A@abcd12
+    }
 
     const { data, error } = await supabase.auth.admin.createUser({
       email,

@@ -109,7 +109,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, description, created_by, target_amount, status } = result.data;
+    const parsed = result.data as {
+      title: string;
+      description: string;
+      created_by: string;
+      target_amount: number;
+      status?: 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED';
+      images?: string[];
+    };
+    const { title, description, created_by, target_amount, status, images } = parsed;
 
     const { data, error } = await supabase
       .from('fundraising')
@@ -117,6 +125,7 @@ export async function POST(request: NextRequest) {
         title,
         description,
         target_amount,
+        images: images || [],
         raised_amount: 0, // Initialize with 0
         status: status || 'PENDING', // Default to PENDING if not provided
         created_by,

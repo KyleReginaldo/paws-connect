@@ -70,7 +70,8 @@ export function UsersProvider({ children }: UsersProviderProps) {
 
       setUsers((prevUsers) => {
         if (!prevUsers) return [newUser];
-        return [...prevUsers, newUser];
+        // Put newest users on top
+        return [newUser, ...prevUsers];
       });
 
       return newUser;

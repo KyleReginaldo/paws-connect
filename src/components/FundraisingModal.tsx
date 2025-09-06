@@ -47,8 +47,10 @@ export function FundraisingModal({
     description: '',
     target_amount: 1000,
     created_by: currentUserId || '',
+    images: [],
     status: 'PENDING',
   });
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +61,7 @@ export function FundraisingModal({
         description: editingCampaign.description || '',
         target_amount: editingCampaign.target_amount || 1000,
         created_by: editingCampaign.created_by || currentUserId || '',
+        images: (editingCampaign?.images as string[]) || [],
         status:
           (editingCampaign.status as
             | 'PENDING'
@@ -67,6 +70,7 @@ export function FundraisingModal({
             | 'REJECTED'
             | 'CANCELLED') || 'PENDING',
       });
+      setImagePreviews((editingCampaign?.images as string[]) || []);
     } else {
       setFormData({
         title: '',
@@ -114,6 +118,30 @@ export function FundraisingModal({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleImageFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const arr: string[] = [];
+    const readers: Promise<void>[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+      const p = new Promise<void>((resolve) => {
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          arr.push(result);
+          resolve();
+        };
+      });
+      readers.push(p);
+      reader.readAsDataURL(file);
+    }
+
+    Promise.all(readers).then(() => {
+      setFormData((prev) => ({ ...prev, images: [...(prev.images || []), ...arr] }));
+      setImagePreviews((prev) => [...prev, ...arr]);
+    });
   };
 
   return (
@@ -168,6 +196,28 @@ export function FundraisingModal({
               <p className="text-xs text-muted-foreground">
                 {formData.description.length}/1000 characters
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Images (optional)</Label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageFiles(e.target.files)}
+              />
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {imagePreviews.map((src, idx) => (
+                  <div key={idx} className="w-20 h-20 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`preview-${idx}`}
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">

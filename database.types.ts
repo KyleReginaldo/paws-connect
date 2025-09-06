@@ -270,6 +270,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: number
+          images: string[] | null
           raised_amount: number | null
           status: Database["public"]["Enums"]["fundraising_status"] | null
           target_amount: number | null
@@ -280,6 +281,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: number
+          images?: string[] | null
           raised_amount?: number | null
           status?: Database["public"]["Enums"]["fundraising_status"] | null
           target_amount?: number | null
@@ -290,6 +292,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: number
+          images?: string[] | null
           raised_amount?: number | null
           status?: Database["public"]["Enums"]["fundraising_status"] | null
           target_amount?: number | null

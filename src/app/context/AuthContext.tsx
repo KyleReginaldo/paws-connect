@@ -26,6 +26,7 @@ type AuthContextType = {
     phone_number: string,
   ) => void;
   user: User | null;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,14 +76,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUserId(null);
+    setUser(null);
+    setStatus(AuthStatus.unauthenticated);
+  };
+
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, 'Session:', !!session?.user);
+
       if (event === 'INITIAL_SESSION') {
         if (session?.user) {
           setUserId(session.user.id);
           setStatus(AuthStatus.authenticated);
-          router.replace('/dashboard');
         } else {
           setUserId(null);
           setStatus(AuthStatus.unauthenticated);
@@ -91,7 +99,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (event === 'SIGNED_IN') {
         setUserId(session?.user?.id || null);
         setStatus(AuthStatus.authenticated);
-        router.replace('/dashboard');
+
+        // only redirect if user is on sign-in page
+        try {
+          if (typeof window !== 'undefined' && window.location.pathname === '/auth/signin') {
+            router.replace('/dashboard');
+          }
+        } catch {
+          // ignore
+        }
       } else if (event === 'SIGNED_OUT') {
         setUserId(null);
         setStatus(AuthStatus.unauthenticated);
@@ -105,7 +121,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ userId, onLogin, status, errorMessage, onSignup, user }}>
+    <AuthContext.Provider
+      value={{ userId, onLogin, status, errorMessage, onSignup, user, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

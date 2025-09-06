@@ -1,19 +1,24 @@
 'use client';
 
+import { useAuth } from '@/app/context/AuthContext';
 import { useUsers } from '@/app/context/UsersContext';
 import { UserModal } from '@/components/UserModal';
 import { UserTable } from '@/components/UserTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { User } from '@/config/models/users';
-import { Plus, Search, Shield, UserCheck, Users, X } from 'lucide-react';
+import { Download, Plus, Search, Shield, UserCheck, Users, X } from 'lucide-react';
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 
 const ManageStaff = () => {
+  const { userId } = useAuth();
   const { users, addUser, updateUser, deleteUser, updateUserStatus } = useUsers();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(10);
 
   const openEditModal = (user: User) => {
     setEditingUser(user);
@@ -25,9 +30,29 @@ const ManageStaff = () => {
     setModalOpen(true);
   };
 
+  const handleExport = () => {
+    if (!users) return;
+    const exportData = users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      phone_number: u.phone_number,
+      role: u.role,
+      status: u.status,
+      created_at: u.created_at,
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'users');
+    XLSX.writeFile(workbook, 'users.xlsx');
+  };
+
   const handleDeleteUser = async (id: string) => {
-    console.log('Deleting user with id:', id);
-    await deleteUser(id);
+    if (userId !== id) {
+      await deleteUser(id);
+    } else {
+      alert('You cannot delete your own account while logged in.');
+    }
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -57,8 +82,8 @@ const ManageStaff = () => {
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">User Management</h1>
-        <p className="text-lg text-muted-foreground">
+        <h1 className="text-xl font-bold mb-2">User Management</h1>
+        <p className="text-md text-muted-foreground">
           Manage all system users, staff members, and administrators. Control access, roles, and
           user status.
         </p>
@@ -82,10 +107,27 @@ const ManageStaff = () => {
             </button>
           )}
         </div>
-        <Button onClick={openAddModal} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={openAddModal} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add User
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              className="rounded-full px-3 shadow-sm hover:shadow-md"
+              title="Export users"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+
+            {/* Import removed — users are created via admin flows. */}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -127,12 +169,43 @@ const ManageStaff = () => {
       </div>
 
       {users && filteredUsers.length > 0 && (
-        <UserTable
-          users={filteredUsers}
-          onEdit={openEditModal}
-          onDelete={handleDeleteUser}
-          onStatusChange={handleStatusChange}
-        />
+        <>
+          <UserTable
+            users={filteredUsers.slice((page - 1) * pageSize, page * pageSize)}
+            onEdit={openEditModal}
+            onDelete={handleDeleteUser}
+            onStatusChange={handleStatusChange}
+          />
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {(page - 1) * pageSize + 1} -{' '}
+              {Math.min(page * pageSize, filteredUsers.length)} of {filteredUsers.length}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                disabled={page * pageSize >= filteredUsers.length}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                Go to top
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
       {users && filteredUsers.length === 0 && searchQuery && (

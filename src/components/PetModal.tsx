@@ -42,6 +42,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [formData, setFormData] = useState<{
     name: string;
     type: string;
+    color?: string;
     breed: string;
     gender: string;
     age: number;
@@ -62,6 +63,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   }>({
     name: '',
     type: '',
+    color: '',
     breed: '',
     gender: '',
     age: 0,
@@ -135,13 +137,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
+  const handleDragOver = (_e: React.DragEvent) => {
+    _e.preventDefault();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
+  const handleDragLeave = (_e: React.DragEvent) => {
+    _e.preventDefault();
     setIsDragOver(false);
   };
 
@@ -183,6 +185,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setFormData({
         name: '',
         type: '',
+        color: '',
         breed: '',
         gender: '',
         age: 1,
@@ -205,7 +208,28 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setPhotoPreview('');
     }
     setUploadError('');
+    // Load draft from session storage if exists (only for new pet)
+    try {
+      if (!editingPet) {
+        const draft = sessionStorage.getItem('pet_form_draft');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          setFormData((prev) => ({ ...prev, ...parsed }));
+        }
+      }
+    } catch {
+      // ignore
+    }
   }, [editingPet, open, userId]);
+
+  // Persist draft to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('pet_form_draft', JSON.stringify(formData));
+    } catch {
+      // ignore storage errors
+    }
+  }, [formData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +281,47 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Important fields first: Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Pet Name *</Label>
+              <Input
+                id="name"
+                placeholder="e.g., Buddy"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Type */}
+            <div className="space-y-2">
+              <Label htmlFor="type">Type *</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => handleInputChange('type', value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dog">Dog</SelectItem>
+                  <SelectItem value="Cat">Cat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Breed */}
+            <div className="space-y-2">
+              <Label htmlFor="breed">Breed</Label>
+              <Input
+                id="breed"
+                placeholder="e.g., Golden Retriever"
+                value={formData.breed}
+                onChange={(e) => handleInputChange('breed', e.target.value)}
+              />
+            </div>
+
             {/* Age */}
             <div className="space-y-2">
               <Label htmlFor="age">Age</Label>
@@ -266,6 +331,33 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 min={1}
                 value={formData.age}
                 onChange={(e) => handleInputChange('age', Number(e.target.value))}
+              />
+            </div>
+
+            {/* Gender */}
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select
+                value={formData.gender}
+                onValueChange={(value) => handleInputChange('gender', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="color">Color</Label>
+              <Input
+                id="color"
+                placeholder="e.g., Brown/White"
+                value={formData.color}
+                onChange={(e) => handleInputChange('color', e.target.value)}
               />
             </div>
 
@@ -286,6 +378,48 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectItem value="giant">Giant</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Weight */}
+            <div className="space-y-2">
+              <Label htmlFor="weight">Weight</Label>
+              <div className="flex">
+                <Input
+                  id="weight"
+                  placeholder="e.g., 25"
+                  value={formData.weight}
+                  onChange={(e) => handleInputChange('weight', e.target.value)}
+                  className="rounded-r-none"
+                />
+                <div className="flex items-center px-3 bg-muted border border-l-0 rounded-r-md text-sm text-muted-foreground">
+                  lbs
+                </div>
+              </div>
+            </div>
+
+            {/* Birth Date */}
+            <div className="space-y-2">
+              <Label>Date of Birth</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal bg-transparent"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {birthDate ? format(birthDate, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={birthDate}
+                    onSelect={setBirthDate}
+                    disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Health Status */}
@@ -396,122 +530,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Pet Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Pet Name *</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Buddy"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Type */}
-            <div className="space-y-2">
-              <Label htmlFor="type">Type *</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) => handleInputChange('type', value)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dog">Dog</SelectItem>
-                  <SelectItem value="Cat">Cat</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Breed */}
-            <div className="space-y-2">
-              <Label htmlFor="breed">Breed</Label>
-              <Input
-                id="breed"
-                placeholder="e.g., Golden Retriever"
-                value={formData.breed}
-                onChange={(e) => handleInputChange('breed', e.target.value)}
-              />
-            </div>
-
-            {/* Gender */}
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select
-                value={formData.gender}
-                onValueChange={(value) => handleInputChange('gender', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Birth Date */}
-            <div className="space-y-2">
-              <Label>Date of Birth</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal bg-transparent"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {birthDate ? format(birthDate, 'PPP') : 'Pick a date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={birthDate}
-                    onSelect={setBirthDate}
-                    disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Weight */}
-            <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
-              <div className="flex">
-                <Input
-                  id="weight"
-                  placeholder="e.g., 25"
-                  value={formData.weight}
-                  onChange={(e) => handleInputChange('weight', e.target.value)}
-                  className="rounded-r-none"
-                />
-                <div className="flex items-center px-3 bg-muted border border-l-0 rounded-r-md text-sm text-muted-foreground">
-                  lbs
-                </div>
-              </div>
-            </div>
-
-            {/* Vaccinated */}
-            <div className="space-y-2">
-              <Label htmlFor="is_vaccinated">Vaccinated</Label>
-              <Select
-                value={formData.is_vaccinated ? 'yes' : 'no'}
-                onValueChange={(value) => handleInputChange('is_vaccinated', value === 'yes')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vaccination status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
                 </SelectContent>
               </Select>
             </div>

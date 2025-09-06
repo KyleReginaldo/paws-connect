@@ -4,6 +4,7 @@ export interface Fundraising {
   description: string | null;
   target_amount: number | null;
   raised_amount: number | null;
+  images?: string[] | null;
   status: string | null;
   created_by: string | null;
   created_at: string;

@@ -66,7 +66,22 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
     setIsSubmitting(true);
 
     try {
-      await onSubmit(formData);
+      // Client-side phone validation: ensure exactly 11 digits
+      const sanitizedPhone = formData.phone_number.replace(/\D/g, '');
+      if (sanitizedPhone.length !== 11) {
+        alert('Phone number must be exactly 11 digits');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // If creating user and no password supplied, generate a default strong password
+      const payload = { ...formData } as CreateUserDto;
+      if (!editingUser && (!payload.password || payload.password.length < 8)) {
+        const rand = Math.random().toString(36).slice(2, 8);
+        payload.password = `A@${rand}1`;
+      }
+
+      await onSubmit(payload);
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting user data:', error);
@@ -177,6 +192,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                 placeholder="Enter password"
                 required={!editingUser}
               />
+              <p className="text-xs text-muted-foreground">
+                Minimum 8 characters. Default strong password will be generated if left empty.
+              </p>
             </div>
           </div>
 

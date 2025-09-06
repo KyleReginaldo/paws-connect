@@ -5,7 +5,7 @@ import { useFundraising } from '@/app/context/FundraisingContext';
 import { FundraisingModal } from '@/components/FundraisingModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { type Fundraising, type FundraisingStatus } from '@/config/types/fundraising';
 import {
   DollarSign,
+  Download,
   Edit,
   Loader2,
   MoreHorizontal,
@@ -26,9 +28,13 @@ import {
   Target,
   Trash2,
   TrendingUp,
+  Upload,
   Users,
 } from 'lucide-react';
-import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 
 const Fundraising = () => {
   const { campaigns, stats, status, deleteCampaign, updateCampaign, addCampaign } =
@@ -38,6 +44,9 @@ const Fundraising = () => {
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Fundraising | null>(null);
+  const [activeStatus, setActiveStatus] = useState<string>('ALL');
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleDelete = async (campaignId: number) => {
     if (confirm('Are you sure you want to delete this campaign?')) {
@@ -94,13 +103,16 @@ const Fundraising = () => {
     setEditingCampaign(null);
   };
 
-  // Filter campaigns based on search query
+  // Filter campaigns based on search query and active tab status
   const filteredCampaigns =
-    campaigns?.filter(
-      (campaign) =>
+    campaigns?.filter((campaign) => {
+      if (activeStatus !== 'ALL' && campaign.status !== activeStatus) return false;
+      if (!searchQuery) return true;
+      return (
         campaign.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        campaign.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-    ) || [];
+        campaign.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }) || [];
 
   const getStatusColor = (status: string | null) => {
     switch (status) {
@@ -159,12 +171,190 @@ const Fundraising = () => {
     );
   }
 
+  const handleExport = () => {
+    if (!campaigns) return;
+    // Excel has a cell text length limit (~32767). Truncate any overly long text
+    const MAX_CELL_LENGTH = 32767;
+    const truncate = (v: unknown) => {
+      if (v == null) return '';
+      const s = typeof v === 'string' ? v : JSON.stringify(v);
+      return s.length > MAX_CELL_LENGTH ? s.slice(0, MAX_CELL_LENGTH - 4) + ' ...' : s;
+    };
+
+    // Ask server to sanitize campaigns (upload data URIs) so exports only contain URLs
+    fetch('/api/v1/fundraising/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaigns }),
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Export prep failed');
+        const payload = await r.json().catch(() => null);
+        const prepared =
+          payload && Array.isArray(payload.campaigns) ? payload.campaigns : campaigns;
+
+        const exportData = (prepared as typeof campaigns).map((c) => {
+          const createdByRaw = (c as unknown as Record<string, unknown>)['created_by'];
+          let createdBy = '';
+          if (typeof createdByRaw === 'string') createdBy = createdByRaw;
+          else if (createdByRaw && typeof createdByRaw === 'object')
+            createdBy = String((createdByRaw as Record<string, unknown>)['id'] ?? '');
+
+          const imageUrl =
+            Array.isArray(c.images) && c.images.length > 0 ? String(c.images[0]) : '';
+
+          const row: Record<string, unknown> = {
+            id: c.id,
+            title: truncate(c.title),
+            description: truncate(c.description),
+            target_amount: c.target_amount,
+            raised_amount: c.raised_amount,
+            status: c.status,
+            created_at: c.created_at,
+            created_by: createdBy,
+            images: truncate(imageUrl),
+          };
+
+          Object.keys(c).forEach((k) => {
+            if (row[k] !== undefined) return;
+            const val = (c as unknown as Record<string, unknown>)[k];
+            row[k] = truncate(val);
+          });
+
+          return row;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'fundraising');
+        XLSX.writeFile(workbook, 'fundraising.xlsx');
+      })
+      .catch(() => {
+        // fallback local export: strip data URIs and keep only first URL
+        const exportData = campaigns.map((c) => {
+          const createdByRaw = (c as unknown as Record<string, unknown>)['created_by'];
+          let createdBy = '';
+          if (typeof createdByRaw === 'string') createdBy = createdByRaw;
+          else if (createdByRaw && typeof createdByRaw === 'object')
+            createdBy = String((createdByRaw as Record<string, unknown>)['id'] ?? '');
+
+          const imageUrl =
+            Array.isArray(c.images) && c.images.length > 0 ? String(c.images[0]) : '';
+
+          const row: Record<string, unknown> = {
+            id: c.id,
+            title: truncate(c.title),
+            description: truncate(c.description),
+            target_amount: c.target_amount,
+            raised_amount: c.raised_amount,
+            status: c.status,
+            created_at: c.created_at,
+            created_by: createdBy,
+            images: truncate(imageUrl.startsWith('data:') ? '' : imageUrl),
+          };
+
+          Object.keys(c).forEach((k) => {
+            if (row[k] !== undefined) return;
+            const val = (c as unknown as Record<string, unknown>)[k];
+            row[k] = truncate(val);
+          });
+
+          return row;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'fundraising');
+        XLSX.writeFile(workbook, 'fundraising.xlsx');
+      });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+    // Normalize and map spreadsheet headers to the API shape:
+    // - convert header names to lowercase_snake_case
+    // - coerce numeric fields
+    // - set created_by to current userId when missing
+    // - normalize status to uppercase enum values
+    const normalized = rows.map((r) => {
+      const mapped: Record<string, unknown> = {};
+      // map keys
+      Object.keys(r).forEach((k) => {
+        const rawKey = String(k || '').trim();
+        const key = rawKey
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '');
+        mapped[key] = (r as Record<string, unknown>)[k];
+      });
+
+      // coerce numeric fields
+      if ('target_amount' in mapped && typeof mapped.target_amount === 'string') {
+        const v = Number(mapped.target_amount as string);
+        mapped.target_amount = Number.isNaN(v) ? undefined : v;
+      }
+      if ('raised_amount' in mapped && typeof mapped.raised_amount === 'string') {
+        const v = Number(mapped.raised_amount as string);
+        mapped.raised_amount = Number.isNaN(v) ? undefined : v;
+      }
+
+      // trim strings
+      if ('title' in mapped && mapped.title != null) mapped.title = String(mapped.title).trim();
+      if ('description' in mapped && mapped.description != null)
+        mapped.description = String(mapped.description).trim();
+
+      // normalize status
+      if ('status' in mapped && typeof mapped.status === 'string')
+        mapped.status = String(mapped.status).trim().toUpperCase();
+
+      // set created_by to current user if missing
+      if (!mapped.created_by && userId) mapped.created_by = userId;
+
+      return mapped as Record<string, unknown>;
+    });
+
+    try {
+      const res = await fetch('/api/v1/fundraising/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fundraising: normalized }),
+      });
+      const resultRaw = (await res.json().catch(() => null)) as unknown;
+      if (!res.ok) {
+        const parsed = resultRaw as { errors?: unknown; message?: string } | null;
+        alert(parsed?.message || 'Import failed. Check console for details.');
+        const details = parsed ? parsed.errors ?? parsed : 'No details';
+        console.error('Import errors:', details);
+      } else {
+        const parsed = resultRaw as { errors?: unknown[]; created?: number } | null;
+        const errorsCount = parsed && Array.isArray(parsed.errors) ? parsed.errors.length : 0;
+        alert(`Imported ${parsed?.created || 0} items. ${errorsCount} errors.`);
+        // Optionally refresh data by reloading the page
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Import failed', err);
+      alert('Import failed. See console for details.');
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Fundraising Campaigns</h1>
-        <p className="text-lg text-muted-foreground">
+        <h1 className="text-xl font-bold mb-2">Fundraising Campaigns</h1>
+        <p className="text-md text-muted-foreground">
           Manage and track all fundraising campaigns for animal welfare.
         </p>
       </div>
@@ -239,94 +429,157 @@ const Fundraising = () => {
             className="pl-10"
           />
         </div>
-        <Button className="gap-2" onClick={handleNewCampaignClick}>
-          <Plus className="h-4 w-4" />
-          New Campaign
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button className="gap-2" onClick={handleNewCampaignClick}>
+            <Plus className="h-4 w-4" />
+            New Campaign
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              className="rounded-full px-3 shadow-sm hover:shadow-md"
+              title="Export campaigns"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleImportClick}
+              className="rounded-full px-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-95 shadow-sm"
+              title="Import campaigns"
+            >
+              <Upload className="h-4 w-4" />
+              Import
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {/* Status Tabs */}
+      <Tabs defaultValue="ALL" onValueChange={(v) => setActiveStatus(v)} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="ALL">All ({campaigns?.length || 0})</TabsTrigger>
+          <TabsTrigger value="PENDING">Pending ({stats?.pending_campaigns || 0})</TabsTrigger>
+          <TabsTrigger value="ONGOING">Ongoing ({stats?.ongoing_campaigns || 0})</TabsTrigger>
+          <TabsTrigger value="COMPLETE">Complete ({stats?.completed_campaigns || 0})</TabsTrigger>
+          <TabsTrigger value="REJECTED">Rejected</TabsTrigger>
+          <TabsTrigger value="CANCELLED">Cancelled</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Campaigns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredCampaigns.map((campaign) => (
-          <Card key={campaign.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg mb-2">{campaign.title}</CardTitle>
-                  <CardDescription className="text-sm">{campaign.description}</CardDescription>
+          <Card key={campaign.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+            <Link href={`/fundraising/${campaign.id}`} className="block">
+              <div className="relative">
+                {campaign.images && campaign.images.length > 0 ? (
+                  <div className="w-full h-44 bg-gray-100 relative overflow-hidden">
+                    <Image
+                      src={String(campaign.images[0])}
+                      alt={campaign.title || 'campaign image'}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-44 bg-muted-foreground/10 flex items-center justify-center">
+                    <div className="text-muted-foreground">No image</div>
+                  </div>
+                )}
+                <div className="absolute left-4 bottom-3 bg-gradient-to-r from-black/60 to-transparent text-white rounded-md px-3 py-2">
+                  <div className="text-sm font-semibold">{campaign.title}</div>
+                  <div className="text-xs opacity-90">
+                    ₱{(campaign.raised_amount || 0).toLocaleString()} · ₱
+                    {(campaign.target_amount || 0).toLocaleString()}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="absolute right-3 top-3">
                   <Badge className={getStatusColor(campaign.status)}>
                     {getStatusLabel(campaign.status)}
                   </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" disabled={isDeleting === campaign.id}>
-                        {isDeleting === campaign.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <MoreHorizontal className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => handleEditClick(campaign)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      {campaign.status === 'PENDING' && (
-                        <DropdownMenuItem
-                          onClick={() => handleStatusChange(campaign.id, 'ONGOING')}
-                        >
-                          Approve & Start
-                        </DropdownMenuItem>
-                      )}
-                      {campaign.status === 'ONGOING' && (
-                        <DropdownMenuItem
-                          onClick={() => handleStatusChange(campaign.id, 'COMPLETE')}
-                        >
-                          Mark Complete
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleDelete(campaign.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Progress */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">
-                    ₱{(campaign.raised_amount || 0).toLocaleString()}
-                  </span>
-                  <span className="text-muted-foreground">
-                    ₱{(campaign.target_amount || 0).toLocaleString()}
-                  </span>
+            </Link>
+
+            <CardContent className="space-y-3">
+              <CardDescription className="text-sm line-clamp-3">
+                {campaign.description}
+              </CardDescription>
+              <div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <Progress
+                      value={
+                        campaign.target_amount
+                          ? ((campaign.raised_amount || 0) / campaign.target_amount) * 100
+                          : 0
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {campaign.target_amount
+                        ? Math.round(((campaign.raised_amount || 0) / campaign.target_amount) * 100)
+                        : 0}
+                      % of goal reached
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" disabled={isDeleting === campaign.id}>
+                          {isDeleting === campaign.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MoreHorizontal className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => handleEditClick(campaign)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        {campaign.status === 'PENDING' && (
+                          <DropdownMenuItem
+                            onClick={() => handleStatusChange(campaign.id, 'ONGOING')}
+                          >
+                            Approve & Start
+                          </DropdownMenuItem>
+                        )}
+                        {campaign.status === 'ONGOING' && (
+                          <DropdownMenuItem
+                            onClick={() => handleStatusChange(campaign.id, 'COMPLETE')}
+                          >
+                            Mark Complete
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDelete(campaign.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-                <Progress
-                  value={
-                    campaign.target_amount
-                      ? ((campaign.raised_amount || 0) / campaign.target_amount) * 100
-                      : 0
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  {campaign.target_amount
-                    ? Math.round(((campaign.raised_amount || 0) / campaign.target_amount) * 100)
-                    : 0}
-                  % of goal reached
-                </p>
               </div>
 
-              {/* Footer */}
               <div className="pt-2 border-t">
                 <p className="text-xs text-muted-foreground">
                   Created {new Date(campaign.created_at).toLocaleDateString()}

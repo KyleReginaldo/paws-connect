@@ -89,6 +89,34 @@ export function FundraisingProvider({ children }: FundraisingProviderProps) {
     }
   };
 
+  // Helper to extract an error message from unknown response bodies
+  const extractErrorMessage = (errorData: unknown, fallback = 'An error occurred'): string => {
+    if (!errorData) return fallback;
+    if (typeof errorData === 'string') return errorData;
+    if (typeof errorData === 'object') {
+      const obj = errorData as Record<string, unknown>;
+      if (typeof obj.message === 'string') return obj.message;
+      if (typeof obj.error === 'string') return obj.error;
+      if (Array.isArray(obj.issues)) {
+        try {
+          return obj.issues
+            .map((i: unknown) => {
+              if (typeof i === 'string') return i;
+              const ii = i as Record<string, unknown>;
+              const field = ii.field ?? ii.path ?? '';
+              const message = ii.message ?? '';
+              return `${field}: ${message}`;
+            })
+            .join('; ');
+        } catch {
+          return fallback;
+        }
+      }
+      return JSON.stringify(obj);
+    }
+    return fallback;
+  };
+
   const addCampaign = async (
     campaignData: CreateFundraisingDto,
   ): Promise<{
@@ -97,19 +125,47 @@ export function FundraisingProvider({ children }: FundraisingProviderProps) {
     error?: string;
   }> => {
     try {
+      // Sanitize numeric fields that may be strings from the UI
+      const payload = { ...campaignData } as Record<string, unknown>;
+      if ('target_amount' in payload) {
+        const val = payload['target_amount'];
+        if (typeof val === 'string' && val !== '') {
+          const n = Number(val);
+          if (!Number.isNaN(n)) payload['target_amount'] = n;
+          else delete payload['target_amount'];
+        }
+      }
+
+      if ('raised_amount' in payload) {
+        const val = payload['raised_amount'];
+        if (typeof val === 'string' && val !== '') {
+          const n = Number(val);
+          if (!Number.isNaN(n)) payload['raised_amount'] = n;
+          else delete payload['raised_amount'];
+        }
+      }
+
       const response = await fetch('/api/v1/fundraising', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(campaignData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData: unknown = { message: 'Failed to create campaign' };
+        try {
+          errorData = await response.json();
+        } catch (err) {
+          console.error('Failed to parse error response for addCampaign:', err);
+        }
+
+        const errMessage = extractErrorMessage(errorData, 'Failed to create campaign');
+
         return {
           success: false,
-          error: errorData.message || 'Failed to create campaign',
+          error: errMessage,
         };
       }
 
@@ -146,19 +202,47 @@ export function FundraisingProvider({ children }: FundraisingProviderProps) {
     error?: string;
   }> => {
     try {
+      // Sanitize numeric fields that may be strings from the UI
+      const payload = { ...campaignData } as Record<string, unknown>;
+      if ('target_amount' in payload) {
+        const val = payload['target_amount'];
+        if (typeof val === 'string' && val !== '') {
+          const n = Number(val);
+          if (!Number.isNaN(n)) payload['target_amount'] = n;
+          else delete payload['target_amount'];
+        }
+      }
+
+      if ('raised_amount' in payload) {
+        const val = payload['raised_amount'];
+        if (typeof val === 'string' && val !== '') {
+          const n = Number(val);
+          if (!Number.isNaN(n)) payload['raised_amount'] = n;
+          else delete payload['raised_amount'];
+        }
+      }
+
       const response = await fetch(`/api/v1/fundraising/${campaignId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(campaignData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData: unknown = { message: 'Failed to update campaign' };
+        try {
+          errorData = await response.json();
+        } catch (err) {
+          console.error('Failed to parse error response for updateCampaign:', err);
+        }
+
+        const errMessage = extractErrorMessage(errorData, 'Failed to update campaign');
+
         return {
           success: false,
-          error: errorData.message || 'Failed to update campaign',
+          error: errMessage,
         };
       }
 
@@ -200,10 +284,18 @@ export function FundraisingProvider({ children }: FundraisingProviderProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData: unknown = { message: 'Failed to delete campaign' };
+        try {
+          errorData = await response.json();
+        } catch (err) {
+          console.error('Failed to parse error response for deleteCampaign:', err);
+        }
+
+        const errMessage = extractErrorMessage(errorData, 'Failed to delete campaign');
+
         return {
           success: false,
-          error: errorData.message || 'Failed to delete campaign',
+          error: errMessage,
         };
       }
 
