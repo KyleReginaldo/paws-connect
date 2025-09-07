@@ -96,6 +96,25 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('User already has addresses, keeping provided is_default value or false');
             // If not explicitly set to true, ensure it's false when user has other addresses
+            // Prevent creating a second default address: check if a default already exists
+            try {
+              const { data: existingDefault, error: defErr } = await supabase
+                .from('address')
+                .select('id')
+                .eq('users', row.users)
+                .eq('is_default', true)
+                .limit(1);
+              if (defErr) console.warn('Error checking existing default address:', defErr.message);
+              const defaultExists = Array.isArray(existingDefault) && existingDefault.length > 0;
+              if (defaultExists && row.is_default === true) {
+                return new Response(
+                  JSON.stringify({ error: 'User already has a default address' }),
+                  { status: 400, headers: { 'Content-Type': 'application/json' } },
+                );
+              }
+            } catch (innerErr) {
+              console.warn('Failed to check existing default address:', innerErr);
+            }
             if (row.is_default !== true) {
               row.is_default = false;
             }
