@@ -52,6 +52,7 @@ export function FundraisingModal({
   });
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,6 +91,12 @@ export function FundraisingModal({
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+
+    if (isUploading) {
+      setError('Please wait for image uploads to finish before submitting.');
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       // Validate required fields before submission
@@ -149,8 +156,8 @@ export function FundraisingModal({
 
   const handleImageFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-
     setError(null); // Clear any previous errors
+    setIsUploading(true);
     const uploadedUrls: string[] = [];
     const localPreviews: string[] = [];
 
@@ -199,6 +206,7 @@ export function FundraisingModal({
       images: [...(prev.images || []), ...uploadedUrls],
     }));
     setImagePreviews((prev) => [...prev, ...localPreviews]);
+    setIsUploading(false);
   };
 
   return (
@@ -256,7 +264,14 @@ export function FundraisingModal({
             </div>
 
             <div className="space-y-2">
-              <Label>Images (optional)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Images (optional)</Label>
+                {isUploading && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
+                  </div>
+                )}
+              </div>
               <input
                 type="file"
                 accept="image/*"
@@ -319,7 +334,7 @@ export function FundraisingModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
             >
               Cancel
             </Button>
