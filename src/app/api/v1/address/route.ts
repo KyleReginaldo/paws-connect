@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
         street: z.string().nullable().optional(),
         users: z.string().nullable().optional(),
         zip_code: z.string().nullable().optional(),
+        latitude: z.number().nullable().optional(),
+        longitude: z.number().nullable().optional(),
       })
       .strict();
 
