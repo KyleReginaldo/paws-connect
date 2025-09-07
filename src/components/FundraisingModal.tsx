@@ -338,11 +338,17 @@ export function FundraisingModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button type="submit" disabled={isSubmitting || isUploading}>
+              {isSubmitting || isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {editingCampaign ? 'Updating...' : 'Creating...'}
+                  {isUploading
+                    ? editingCampaign
+                      ? 'Uploading...'
+                      : 'Uploading...'
+                    : editingCampaign
+                    ? 'Updating...'
+                    : 'Creating...'}
                 </>
               ) : editingCampaign ? (
                 'Update Campaign'
