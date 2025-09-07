@@ -73,10 +73,73 @@ export async function POST(request: NextRequest) {
 
     const row = { ...parsed.data };
 
+    // Auto-set first address as default: check if user has any existing addresses
+    let isFirstForUser = false;
+    if (row.users && row.users.trim()) {
+      console.log(`Checking existing addresses for user: ${row.users}`);
+      try {
+        const { count, error: countErr } = await supabase
+          .from('address')
+          .select('*', { count: 'exact', head: true })
+          .eq('users', row.users);
+
+        if (countErr) {
+          console.warn('Error checking existing addresses:', countErr.message);
+        } else {
+          const hasExisting = count && count > 0;
+          console.log(`User ${row.users} has ${count || 0} existing addresses`);
+
+          if (!hasExisting) {
+            console.log('This is the first address for user, setting is_default to true');
+            row.is_default = true;
+            isFirstForUser = true;
+          } else {
+            console.log('User already has addresses, keeping provided is_default value or false');
+            // If not explicitly set to true, ensure it's false when user has other addresses
+            if (row.is_default !== true) {
+              row.is_default = false;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to check existing addresses, proceeding with provided payload', e);
+      }
+    } else {
+      console.log('No user ID provided, skipping auto-default logic');
+    }
+
+    console.log('Address insert row (pre-insert):', row);
+
     const { data, error } = await supabase.from('address').insert(row).select().single();
+
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
-    return new Response(JSON.stringify({ data }), {
+    let finalData = data;
+
+    // If we expected this to be the first address but the inserted row does not have is_default=true,
+    // enforce it explicitly (covering cases where DB defaults/constraints may override the provided value).
+    if (isFirstForUser && data && data.is_default !== true) {
+      try {
+        const { data: updated, error: updErr } = await supabase
+          .from('address')
+          .update({ is_default: true })
+          .eq('id', data.id)
+          .select()
+          .single();
+        if (updErr) {
+          console.warn('Failed to force-default address after insert:', updErr.message);
+        } else {
+          console.log('Enforced is_default on inserted address:', updated);
+          finalData = updated; // Use the updated data with is_default: true
+        }
+      } catch (uErr) {
+        console.warn('Error enforcing is_default after insert:', uErr);
+      }
+    }
+
+    console.log('Final address data being returned:', finalData);
+
+    return new Response(JSON.stringify({ data: finalData }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
