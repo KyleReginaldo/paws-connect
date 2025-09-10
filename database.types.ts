@@ -421,6 +421,7 @@ export type Database = {
           email: string | null
           house_images: string[] | null
           id: string
+          payment_method: string | null
           paymongo_id: string | null
           phone_number: string
           role: number
@@ -432,6 +433,7 @@ export type Database = {
           email?: string | null
           house_images?: string[] | null
           id: string
+          payment_method?: string | null
           paymongo_id?: string | null
           phone_number: string
           role: number
@@ -443,6 +445,7 @@ export type Database = {
           email?: string | null
           house_images?: string[] | null
           id?: string
+          payment_method?: string | null
           paymongo_id?: string | null
           phone_number?: string
           role?: number
