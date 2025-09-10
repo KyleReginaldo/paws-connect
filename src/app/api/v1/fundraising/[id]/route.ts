@@ -17,7 +17,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .select(
         `
         *,
-        created_by_user:users!created_by(username, email)
+        created_by_user:users!created_by(username, email),
+        donations(
+          id,
+          amount,
+          message,
+          donated_at,
+          donor:users(id, username, email)
+        )
       `,
       )
       .eq('id', fundraisingId)
