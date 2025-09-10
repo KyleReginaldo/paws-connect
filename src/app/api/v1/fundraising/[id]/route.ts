@@ -28,6 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       `,
       )
       .eq('id', fundraisingId)
+      .order('donated_at', { ascending: false, referencedTable: 'donations' })
       .single();
 
     if (error) {
