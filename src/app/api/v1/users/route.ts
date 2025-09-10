@@ -68,8 +68,9 @@ export async function POST(request: NextRequest) {
       phone_number: string;
       role: number;
     };
-    let { password, phone_number } = parsed;
     const { email, username, role } = parsed;
+    const phone_number = parsed.phone_number;
+    let password = parsed.password;
 
     // Additional validation after sanitization
 

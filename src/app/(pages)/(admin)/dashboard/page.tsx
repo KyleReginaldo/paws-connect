@@ -47,48 +47,6 @@ const Page = () => {
   const [adoptionsError, setAdoptionsError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // Analytics state
-  const [analytics, setAnalytics] = useState<{
-    series: Array<{ date: string; donations: number; adoptions: number; users: number }>;
-    totals: Record<string, number>;
-  } | null>(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
-  const [chartType, setChartType] = useState<'area' | 'bar' | 'line'>('area');
-
-  // Formatters for charts
-  const formatDateTick = (v: string) => {
-    try {
-      const d = new Date(v);
-      return `${d.getMonth() + 1}/${d.getDate()}`; // M/D
-    } catch {
-      return v;
-    }
-  };
-
-  const abbrev = (num: number) => {
-    if (Math.abs(num) >= 1_000_000) return `${Math.round(num / 1_000_000)}M`;
-    if (Math.abs(num) >= 1_000) return `${Math.round(num / 1_000)}k`;
-    return String(num);
-  };
-
-  const tooltipFormatter = (value: any, name?: string) => {
-    if (name && name.toLowerCase().includes('donat')) {
-      const n = Number(value || 0);
-      return [`₱${n.toLocaleString()}`, name];
-    }
-    if (typeof value === 'number') return [abbrev(value), name];
-    return [value, name];
-  };
-
-  const labelFormatter = (label: string) => {
-    try {
-      const d = new Date(label);
-      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    } catch {
-      return label;
-    }
-  };
   useEffect(() => {
     let mounted = true;
     const fetchAdoptions = async () => {
@@ -137,81 +95,6 @@ const Page = () => {
       mounted = false;
     };
   }, [dateRange]);
-
-  // Analytics effect: try endpoint, otherwise build from adoptions + users
-  useEffect(() => {
-    let mounted = true;
-    const fetchAnalytics = async () => {
-      setAnalyticsLoading(true);
-      try {
-        const resp = await fetch('/api/v1/analytics/overview?days=30');
-        if (resp.ok) {
-          const json = await resp.json();
-          if (!mounted) return;
-          setAnalytics(json.data);
-          return;
-        }
-
-        const days = 30;
-        const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-
-        const [adoptResponse, usersResponse] = await Promise.all([
-          fetch(`/api/v1/adoption?since=${encodeURIComponent(since)}`),
-          fetch('/api/v1/users'),
-        ]);
-
-        const adoptJson = adoptResponse.ok ? await adoptResponse.json() : { data: [] };
-        const usersJson = usersResponse.ok ? await usersResponse.json() : { data: [] };
-
-        const donationsTotal = fundraisingStats?.total_raised || 0;
-
-        const adoptionsArr = Array.isArray(adoptJson.data) ? adoptJson.data : [];
-        const allUsersArr = Array.isArray(usersJson.data) ? usersJson.data : [];
-
-        const buckets: Record<
-          string,
-          { date: string; donations: number; adoptions: number; users: number }
-        > = {};
-        for (let i = 0; i < days; i++) {
-          const d = new Date(Date.now() - (days - 1 - i) * 24 * 60 * 60 * 1000);
-          const key = d.toISOString().slice(0, 10);
-          buckets[key] = { date: key, donations: 0, adoptions: 0, users: 0 };
-        }
-
-        adoptionsArr.forEach((row: any) => {
-          const key = String(row.created_at || row.createdAt || '').slice(0, 10);
-          if (!key || !buckets[key]) return;
-          buckets[key].adoptions += 1;
-        });
-
-        allUsersArr.forEach((row: any) => {
-          const key = String(row.created_at || row.createdAt || '').slice(0, 10);
-          if (!key || !buckets[key]) return;
-          buckets[key].users += 1;
-        });
-
-        const series = Object.values(buckets);
-        const totals = {
-          totalDonations: donationsTotal,
-          totalAdoptions: series.reduce((s, r) => s + (r.adoptions || 0), 0),
-          totalUsers: series.reduce((s, r) => s + (r.users || 0), 0),
-        };
-
-        if (!mounted) return;
-        setAnalytics({ series, totals });
-      } catch (err: unknown) {
-        console.error('Analytics fetch error', err);
-        const msg = err instanceof Error ? err.message : String(err);
-        setAnalyticsError(msg || 'Failed to load analytics');
-      } finally {
-        setAnalyticsLoading(false);
-      }
-    };
-    fetchAnalytics();
-    return () => {
-      mounted = false;
-    };
-  }, [fundraisingStats]);
 
   // Build stats using available contexts
   const stats = [
@@ -300,7 +183,7 @@ const Page = () => {
             time: string;
           }> = [];
 
-          donations.forEach((d: any, idx: number) => {
+          donations.forEach((d: Record<string, unknown>, idx: number) => {
             out.push({
               id: `don_${idx}_${d.created_at}`,
               type: 'donation',
@@ -308,27 +191,27 @@ const Page = () => {
               subtitle: `₱${Number(d.amount || 0).toLocaleString()}${
                 d.message ? ` — ${d.message}` : ''
               }`,
-              time: d.created_at || new Date().toISOString(),
+              time: String(d.created_at || new Date().toISOString()),
             });
           });
 
-          adoptions.slice(0, 5).forEach((a: any, idx: number) => {
+          adoptions.slice(0, 5).forEach((a: Record<string, unknown>, idx: number) => {
             out.push({
               id: `adopt_${idx}_${a.created_at}`,
               type: 'adoption',
               title: a.status === 'completed' ? 'Adoption completed' : 'Adoption application',
-              subtitle: a.pet_name || a.pet || 'Unknown',
-              time: a.created_at || new Date().toISOString(),
+              subtitle: String(a.pet_name || a.pet || 'Unknown'),
+              time: String(a.created_at || new Date().toISOString()),
             });
           });
 
-          newUsers.slice(0, 5).forEach((u: any, idx: number) => {
+          newUsers.slice(0, 5).forEach((u: Record<string, unknown>, idx: number) => {
             out.push({
               id: `user_${idx}_${u.created_at}`,
               type: 'user',
               title: 'New user registered',
-              subtitle: u.username || u.email || 'New user',
-              time: u.created_at || new Date().toISOString(),
+              subtitle: String(u.username || u.email || 'New user'),
+              time: String(u.created_at || new Date().toISOString()),
             });
           });
 
