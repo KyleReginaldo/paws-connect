@@ -22,8 +22,10 @@ import {
   Users,
 } from 'lucide-react';
 import Image from 'next/image';
+import router from 'next/router';
 import { useEffect, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+// Charts
 
 const Page = () => {
   const { pets } = usePets();
@@ -45,7 +47,48 @@ const Page = () => {
   const [adoptionsError, setAdoptionsError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Analytics state
+  const [analytics, setAnalytics] = useState<{
+    series: Array<{ date: string; donations: number; adoptions: number; users: number }>;
+    totals: Record<string, number>;
+  } | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [chartType, setChartType] = useState<'area' | 'bar' | 'line'>('area');
 
+  // Formatters for charts
+  const formatDateTick = (v: string) => {
+    try {
+      const d = new Date(v);
+      return `${d.getMonth() + 1}/${d.getDate()}`; // M/D
+    } catch {
+      return v;
+    }
+  };
+
+  const abbrev = (num: number) => {
+    if (Math.abs(num) >= 1_000_000) return `${Math.round(num / 1_000_000)}M`;
+    if (Math.abs(num) >= 1_000) return `${Math.round(num / 1_000)}k`;
+    return String(num);
+  };
+
+  const tooltipFormatter = (value: any, name?: string) => {
+    if (name && name.toLowerCase().includes('donat')) {
+      const n = Number(value || 0);
+      return [`₱${n.toLocaleString()}`, name];
+    }
+    if (typeof value === 'number') return [abbrev(value), name];
+    return [value, name];
+  };
+
+  const labelFormatter = (label: string) => {
+    try {
+      const d = new Date(label);
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch {
+      return label;
+    }
+  };
   useEffect(() => {
     let mounted = true;
     const fetchAdoptions = async () => {
@@ -57,11 +100,10 @@ const Page = () => {
         if (dateRange?.to) params.to = new Date(dateRange.to).toISOString();
         const url = new URL('/api/v1/adoption', window.location.origin);
         Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('Failed to fetch adoptions');
-        const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error('Failed to fetch adoptions');
+        const json = (await response.json()) as { data?: Array<Record<string, unknown>> };
         if (!mounted) return;
-        // Take the most recent 5
         const data = Array.isArray(json.data) ? json.data.slice(0, 5) : [];
         const parsed = data.map((d: Record<string, unknown>) => {
           const id = (d['id'] as number) ?? String(Math.random()).slice(2, 8);
@@ -95,6 +137,81 @@ const Page = () => {
       mounted = false;
     };
   }, [dateRange]);
+
+  // Analytics effect: try endpoint, otherwise build from adoptions + users
+  useEffect(() => {
+    let mounted = true;
+    const fetchAnalytics = async () => {
+      setAnalyticsLoading(true);
+      try {
+        const resp = await fetch('/api/v1/analytics/overview?days=30');
+        if (resp.ok) {
+          const json = await resp.json();
+          if (!mounted) return;
+          setAnalytics(json.data);
+          return;
+        }
+
+        const days = 30;
+        const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+        const [adoptResponse, usersResponse] = await Promise.all([
+          fetch(`/api/v1/adoption?since=${encodeURIComponent(since)}`),
+          fetch('/api/v1/users'),
+        ]);
+
+        const adoptJson = adoptResponse.ok ? await adoptResponse.json() : { data: [] };
+        const usersJson = usersResponse.ok ? await usersResponse.json() : { data: [] };
+
+        const donationsTotal = fundraisingStats?.total_raised || 0;
+
+        const adoptionsArr = Array.isArray(adoptJson.data) ? adoptJson.data : [];
+        const allUsersArr = Array.isArray(usersJson.data) ? usersJson.data : [];
+
+        const buckets: Record<
+          string,
+          { date: string; donations: number; adoptions: number; users: number }
+        > = {};
+        for (let i = 0; i < days; i++) {
+          const d = new Date(Date.now() - (days - 1 - i) * 24 * 60 * 60 * 1000);
+          const key = d.toISOString().slice(0, 10);
+          buckets[key] = { date: key, donations: 0, adoptions: 0, users: 0 };
+        }
+
+        adoptionsArr.forEach((row: any) => {
+          const key = String(row.created_at || row.createdAt || '').slice(0, 10);
+          if (!key || !buckets[key]) return;
+          buckets[key].adoptions += 1;
+        });
+
+        allUsersArr.forEach((row: any) => {
+          const key = String(row.created_at || row.createdAt || '').slice(0, 10);
+          if (!key || !buckets[key]) return;
+          buckets[key].users += 1;
+        });
+
+        const series = Object.values(buckets);
+        const totals = {
+          totalDonations: donationsTotal,
+          totalAdoptions: series.reduce((s, r) => s + (r.adoptions || 0), 0),
+          totalUsers: series.reduce((s, r) => s + (r.users || 0), 0),
+        };
+
+        if (!mounted) return;
+        setAnalytics({ series, totals });
+      } catch (err: unknown) {
+        console.error('Analytics fetch error', err);
+        const msg = err instanceof Error ? err.message : String(err);
+        setAnalyticsError(msg || 'Failed to load analytics');
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+    fetchAnalytics();
+    return () => {
+      mounted = false;
+    };
+  }, [fundraisingStats]);
 
   // Build stats using available contexts
   const stats = [
@@ -142,6 +259,131 @@ const Page = () => {
       daysLeft: 0,
       supporters: 0,
     })) || [];
+
+  // Local RecentActivity component
+  function RecentActivity() {
+    const [items, setItems] = useState<
+      Array<{
+        id: string;
+        type: 'user' | 'adoption' | 'donation';
+        title: string;
+        subtitle?: string;
+        time: string;
+      }>
+    >([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      let mounted = true;
+      const fetchItems = async () => {
+        try {
+          setLoading(true);
+          const [donRes, adoptRes, usersRes] = await Promise.all([
+            fetch('/api/v1/donations?limit=5'),
+            fetch('/api/v1/adoption'),
+            fetch('/api/v1/users'),
+          ]);
+
+          const donJson = donRes.ok ? await donRes.json() : { data: [] };
+          const adoptJson = adoptRes.ok ? await adoptRes.json() : { data: [] };
+          const usersJson = usersRes.ok ? await usersRes.json() : { data: [] };
+
+          const donations = Array.isArray(donJson.data) ? donJson.data : [];
+          const adoptions = Array.isArray(adoptJson.data) ? adoptJson.data : [];
+          const newUsers = Array.isArray(usersJson.data) ? usersJson.data : [];
+
+          const out: Array<{
+            id: string;
+            type: 'user' | 'adoption' | 'donation';
+            title: string;
+            subtitle?: string;
+            time: string;
+          }> = [];
+
+          donations.forEach((d: any, idx: number) => {
+            out.push({
+              id: `don_${idx}_${d.created_at}`,
+              type: 'donation',
+              title: 'New donation received',
+              subtitle: `₱${Number(d.amount || 0).toLocaleString()}${
+                d.message ? ` — ${d.message}` : ''
+              }`,
+              time: d.created_at || new Date().toISOString(),
+            });
+          });
+
+          adoptions.slice(0, 5).forEach((a: any, idx: number) => {
+            out.push({
+              id: `adopt_${idx}_${a.created_at}`,
+              type: 'adoption',
+              title: a.status === 'completed' ? 'Adoption completed' : 'Adoption application',
+              subtitle: a.pet_name || a.pet || 'Unknown',
+              time: a.created_at || new Date().toISOString(),
+            });
+          });
+
+          newUsers.slice(0, 5).forEach((u: any, idx: number) => {
+            out.push({
+              id: `user_${idx}_${u.created_at}`,
+              type: 'user',
+              title: 'New user registered',
+              subtitle: u.username || u.email || 'New user',
+              time: u.created_at || new Date().toISOString(),
+            });
+          });
+
+          // Sort by time desc
+          out.sort((a, b) => (a.time < b.time ? 1 : -1));
+
+          if (!mounted) return;
+          setItems(out.slice(0, 6));
+        } catch (err) {
+          console.error('Failed to fetch recent activity', err);
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      };
+      fetchItems();
+      return () => {
+        mounted = false;
+      };
+    }, []);
+
+    if (loading) return <div className="text-sm text-muted-foreground">Loading activity…</div>;
+    if (!items.length)
+      return <div className="text-sm text-muted-foreground">No recent activity found.</div>;
+
+    return (
+      <div className="space-y-3">
+        {items.map((it) => (
+          <div key={it.id} className="flex items-start space-x-4">
+            <div
+              className={`p-2 rounded-full ${
+                it.type === 'user'
+                  ? 'bg-blue-100'
+                  : it.type === 'adoption'
+                  ? 'bg-green-100'
+                  : 'bg-orange-100'
+              }`}
+            >
+              {it.type === 'user' ? (
+                <Users className="h-4 w-4 text-blue-600" />
+              ) : it.type === 'adoption' ? (
+                <Heart className="h-4 w-4 text-green-600" />
+              ) : (
+                <DollarSign className="h-4 w-4 text-orange-600" />
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{it.title}</p>
+              {it.subtitle && <p className="text-xs text-muted-foreground">{it.subtitle}</p>}
+              <p className="text-xs text-muted-foreground">{new Date(it.time).toLocaleString()}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-8 p-8 pt-6">
@@ -307,36 +549,7 @@ const Page = () => {
             <CardDescription>Latest updates from your organization</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-start space-x-4">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <Users className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">New volunteer registered</p>
-                <p className="text-xs text-muted-foreground">Maria Santos joined as a volunteer</p>
-                <p className="text-xs text-muted-foreground">2 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="bg-green-100 p-2 rounded-full">
-                <Heart className="h-4 w-4 text-green-600" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Adoption completed</p>
-                <p className="text-xs text-muted-foreground">Buddy found a new home</p>
-                <p className="text-xs text-muted-foreground">1 hour ago</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="bg-orange-100 p-2 rounded-full">
-                <DollarSign className="h-4 w-4 text-orange-600" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">New donation received</p>
-                <p className="text-xs text-muted-foreground">₱5,000 for medical fund</p>
-                <p className="text-xs text-muted-foreground">3 hours ago</p>
-              </div>
-            </div>
+            <RecentActivity />
           </CardContent>
         </Card>
       </div>
@@ -378,7 +591,13 @@ const Page = () => {
             ))}
           </div>
           <div className="mt-4">
-            <Button variant="outline" className="w-full">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                router.push('/admin/donations');
+              }}
+            >
               <ArrowUpRight className="mr-2 h-4 w-4" />
               View All Campaigns
             </Button>

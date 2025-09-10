@@ -25,8 +25,8 @@ export default function RootLayout({
   const { signOut } = useAuth();
 
   return (
-    <div className="flex h-screen bg-[#EEEEEE]">
-      <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-white">
+    <div className="flex h-screen bg-[#FFFCFB]">
+      <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-[#333446]">
         <div>
           <h1 className="p-[10px] font-semibold text-[#FE5D26] mb-[8px] self-center text-[18px]">
             Admin

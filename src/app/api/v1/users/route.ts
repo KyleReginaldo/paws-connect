@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Sanitize phone number before validation
+    if (body.phone_number) {
+      body.phone_number = String(body.phone_number).replace(/\D/g, '');
+    }
+
     const result = createUserSchema.safeParse(body);
     if (!result.success) {
       return new Response(
@@ -66,11 +71,8 @@ export async function POST(request: NextRequest) {
     let { password, phone_number } = parsed;
     const { email, username, role } = parsed;
 
-    // sanitize phone: remove non-digits
-    phone_number = String(phone_number).replace(/\D/g, '');
-    if (phone_number.length !== 11) {
-      return new Response(JSON.stringify({ error: 'Invalid phone number' }), { status: 400 });
-    }
+    // Additional validation after sanitization
+
 
     // If no password provided or too weak/short, generate a default strong password
     if (!password || String(password).length < 8) {
@@ -100,14 +102,53 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Make external API call to create customer
+    let externalCustomerId: string | null = null;
+    try {
+      const externalApiResponse = await fetch('https://api.paymongo.com/v1/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic c2tfdGVzdF9rU2tHREtnNDNMSkpFWWJlOTNHR2N6aEw6', // Replace with actual auth header
+          // Add other required headers here
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              first_name: username, // Using username as first_name for now
+              last_name: 'NA', // You can modify this later
+              phone: `+${phone_number}`,
+              email: email,
+              default_device: 'phone'
+            }
+          }
+        }),
+      });
+
+      if (!externalApiResponse.ok) {
+        console.error('External API call failed:', await externalApiResponse.text());
+        // Continue with user creation even if external API fails
+      } else {
+        const externalApiData = await externalApiResponse.json();
+        if (externalApiData?.data?.id) {
+          externalCustomerId = externalApiData.data.id;
+          console.log('External customer created with ID:', externalCustomerId);
+        }
+      }
+    } catch (externalApiError) {
+      console.error('Error calling external API:', externalApiError);
+      // Continue with user creation even if external API fails
+    }
+
     const { data: user, error: userError } = await supabase
       .from('users')
       .insert({
         id: data.user.id,
         username,
         email,
-        phone_number,
+        phone_number: `+${phone_number}`,
         role,
+        paymongo_id: externalCustomerId, // Store the external ID
       })
       .select()
       .single();

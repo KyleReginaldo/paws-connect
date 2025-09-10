@@ -16,7 +16,7 @@ const SideBarTile = (props: Props) => {
     <li
       className={`cursor-pointer flex items-center gap-[8px] w-[180px] hover:bg-[#FE5D26] p-[8px] hover:text-white mx-[10px] rounded-[8px] ${
         isActive ? 'bg-[#FE5D26]' : null
-      } ${isActive ? 'text-white' : null}`}
+      } text-white`}
       onClick={onButtonClick}
     >
       <Icon className="w-5 h-5" />

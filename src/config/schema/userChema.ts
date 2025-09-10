@@ -6,7 +6,7 @@ export const createUserSchema = z.object({
   email: z.email(),
   status: z.string().optional(),
   role: z.number(),
-  phone_number: z.string().regex(/^\d{11}$/, 'Phone number must be exactly 11 digits'),
+  phone_number: z.string(),
   password: z.string().optional(),
 });
 

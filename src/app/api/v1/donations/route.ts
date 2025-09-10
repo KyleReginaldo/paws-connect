@@ -99,3 +99,31 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const limit = parseInt(searchParams.get('limit') || '5', 10);
+    const { data, error } = await supabase
+      .from('donations')
+      .select('amount, donor, message, created_at, fundraising')
+      .order('created_at', { ascending: false })
+      .limit(isNaN(limit) ? 5 : limit);
+
+    if (error) {
+      console.error('Failed to fetch donations:', error.message);
+      return new Response(JSON.stringify({ error: 'Failed to fetch donations' }), { status: 500 });
+    }
+
+    return new Response(JSON.stringify({ message: 'Success', data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('Donations GET error', err);
+    return new Response(
+      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
+      { status: 500 },
+    );
+  }
+}
