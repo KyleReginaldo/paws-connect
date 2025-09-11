@@ -1,0 +1,52 @@
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DownloadCloud } from 'lucide-react';
+import Link from 'next/link';
+
+export default function AppDownloadPage() {
+  return (
+    <html>
+      <body>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-4">
+          <Card className="max-w-2xl w-full shadow-2xl">
+            <CardContent className="p-8 text-center space-y-6">
+              {/* Icon / Logo */}
+              <div className="flex justify-center">
+                <DownloadCloud className="h-16 w-16 text-purple-500 animate-bounce" />
+              </div>
+
+              {/* Title & Subtitle */}
+              <div className="space-y-4">
+                <h1 className="text-3xl font-bold text-gray-800">Get Paws Connect</h1>
+                <p className="text-gray-600 text-lg">
+                  Access the full Paws Connect experience on your mobile device. Track donations,
+                  adopt pets, and stay connected with the community anytime, anywhere.
+                </p>
+              </div>
+
+              {/* Download Button */}
+              <div className="flex justify-center pt-4">
+                <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700">
+                  <Link
+                    href="https://drive.google.com/drive/folders/1ut3xeCHur6U1067Q8eV4WAzypl3MeBic?usp=sharing"
+                    target="_blank"
+                  >
+                    <DownloadCloud className="mr-2 h-5 w-5" />
+                    Download the App
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Footer / Note */}
+              <div className="pt-6 border-t">
+                <p className="text-sm text-gray-500">Available on Android. Free to download.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </body>
+    </html>
+  );
+}
