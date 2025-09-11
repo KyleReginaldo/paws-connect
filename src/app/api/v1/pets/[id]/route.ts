@@ -58,6 +58,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
     rescue_address,
     description,
     special_needs,
+    request_status,
     photo,
   } = result.data;
   const { data: updatedPet, error } = await supabase
@@ -79,6 +80,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
       rescue_address,
       description,
       special_needs,
+      request_status,
       photo,
     })
     .eq('id', id)

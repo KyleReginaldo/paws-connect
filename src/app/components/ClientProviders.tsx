@@ -1,5 +1,7 @@
 'use client';
 
+import { ConfirmationProvider } from '@/components/ui/confirmation';
+import { NotificationProvider } from '@/components/ui/notification';
 import { AuthProvider } from '../context/AuthContext';
 import { FundraisingProvider } from '../context/FundraisingContext';
 import { PetsProvider } from '../context/PetsContext';
@@ -11,12 +13,16 @@ interface ClientProvidersProps {
 
 export default function ClientProviders({ children }: ClientProvidersProps) {
   return (
-    <AuthProvider>
-      <PetsProvider>
-        <UsersProvider>
-          <FundraisingProvider>{children}</FundraisingProvider>
-        </UsersProvider>
-      </PetsProvider>
-    </AuthProvider>
+    <NotificationProvider>
+      <ConfirmationProvider>
+        <AuthProvider>
+          <PetsProvider>
+            <UsersProvider>
+              <FundraisingProvider>{children}</FundraisingProvider>
+            </UsersProvider>
+          </PetsProvider>
+        </AuthProvider>
+      </ConfirmationProvider>
+    </NotificationProvider>
   );
 }

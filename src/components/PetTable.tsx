@@ -1,5 +1,6 @@
 'use client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -31,6 +32,19 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
     console.log('First pet data:', pets);
   }
 
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return 'default'; // green
+      case 'pending':
+        return 'secondary'; // yellow/orange
+      case 'rejected':
+        return 'destructive'; // red
+      default:
+        return 'outline'; // gray
+    }
+  };
+
   if (pets.length === 0) {
     return (
       <div className="text-center py-12">
@@ -53,6 +67,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
             <TableHead>Age</TableHead>
             <TableHead>Size</TableHead>
             <TableHead>Weight</TableHead>
+            <TableHead>Request Status</TableHead>
             <TableHead>Vaccination status</TableHead>
             <TableHead>Spayed/Neutered</TableHead>
             <TableHead>Health status</TableHead>
@@ -86,6 +101,11 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                 </div> */}
               </TableCell>
               <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
+              <TableCell>
+                <Badge variant={getStatusBadgeVariant(pet.request_status)}>
+                  {pet.request_status || 'pending'}
+                </Badge>
+              </TableCell>
               <TableCell>{pet.is_vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</TableCell>
               <TableCell>
                 {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}

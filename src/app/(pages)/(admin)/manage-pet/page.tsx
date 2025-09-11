@@ -6,6 +6,7 @@ import { PetModal } from '@/components/PetModal';
 import { PetTable } from '@/components/PetTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useNotifications } from '@/components/ui/notification';
 import { Pet } from '@/config/types/pet';
 import { Download, Plus, Search, Upload, X } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -14,6 +15,7 @@ import * as XLSX from 'xlsx';
 export default function PetManagement() {
   const { pets, addPet, updatePet, deletePet: deletePetFromContext } = usePets();
   const { userId } = useAuth();
+  const { success, error, warning } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -42,7 +44,7 @@ export default function PetManagement() {
     setIsImporting(true);
 
     if (!userId) {
-      alert('You must be signed in as an admin to import pets.');
+      error('Authentication Required', 'You must be signed in as an admin to import pets.');
       setIsImporting(false);
       return;
     }
@@ -96,6 +98,7 @@ export default function PetManagement() {
         description: String(r.description ?? '').trim() || '',
         special_needs: String(r.special_needs ?? '').trim() || '',
         added_by: userId, // Always use current user
+        photo: String(r.photo ?? '').trim() || '/empty_pet.png', // Default photo if none provided
       };
 
       console.log('Normalized row:', normalized);
@@ -118,7 +121,10 @@ export default function PetManagement() {
             console.log('Raw XLSX data:', json);
 
             if (json.length === 0) {
-              alert('No data found in the Excel file.');
+              error(
+                'No Data Found',
+                'The Excel file appears to be empty or contains no valid data.',
+              );
               setIsImporting(false);
               return;
             }
@@ -142,30 +148,30 @@ export default function PetManagement() {
               const message = result?.message || 'Import failed';
               const errors = result?.errors ? JSON.stringify(result.errors, null, 2) : '';
               console.error('Import failed:', message, errors);
-              alert(`${message}\n${errors}`);
+              error(`${message}${errors ? '\n' + errors : ''}`);
               setIsImporting(false);
               return;
             }
 
             const created = result.created || 0;
-            alert(`Import succeeded! ${created} pets created.`);
+            success(`Import succeeded! ${created} pets created.`);
 
             // Refresh pets context instead of full page reload
             window.location.reload();
           } catch (err) {
             console.error('Excel parsing error:', err);
-            alert('Failed to parse Excel file: ' + String(err));
+            error('Failed to parse Excel file: ' + String(err));
             setIsImporting(false);
           }
         };
         reader.readAsArrayBuffer(file);
       } else {
-        alert('Please select an Excel file (.xlsx)');
+        warning('Please select an Excel file (.xlsx)');
         setIsImporting(false);
       }
     } catch (err) {
       console.error('Import failed:', err);
-      alert('Import failed: ' + String(err));
+      error('Import failed: ' + String(err));
       setIsImporting(false);
     }
   };
@@ -242,8 +248,14 @@ export default function PetManagement() {
               variant="outline"
               size="sm"
               onClick={() => {
-                // Export pets to Excel
-                const ws = XLSX.utils.json_to_sheet(pets || []);
+                // Export pets to Excel - format good_with array as comma-separated string
+                const exportData = (pets || []).map((pet) => ({
+                  ...pet,
+                  good_with: Array.isArray(pet.good_with)
+                    ? pet.good_with.join(', ')
+                    : pet.good_with,
+                }));
+                const ws = XLSX.utils.json_to_sheet(exportData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Pets');
                 XLSX.writeFile(wb, 'pets_export.xlsx');

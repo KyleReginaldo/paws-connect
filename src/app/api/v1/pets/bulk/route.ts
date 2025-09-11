@@ -1,5 +1,5 @@
 import { supabase } from '@/app/supabase/supabase';
-import { createPetSchema, type CreatePetDto } from '@/config/schema/petSchema';
+import { bulkCreatePetSchema, type BulkCreatePetDto } from '@/config/schema/petSchema';
 
 export async function POST(request: Request) {
   console.log('Bulk import request received');
@@ -23,12 +23,12 @@ export async function POST(request: Request) {
 
   console.log(`Processing ${petsInput.length} pets for bulk import`);
 
-  const validPets: CreatePetDto[] = [];
+  const validPets: BulkCreatePetDto[] = [];
   const errors: { index: number; message: string; data?: unknown }[] = [];
 
   (petsInput as unknown[]).forEach((p: unknown, idx: number) => {
     console.log(`Validating pet ${idx}:`, p);
-    const result = createPetSchema.safeParse(p);
+    const result = bulkCreatePetSchema.safeParse(p);
     if (!result.success) {
       const errorMsg = result.error.issues
         .map((i) => `${i.path.join('.')}: ${i.message}`)

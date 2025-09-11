@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNotifications } from '@/components/ui/notification';
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
     status: 'ACTIVE',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { warning } = useNotifications();
 
   useEffect(() => {
     if (editingUser) {
@@ -69,7 +71,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
       // Client-side phone validation: ensure exactly 11 digits
       const sanitizedPhone = formData.phone_number.replace(/\D/g, '');
       if (sanitizedPhone.length !== 11) {
-        alert('Phone number must be exactly 11 digits');
+        warning('Phone number must be exactly 11 digits');
         setIsSubmitting(false);
         return;
       }

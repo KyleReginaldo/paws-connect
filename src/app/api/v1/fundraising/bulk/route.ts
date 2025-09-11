@@ -1,7 +1,7 @@
 import { supabase } from '@/app/supabase/supabase';
 import {
-  createFundraisingSchema,
-  type CreateFundraisingDto,
+    createFundraisingSchema,
+    type CreateFundraisingDto,
 } from '@/config/schema/fundraisingSchema';
 
 export async function POST(request: Request) {
@@ -52,9 +52,12 @@ export async function POST(request: Request) {
       const v = Number(normalized.target_amount as string);
       normalized.target_amount = Number.isNaN(v) ? undefined : v;
     }
-    if ('raised_amount' in normalized && typeof normalized.raised_amount === 'string') {
-      const v = Number(normalized.raised_amount as string);
-      normalized.raised_amount = Number.isNaN(v) ? undefined : v;
+    
+    // IMPORTANT: Reset raised_amount to 0 for imports to prevent data inconsistency
+    // Imported campaigns should start with 0 raised amount since no actual donations exist
+    if ('raised_amount' in normalized) {
+      console.log(`Resetting raised_amount from ${normalized.raised_amount} to 0 for imported campaign`);
+      normalized.raised_amount = 0;
     }
 
     // trim strings

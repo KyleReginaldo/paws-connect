@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     special_needs,
     type,
     weight,
+    request_status,
     photo,
   } = result.data;
   const { data, error } = await supabase
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       special_needs,
       type,
       weight,
+      request_status: request_status || 'pending',
       photo,
     })
     .select()

@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useNotifications } from '@/components/ui/notification';
 import { useState } from 'react';
 
 interface Props {
@@ -14,11 +15,12 @@ export default function FundraisingDonate({ fundraisingId }: Props) {
   const [amount, setAmount] = useState('');
   const [donorName, setDonorName] = useState('');
   const [loading, setLoading] = useState(false);
+  const { success, error, warning } = useNotifications();
 
   const handleDonate = async () => {
-    if (!amount) return alert('Enter an amount');
+    if (!amount) return warning('Enter an amount');
     const n = Number(amount);
-    if (Number.isNaN(n) || n <= 0) return alert('Enter a valid amount');
+    if (Number.isNaN(n) || n <= 0) return warning('Enter a valid amount');
     setLoading(true);
     try {
       const res = await fetch('/api/v1/donations', {
@@ -32,15 +34,15 @@ export default function FundraisingDonate({ fundraisingId }: Props) {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        alert(json?.message || json?.error || 'Donation failed');
+        error(json?.message || json?.error || 'Donation failed');
       } else {
-        alert('Donation successful');
+        success('Donation successful');
         // reload to refresh server-rendered data
         window.location.reload();
       }
     } catch (err) {
       console.error('Donate error', err);
-      alert('Donation failed');
+      error('Donation failed');
     } finally {
       setLoading(false);
       setOpen(false);

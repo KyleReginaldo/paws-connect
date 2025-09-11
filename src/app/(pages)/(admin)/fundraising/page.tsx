@@ -6,6 +6,7 @@ import { FundraisingModal } from '@/components/FundraisingModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription } from '@/components/ui/card';
+import { useConfirmation } from '@/components/ui/confirmation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { useNotifications } from '@/components/ui/notification';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
@@ -40,6 +42,8 @@ const Fundraising = () => {
   const { campaigns, stats, status, deleteCampaign, updateCampaign, addCampaign } =
     useFundraising();
   const { userId } = useAuth();
+  const { success, error, warning, info } = useNotifications();
+  const { confirm } = useConfirmation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,13 +53,21 @@ const Fundraising = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleDelete = async (campaignId: number) => {
-    if (confirm('Are you sure you want to delete this campaign?')) {
+    const confirmed = await confirm({
+      title: 'Delete Campaign',
+      message: 'Are you sure you want to delete this campaign? This action cannot be undone.',
+      type: 'danger',
+      confirmText: 'Delete',
+      confirmVariant: 'destructive',
+    });
+
+    if (confirmed) {
       setIsDeleting(campaignId);
       const result = await deleteCampaign(campaignId);
       if (result.success) {
-        console.log('Campaign deleted successfully');
+        success('Campaign Deleted', 'The campaign has been successfully deleted.');
       } else {
-        alert(result.error || 'Failed to delete campaign.');
+        error('Delete Failed', result.error || 'Failed to delete campaign.');
       }
       setIsDeleting(null);
     }
@@ -64,9 +76,9 @@ const Fundraising = () => {
   const handleStatusChange = async (campaignId: number, newStatus: FundraisingStatus) => {
     const result = await updateCampaign(campaignId, { status: newStatus });
     if (result.success) {
-      console.log('Campaign status updated successfully');
+      success('Status Updated', `Campaign status has been changed to ${newStatus.toLowerCase()}.`);
     } else {
-      alert(result.error || 'Failed to update campaign status.');
+      error('Update Failed', result.error || 'Failed to update campaign status.');
     }
   };
 
@@ -208,7 +220,7 @@ const Fundraising = () => {
             title: truncate(c.title),
             description: truncate(c.description),
             target_amount: c.target_amount,
-            raised_amount: c.raised_amount,
+            raised_amount: c.raised_amount, // Note: Will be reset to 0 when imported
             status: c.status,
             created_at: c.created_at,
             created_by: createdBy,
@@ -228,6 +240,13 @@ const Fundraising = () => {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'fundraising');
         XLSX.writeFile(workbook, 'fundraising.xlsx');
+
+        // Inform user about import behavior
+        info(
+          'Export Completed',
+          'When you re-import this file, all raised_amount values will be reset to ₱0. This prevents data inconsistency since donation records are not exported.',
+          8000,
+        );
       })
       .catch(() => {
         // fallback local export: strip data URIs and keep only first URL
@@ -266,6 +285,13 @@ const Fundraising = () => {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'fundraising');
         XLSX.writeFile(workbook, 'fundraising.xlsx');
+
+        // Inform user about import behavior (fallback export)
+        info(
+          'Export Completed',
+          'When you re-import this file, all raised_amount values will be reset to ₱0. This prevents data inconsistency since donation records are not exported.',
+          8000,
+        );
       });
   };
 
@@ -276,6 +302,22 @@ const Fundraising = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Warn user about raised_amount reset
+    const confirmed = await confirm({
+      title: 'Import Fundraising Campaigns',
+      message:
+        'IMPORTANT: When importing fundraising campaigns, the raised_amount will be reset to ₱0 for all campaigns.\n\nThis prevents data inconsistency since the actual donation records are not imported.\n\nDo you want to continue with the import?',
+      type: 'warning',
+      confirmText: 'Continue Import',
+      cancelText: 'Cancel',
+    });
+
+    if (!confirmed) {
+      // Reset file input
+      e.target.value = '';
+      return;
+    }
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
     const sheetName = workbook.SheetNames[0];
@@ -333,19 +375,33 @@ const Fundraising = () => {
       const resultRaw = (await res.json().catch(() => null)) as unknown;
       if (!res.ok) {
         const parsed = resultRaw as { errors?: unknown; message?: string } | null;
-        alert(parsed?.message || 'Import failed. Check console for details.');
+        error('Import Failed', parsed?.message || 'Import failed. Check console for details.');
         const details = parsed ? parsed.errors ?? parsed : 'No details';
         console.error('Import errors:', details);
       } else {
         const parsed = resultRaw as { errors?: unknown[]; created?: number } | null;
         const errorsCount = parsed && Array.isArray(parsed.errors) ? parsed.errors.length : 0;
-        alert(`Imported ${parsed?.created || 0} items. ${errorsCount} errors.`);
-        // Optionally refresh data by reloading the page
-        window.location.reload();
+        const created = parsed?.created || 0;
+
+        if (errorsCount > 0) {
+          warning(
+            'Import Completed with Errors',
+            `Imported ${created} items successfully. ${errorsCount} items had errors.`,
+            8000,
+          );
+        } else {
+          success(
+            'Import Successful',
+            `Successfully imported ${created} fundraising campaigns.`,
+            6000,
+          );
+        }
+        // Refresh data by reloading the page
+        setTimeout(() => window.location.reload(), 2000);
       }
     } catch (err) {
       console.error('Import failed', err);
-      alert('Import failed. See console for details.');
+      error('Import Error', 'Import failed due to an unexpected error. Check console for details.');
     }
   };
 

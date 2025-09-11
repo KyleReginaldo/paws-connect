@@ -18,6 +18,7 @@ export const createFundraisingSchema = z.object({
   created_by: z.string().min(1, 'User ID is required'),
   images: z.array(z.string()).optional(),
   status: statusEnum.optional().default('PENDING'),
+  // Note: raised_amount is NOT included in create schema - it starts at 0 and is updated via donations
 });
 
 export const updateFundraisingSchema = z.object({

@@ -6,6 +6,7 @@ import { UserModal } from '@/components/UserModal';
 import { UserTable } from '@/components/UserTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useNotifications } from '@/components/ui/notification';
 import { User } from '@/config/models/users';
 import { Download, Plus, Search, Shield, UserCheck, Users, X } from 'lucide-react';
 import { useState } from 'react';
@@ -19,6 +20,7 @@ const ManageStaff = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
+  const { warning } = useNotifications();
 
   const openEditModal = (user: User) => {
     setEditingUser(user);
@@ -51,7 +53,7 @@ const ManageStaff = () => {
     if (userId !== id) {
       await deleteUser(id);
     } else {
-      alert('You cannot delete your own account while logged in.');
+      warning('You cannot delete your own account while logged in.');
     }
   };
 

@@ -25,7 +25,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Pet } from '@/config/types/pet';
 import { format } from 'date-fns';
-import { CalendarIcon, Upload } from 'lucide-react';
+import { CalendarIcon, Info, Upload } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -89,6 +89,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [uploadError, setUploadError] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const validateFile = (file: File): string | null => {
     const maxSize = 5 * 1024 * 1024; // 5MB
@@ -486,7 +487,22 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
             {/* Good With */}
             <div className="space-y-2">
-              <Label>Good With</Label>
+              <div className="flex items-center gap-1 relative">
+                <Label>Good With</Label>
+                <span
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                  className="relative cursor-pointer"
+                >
+                  <Info size={16} />
+
+                  {showTooltip && (
+                    <span className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                      This tells adopters what your pet is comfortable around.
+                    </span>
+                  )}
+                </span>
+              </div>
               <div className="flex flex-col gap-1">
                 {['dogs', 'cats', 'children', 'other'].map((option) => (
                   <label key={option} className="flex items-center gap-2">
@@ -531,7 +547,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
             {/* Trained */}
             <div className="space-y-2">
-              <Label htmlFor="is_trained">Trained</Label>
+              <Label htmlFor="is_trained">Potty-train</Label>
               <Select
                 value={formData.is_trained ? 'yes' : 'no'}
                 onValueChange={(value) => handleInputChange('is_trained', value === 'yes')}
