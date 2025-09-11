@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const createdBy = request.nextUrl.searchParams.get('created_by');
 
     if (createdBy) {
-      const { data, error } = await supabase.from('forum').select('*').eq('created_by', createdBy);
+      const { data, error } = await supabase.from('forum').select('*').eq('created_by', createdBy).order('updated_at', { ascending: false });
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
       return new Response(JSON.stringify({ data }), {

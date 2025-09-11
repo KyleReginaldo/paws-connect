@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest, context: any) {
     if (!userId)
       return new Response(JSON.stringify({ error: 'Missing userId param' }), { status: 400 });
 
-    const { data, error } = await supabase.from('forum').select('*').eq('created_by', userId);
+    const { data, error } = await supabase.from('forum').select('*').eq('created_by', userId).order('created_at', { ascending: false });
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
     return new Response(JSON.stringify({ data }), {
