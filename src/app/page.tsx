@@ -20,31 +20,32 @@ export default function HomePage() {
             Welcome to Paws Connect Admin
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Find your perfect furry companion, support meaningful causes, and join a community of
-            pet lovers.
+            Manage pet adoption listings, oversee fundraising campaigns, and monitor community
+            activity efficiently.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600">
               <Link href={userId ? '/dashboard' : '/auth/signin'}>
                 <Heart className="mr-2 h-5 w-5" />
-                Get Started
+                Go to Dashboard
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/fundraising">View Campaigns</Link>
+              <Link href="/admin/fundraising">Manage Campaigns</Link>
             </Button>
           </div>
         </div>
 
+        {/* Admin Feature Cards */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <Card className="text-center">
             <CardHeader>
               <div className="flex justify-center mb-4">
                 <PawPrint className="h-12 w-12 text-blue-500" />
               </div>
-              <CardTitle>Find Pets</CardTitle>
+              <CardTitle>Pet Management</CardTitle>
               <CardDescription>
-                Browse through adorable pets looking for their forever homes
+                Add, edit, or remove pet listings, update adoption status, and manage pet profiles.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -54,9 +55,10 @@ export default function HomePage() {
               <div className="flex justify-center mb-4">
                 <Heart className="h-12 w-12 text-red-500" />
               </div>
-              <CardTitle>Support Causes</CardTitle>
+              <CardTitle>Fundraising Oversight</CardTitle>
               <CardDescription>
-                Help fundraising campaigns for pet care and rescue operations
+                Monitor active campaigns, approve donations, and track fundraising progress in
+                real-time.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -66,9 +68,10 @@ export default function HomePage() {
               <div className="flex justify-center mb-4">
                 <Users className="h-12 w-12 text-green-500" />
               </div>
-              <CardTitle>Join Community</CardTitle>
+              <CardTitle>User & Community</CardTitle>
               <CardDescription>
-                Connect with fellow pet lovers and make a difference together
+                Manage user accounts, monitor community interactions, and resolve issues
+                efficiently.
               </CardDescription>
             </CardHeader>
           </Card>
