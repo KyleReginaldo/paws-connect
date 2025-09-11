@@ -1,10 +1,6 @@
-'use client';
-import RouteGuard from '@/components/RouteGuard';
+import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { AuthProvider } from './context/AuthContext';
-import { FundraisingProvider } from './context/FundraisingContext';
-import { PetsProvider } from './context/PetsContext';
-import { UsersProvider } from './context/UsersContext';
+import ClientProviders from './components/ClientProviders';
 import './globals.css';
 
 const geistSans = Geist({
@@ -17,6 +13,33 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const metadata: Metadata = {
+  title: 'Paws Connect - Find Your Perfect Pet Companion',
+  description:
+    'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
+  keywords: ['pets', 'adoption', 'dogs', 'cats', 'animal rescue', 'fundraising'],
+  authors: [{ name: 'Paws Connect Team' }],
+  creator: 'Paws Connect',
+  publisher: 'Paws Connect',
+  openGraph: {
+    title: 'Paws Connect - Find Your Perfect Pet Companion',
+    description:
+      'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Paws Connect - Find Your Perfect Pet Companion',
+    description:
+      'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,15 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <PetsProvider>
-            <UsersProvider>
-              <FundraisingProvider>
-                <RouteGuard>{children}</RouteGuard>
-              </FundraisingProvider>
-            </UsersProvider>
-          </PetsProvider>
-        </AuthProvider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
