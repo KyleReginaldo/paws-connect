@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, PawPrint, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from './context/AuthContext';
@@ -17,7 +17,7 @@ export default function HomePage() {
             <PawPrint className="h-16 w-16 text-orange-500" />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
-            Welcome to Paws Connect
+            Welcome to Paws Connect Admin
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Find your perfect furry companion, support meaningful causes, and join a community of
@@ -25,7 +25,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600">
-              <Link href={userId ? '/dashboard' : '/auth/signup'}>
+              <Link href={userId ? '/dashboard' : '/auth/signin'}>
                 <Heart className="mr-2 h-5 w-5" />
                 Get Started
               </Link>
@@ -36,7 +36,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <Card className="text-center">
             <CardHeader>
@@ -74,19 +73,6 @@ export default function HomePage() {
             </CardHeader>
           </Card>
         </div>
-
-        {/* CTA Section */}
-        <Card className="bg-gradient-to-r from-orange-100 to-blue-100">
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Ready to Make a Difference?</h2>
-            <p className="text-gray-600 mb-6">
-              Join thousands of pet lovers in our mission to connect pets with loving families.
-            </p>
-            <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <Link href="/auth/signup">Join Paws Connect Today</Link>
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

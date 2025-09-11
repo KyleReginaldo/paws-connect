@@ -2,63 +2,46 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
+import { DownloadCloud } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect } from 'react';
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Global error:', error);
-  }, [error]);
-
+export default function AppDownloadPage() {
   return (
     <html>
       <body>
-        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-4">
           <Card className="max-w-2xl w-full shadow-2xl">
             <CardContent className="p-8 text-center space-y-6">
+              {/* Icon / Logo */}
               <div className="flex justify-center">
-                <AlertTriangle className="h-16 w-16 text-red-500" />
+                <DownloadCloud className="h-16 w-16 text-purple-500 animate-bounce" />
               </div>
 
+              {/* Title & Subtitle */}
               <div className="space-y-4">
-                <h1 className="text-3xl font-bold text-gray-800">Something went wrong!</h1>
+                <h1 className="text-3xl font-bold text-gray-800">Get Paws Connect</h1>
                 <p className="text-gray-600 text-lg">
-                  We&apos;re sorry, but something unexpected happened. Our team has been notified
-                  and is working on a fix.
+                  Access the full Paws Connect experience on your mobile device. Track donations,
+                  adopt pets, and stay connected with the community anytime, anywhere.
                 </p>
-                {error.digest && (
-                  <p className="text-sm text-gray-500 font-mono bg-gray-100 p-2 rounded">
-                    Error ID: {error.digest}
-                  </p>
-                )}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button onClick={reset} size="lg" className="bg-blue-600 hover:bg-blue-700">
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Try Again
-                </Button>
-
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/">
-                    <Home className="mr-2 h-5 w-5" />
-                    Go Home
+              {/* Download Button */}
+              <div className="flex justify-center pt-4">
+                <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700">
+                  <Link
+                    href="https://drive.google.com/drive/folders/1ut3xeCHur6U1067Q8eV4WAzypl3MeBic?usp=sharing"
+                    target="_blank"
+                  >
+                    <DownloadCloud className="mr-2 h-5 w-5" />
+                    Download the App
                   </Link>
                 </Button>
               </div>
 
-              <div className="pt-4 border-t">
-                <p className="text-sm text-gray-500">
-                  If this problem persists, please contact our support team.
-                </p>
+              {/* Footer / Note */}
+              <div className="pt-6 border-t">
+                <p className="text-sm text-gray-500">Available on Android. Free to download.</p>
               </div>
             </CardContent>
           </Card>
