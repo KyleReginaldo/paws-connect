@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.paws_connect",
+      "sha256_cert_fingerprints": [
+        "32:BB:C4:8F:FA:DA:3B:40:A0:CA:66:17:E0:AC:A2:D0:AD:34:DD:1F:2D:44:0C:7C:43:39:AF:20:53:57:25:56"
+      ]
+    }
+  }
+]
