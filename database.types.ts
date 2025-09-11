@@ -275,6 +275,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          end_date: string | null
+          facebook_link: string | null
           id: number
           images: string[] | null
           raised_amount: number | null
@@ -286,6 +288,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
+          facebook_link?: string | null
           id?: number
           images?: string[] | null
           raised_amount?: number | null
@@ -297,6 +301,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
+          facebook_link?: string | null
           id?: number
           images?: string[] | null
           raised_amount?: number | null

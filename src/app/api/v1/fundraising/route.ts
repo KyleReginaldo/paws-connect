@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
       target_amount: number;
       status?: 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED';
       images?: string[];
+      end_date: string;
+      facebook_link?: string;
     };
     const { title, description, created_by, target_amount, status, images } = parsed;
 
