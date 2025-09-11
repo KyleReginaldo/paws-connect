@@ -205,6 +205,7 @@ export type Database = {
           created_by: string | null
           forum_name: string | null
           id: number
+          private: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -212,6 +213,7 @@ export type Database = {
           created_by?: string | null
           forum_name?: string | null
           id?: number
+          private?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -219,6 +221,7 @@ export type Database = {
           created_by?: string | null
           forum_name?: string | null
           id?: number
+          private?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -264,6 +267,42 @@ export type Database = {
           {
             foreignKeyName: "forum_chats_sender_fkey"
             columns: ["sender"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_members: {
+        Row: {
+          created_at: string
+          forum: number
+          id: number
+          member: string
+        }
+        Insert: {
+          created_at?: string
+          forum: number
+          id?: number
+          member: string
+        }
+        Update: {
+          created_at?: string
+          forum?: number
+          id?: number
+          member?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_members_forum_fkey"
+            columns: ["forum"]
+            isOneToOne: false
+            referencedRelation: "forum"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_members_member_fkey"
+            columns: ["member"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

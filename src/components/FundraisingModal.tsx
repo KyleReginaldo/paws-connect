@@ -49,6 +49,8 @@ export function FundraisingModal({
     created_by: currentUserId || '',
     images: [],
     status: 'PENDING',
+    end_date: '',
+    facebook_link: '',
   });
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +72,8 @@ export function FundraisingModal({
             | 'COMPLETE'
             | 'REJECTED'
             | 'CANCELLED') || 'PENDING',
+        end_date: editingCampaign.end_date || '',
+        facebook_link: editingCampaign.facebook_link || '',
       });
       setImagePreviews((editingCampaign?.images as string[]) || []);
     } else {
@@ -80,6 +84,8 @@ export function FundraisingModal({
         created_by: currentUserId || '',
         images: [],
         status: 'PENDING',
+        end_date: '',
+        facebook_link: '',
       });
       setImagePreviews([]);
     }
@@ -147,7 +153,7 @@ export function FundraisingModal({
     }
   };
 
-  const handleInputChange = (field: keyof CreateFundraisingDto, value: string | number) => {
+  const handleInputChange = (field: keyof CreateFundraisingDto, value: string | number | null) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -305,6 +311,34 @@ export function FundraisingModal({
                 max={10000000}
               />
               <p className="text-xs text-muted-foreground">Minimum: ₱100, Maximum: ₱10,000,000</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end_date">End Date (optional)</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={formData.end_date || ''}
+                onChange={(e) => handleInputChange('end_date', e.target.value || '')}
+                placeholder="Select end date"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty for no end date. Campaign will continue until target is reached.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="facebook_link">Facebook Link (optional)</Label>
+              <Input
+                id="facebook_link"
+                type="url"
+                value={formData.facebook_link || ''}
+                onChange={(e) => handleInputChange('facebook_link', e.target.value || '')}
+                placeholder="https://facebook.com/your-campaign"
+              />
+              <p className="text-xs text-muted-foreground">
+                Link to your Facebook page or post about this campaign
+              </p>
             </div>
 
             {editingCampaign && (

@@ -20,10 +20,43 @@ export async function GET(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Invalid forum id' }), { status: 400 });
 
     const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id'); // Current user for privacy check
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = (page - 1) * limit;
     const since = url.searchParams.get('since'); // For real-time updates
+
+    // Check forum exists and get privacy setting
+    const { data: forum, error: forumError } = await supabase
+      .from('forum')
+      .select('id, private, created_by')
+      .eq('id', forumId)
+      .single();
+
+    if (forumError || !forum) {
+      return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
+    }
+
+    // Check access for private forums
+    if (forum.private && userId) {
+      // Check if user is the creator or a member
+      const isCreator = forum.created_by === userId;
+      
+      if (!isCreator) {
+        const { data: membership } = await supabase
+          .from('forum_members')
+          .select('id')
+          .eq('forum', forumId)
+          .eq('member', userId)
+          .single();
+
+        if (!membership) {
+          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), { status: 403 });
+        }
+      }
+    } else if (forum.private && !userId) {
+      return new Response(JSON.stringify({ error: 'Authentication required for private forum' }), { status: 401 });
+    }
 
     // Build optimized query
     let query = supabase
@@ -112,17 +145,43 @@ export async function POST(request: NextRequest, context: any) {
 
     const { message, sender } = parsed.data;
 
-    // Single query to validate both forum and user existence (faster than sequential queries)
-    const [forumCheck, userCheck] = await Promise.all([
-      supabase.from('forum').select('id').eq('id', forumId).single(),
-      supabase.from('users').select('id').eq('id', sender).single()
-    ]);
+    // Get forum details and check privacy
+    const { data: forum, error: forumError } = await supabase
+      .from('forum')
+      .select('id, private, created_by')
+      .eq('id', forumId)
+      .single();
 
-    if (forumCheck.error || !forumCheck.data) {
+    if (forumError || !forum) {
       return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
     }
 
-    if (userCheck.error || !userCheck.data) {
+    // Check access for private forums
+    if (forum.private) {
+      const isCreator = forum.created_by === sender;
+      
+      if (!isCreator) {
+        const { data: membership } = await supabase
+          .from('forum_members')
+          .select('id')
+          .eq('forum', forumId)
+          .eq('member', sender)
+          .single();
+
+        if (!membership) {
+          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), { status: 403 });
+        }
+      }
+    }
+
+    // Verify user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', sender)
+      .single();
+
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
 

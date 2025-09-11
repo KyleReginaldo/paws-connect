@@ -8,6 +8,8 @@ export interface Fundraising {
   status: string | null;
   created_by: string | null;
   created_at: string;
+  end_date: string | null;
+  facebook_link: string | null;
 }
 
 export interface FundraisingWithUser extends Fundraising {
