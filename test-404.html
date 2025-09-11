@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test 404 Links</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      .test-link {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        background: #f0f0f0;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+      .test-link:hover {
+        background: #e0e0e0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test 404 Links</h1>
+    <p>Click these links to test if they properly show the not-found page:</p>
+
+    <a href="/non-existent-page" class="test-link">📄 /non-existent-page</a>
+    <a href="/fake-route" class="test-link">🔗 /fake-route</a>
+    <a href="/missing/deep/route" class="test-link">📁 /missing/deep/route</a>
+    <a href="/admin/nonexistent" class="test-link">🔒 /admin/nonexistent</a>
+    <a href="/products/999999" class="test-link">🛍️ /products/999999</a>
+    <a href="/user/invalid-id" class="test-link">👤 /user/invalid-id</a>
+
+    <hr />
+    <p>Valid links (should work normally):</p>
+    <a href="/" class="test-link">🏠 Home</a>
+    <a href="/auth/signin" class="test-link">🔑 Sign In</a>
+    <a href="/dashboard" class="test-link">📊 Dashboard</a>
+  </body>
+</html>

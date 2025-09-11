@@ -88,14 +88,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Auth state changed:', event, 'Session:', !!session?.user);
 
       if (event === 'INITIAL_SESSION') {
-        router.replace('/auth/signin');
         if (session?.user) {
           setUserId(session.user.id);
           setStatus(AuthStatus.authenticated);
         } else {
           setUserId(null);
           setStatus(AuthStatus.unauthenticated);
-          router.replace('/auth/signin');
+          // Don't automatically redirect here - let RouteGuard handle it for protected routes only
         }
       } else if (event === 'SIGNED_IN') {
         setUserId(session?.user?.id || null);
@@ -112,7 +111,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (event === 'SIGNED_OUT') {
         setUserId(null);
         setStatus(AuthStatus.unauthenticated);
-        router.replace('/auth/signin');
+        // Only redirect to signin if user is currently on a protected page
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname;
+          const isProtectedRoute =
+            currentPath.startsWith('/dashboard') ||
+            currentPath.startsWith('/manage-') ||
+            currentPath.startsWith('/fundraising');
+          if (isProtectedRoute) {
+            router.replace('/auth/signin');
+          }
+        }
       }
     });
 

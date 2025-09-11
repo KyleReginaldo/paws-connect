@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, PawPrint, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from './context/AuthContext';
 
 export default function HomePage() {
+  const { userId } = useAuth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
       <div className="container mx-auto px-4 py-16">
@@ -23,7 +25,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600">
-              <Link href="/auth/signin">
+              <Link href={userId ? '/dashboard' : '/auth/signup'}>
                 <Heart className="mr-2 h-5 w-5" />
                 Get Started
               </Link>

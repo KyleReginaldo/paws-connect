@@ -10,10 +10,10 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (status === AuthStatus.loading) return;
-    const isAuthPage = pathname?.startsWith('/auth') || false;
-    const isPublicPage = pathname === '/' || isAuthPage;
 
-    if (status === AuthStatus.unauthenticated && !isPublicPage) {
+    const isAuthPage = pathname?.startsWith('/auth') || false;
+
+    if (status === AuthStatus.unauthenticated) {
       console.log('Redirecting to signin - user not authenticated');
       router.replace('/auth/signin');
     } else if (status === AuthStatus.authenticated && isAuthPage) {

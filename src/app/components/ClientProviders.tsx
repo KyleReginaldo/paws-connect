@@ -1,6 +1,5 @@
 'use client';
 
-import RouteGuard from '@/components/RouteGuard';
 import { AuthProvider } from '../context/AuthContext';
 import { FundraisingProvider } from '../context/FundraisingContext';
 import { PetsProvider } from '../context/PetsContext';
@@ -15,9 +14,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     <AuthProvider>
       <PetsProvider>
         <UsersProvider>
-          <FundraisingProvider>
-            <RouteGuard>{children}</RouteGuard>
-          </FundraisingProvider>
+          <FundraisingProvider>{children}</FundraisingProvider>
         </UsersProvider>
       </PetsProvider>
     </AuthProvider>
