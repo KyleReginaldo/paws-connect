@@ -8,16 +8,16 @@ export interface CacheConfig {
 
 // Simple in-memory cache for frequently accessed data
 class SimpleCache {
-  private cache = new Map<string, { data: any; expires: number }>();
+  private cache = new Map<string, { data: unknown; expires: number }>();
 
-  set(key: string, data: any, ttlSeconds: number = 300) {
+  set(key: string, data: unknown, ttlSeconds: number = 300) {
     this.cache.set(key, {
       data,
       expires: Date.now() + (ttlSeconds * 1000)
     });
   }
 
-  get(key: string) {
+  get(key: string): unknown {
     const item = this.cache.get(key);
     if (!item) return null;
     
@@ -42,7 +42,7 @@ export async function checkForumExists(forumId: number, useCache = true): Promis
   
   if (useCache) {
     const cached = cache.get(cacheKey);
-    if (cached !== null) return cached;
+    if (cached !== null) return cached as boolean;
   }
 
   const { data, error } = await supabase
@@ -66,7 +66,7 @@ export async function checkUserExists(userId: string, useCache = true): Promise<
   
   if (useCache) {
     const cached = cache.get(cacheKey);
-    if (cached !== null) return cached;
+    if (cached !== null) return cached as boolean;
   }
 
   const { data, error } = await supabase
@@ -119,7 +119,7 @@ export const FORUM_SELECT_FIELDS = `
 `;
 
 // Standard response helpers
-export function createResponse(data: any, status = 200, options: { cache?: string } = {}) {
+export function createResponse(data: unknown, status = 200, options: { cache?: string } = {}) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
@@ -131,9 +131,10 @@ export function createResponse(data: any, status = 200, options: { cache?: strin
   return new Response(JSON.stringify(data), { status, headers });
 }
 
-export function createErrorResponse(message: string, status = 500, details?: any) {
-  return createResponse({ 
-    error: message, 
-    ...(details && { details }) 
-  }, status);
+export function createErrorResponse(message: string, status = 500, details?: unknown) {
+  const responseData: { error: string; details?: unknown } = { error: message };
+  if (details) {
+    responseData.details = details;
+  }
+  return createResponse(responseData, status);
 }
