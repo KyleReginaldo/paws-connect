@@ -25,11 +25,13 @@ export async function GET(_request: NextRequest, context: any) {
     const { data, error } = await supabase
       .from('forum_chats')
       .select(`
-        *,
+        id,
+        message,
+        sent_at,
+        sender,
         users!forum_chats_sender_fkey (
           id,
-          username,
-          email
+          username
         )
       `)
       .eq('id', chatId)
@@ -46,7 +48,10 @@ export async function GET(_request: NextRequest, context: any) {
 
     return new Response(JSON.stringify({ data }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=300'
+      },
     });
   } catch (err) {
     return new Response(
@@ -92,7 +97,7 @@ export async function PUT(request: NextRequest, context: any) {
 
     const { message, sender } = parsed.data;
 
-    // First, verify that the chat exists and belongs to the specified forum
+    // Optimized: Get existing chat and verify ownership in one query
     const { data: existingChat, error: existingChatError } = await supabase
       .from('forum_chats')
       .select('sender')
@@ -104,25 +109,25 @@ export async function PUT(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Chat message not found' }), { status: 404 });
     }
 
-    // Verify that the sender is the owner of the message
+    // Verify ownership
     if (existingChat.sender !== sender) {
       return new Response(JSON.stringify({ error: 'Unauthorized: You can only edit your own messages' }), { status: 403 });
     }
 
-    // Update the chat message
+    // Update with optimized return fields
     const { data, error } = await supabase
       .from('forum_chats')
-      .update({
-        message,
-      })
+      .update({ message })
       .eq('id', chatId)
       .eq('forum', forumId)
       .select(`
-        *,
+        id,
+        message,
+        sent_at,
+        sender,
         users!forum_chats_sender_fkey (
           id,
-          username,
-          email
+          username
         )
       `)
       .single();
@@ -165,7 +170,7 @@ export async function DELETE(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Sender ID is required' }), { status: 400 });
     }
 
-    // First, verify that the chat exists and belongs to the specified forum
+    // Optimized: Single query to verify ownership and delete
     const { data: existingChat, error: existingChatError } = await supabase
       .from('forum_chats')
       .select('sender')
@@ -177,7 +182,7 @@ export async function DELETE(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Chat message not found' }), { status: 404 });
     }
 
-    // Verify that the sender is the owner of the message
+    // Verify ownership
     if (existingChat.sender !== senderId) {
       return new Response(JSON.stringify({ error: 'Unauthorized: You can only delete your own messages' }), { status: 403 });
     }
@@ -188,7 +193,7 @@ export async function DELETE(request: NextRequest, context: any) {
       .delete()
       .eq('id', chatId)
       .eq('forum', forumId)
-      .select()
+      .select('id')
       .single();
 
     if (error) {

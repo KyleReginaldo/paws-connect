@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/app/supabase/supabase';
+import { FORUM_SELECT_FIELDS, createErrorResponse, createResponse } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -16,22 +17,21 @@ export async function GET(_request: NextRequest, context: any) {
     const params = await context.params;
     const pathId = Number((params as { id: string }).id);
     if (Number.isNaN(pathId))
-      return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
+      return createErrorResponse('Invalid id', 400);
 
-    const { data, error } = await supabase.from('forum').select('*').eq('id', pathId).single();
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    const { data, error } = await supabase
+      .from('forum')
+      .select(FORUM_SELECT_FIELDS)
+      .eq('id', pathId)
+      .single();
+      
+    if (error) return createErrorResponse(error.message, 500);
 
-    return new Response(JSON.stringify({ data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+    return createResponse({ data }, 200, { 
+      cache: 'public, s-maxage=60, stale-while-revalidate=120' 
     });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      {
-        status: 500,
-      },
-    );
+    return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
 
@@ -40,62 +40,40 @@ export async function PUT(request: NextRequest, context: any) {
     const params = await context.params;
     const pathId = Number((params as { id: string }).id);
     if (Number.isNaN(pathId))
-      return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
+      return createErrorResponse('Invalid id', 400);
 
     const body = await parseJson(request);
-    if (!body) return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
+    if (!body) return createErrorResponse('Invalid JSON', 400);
 
     const forumUpdateSchema = z
       .object({
-        created_at: z.string().optional(),
-        created_by: z.string().nullable().optional(),
-        forum_name: z.string().nullable().optional(),
-        id: z.number().int().optional(),
-        updated_at: z.string().nullable().optional(),
+        forum_name: z.string().min(1, 'Forum name is required').max(100, 'Forum name too long').optional(),
+        updated_at: z.string().optional(),
       })
       .strict();
 
     const parsed = forumUpdateSchema.safeParse(body);
-    type ForumUpdate = z.infer<typeof forumUpdateSchema>;
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: 'Validation error', details: parsed.error.issues }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
+      return createErrorResponse('Validation error', 400, parsed.error.issues);
     }
 
-    const validated: ForumUpdate = parsed.data;
-    if (validated.id !== undefined && validated.id !== pathId) {
-      return new Response(JSON.stringify({ error: 'ID mismatch between path and payload' }), {
-        status: 400,
-      });
-    }
-
-    const { id: payloadId, ...updatePayload } = validated;
-    void payloadId;
+    const updatePayload = {
+      ...parsed.data,
+      updated_at: new Date().toISOString()
+    };
 
     const { data, error } = await supabase
       .from('forum')
       .update(updatePayload)
       .eq('id', pathId)
-      .select()
+      .select(FORUM_SELECT_FIELDS)
       .single();
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+      
+    if (error) return createErrorResponse(error.message, 500);
 
-    return new Response(JSON.stringify({ data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return createResponse({ data });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      {
-        status: 500,
-      },
-    );
+    return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
 
@@ -104,26 +82,19 @@ export async function DELETE(_request: NextRequest, context: any) {
     const params = await context.params;
     const pathId = Number((params as { id: string }).id);
     if (Number.isNaN(pathId))
-      return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
+      return createErrorResponse('Invalid id', 400);
 
     const { data, error } = await supabase
       .from('forum')
       .delete()
       .eq('id', pathId)
-      .select()
+      .select('id')
       .single();
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+      
+    if (error) return createErrorResponse(error.message, 500);
 
-    return new Response(JSON.stringify({ data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return createResponse({ data });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      {
-        status: 500,
-      },
-    );
+    return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
