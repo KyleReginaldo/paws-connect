@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Validation schema for user updates
     const userUpdateSchema = z
       .object({
-        username: z.string().min(1, 'Username cannot be empty').max(50, 'Username too long').optional(),
+        username: z.string().optional(),
         email: z.email('Invalid email format').optional(),
         phone_number: z.string().min(10, 'Phone number must be at least 10 digits').max(15, 'Phone number too long').optional(),
         profile_image_link: z.url('Invalid URL format').or(z.literal('')).optional(),
