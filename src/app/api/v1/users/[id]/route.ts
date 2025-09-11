@@ -30,11 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         payment_method,
         status,
         created_at,
-        role,
-        role!users_role_fkey (
-          id,
-          type
-        )
+        role
       `)
       .eq('id', id)
       .single();
