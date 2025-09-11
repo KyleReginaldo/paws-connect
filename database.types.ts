@@ -430,6 +430,7 @@ export type Database = {
           payment_method: string | null
           paymongo_id: string | null
           phone_number: string
+          profile_image_link: string | null
           role: number
           status: string | null
           username: string | null
@@ -442,6 +443,7 @@ export type Database = {
           payment_method?: string | null
           paymongo_id?: string | null
           phone_number: string
+          profile_image_link?: string | null
           role: number
           status?: string | null
           username?: string | null
@@ -454,6 +456,7 @@ export type Database = {
           payment_method?: string | null
           paymongo_id?: string | null
           phone_number?: string
+          profile_image_link?: string | null
           role?: number
           status?: string | null
           username?: string | null

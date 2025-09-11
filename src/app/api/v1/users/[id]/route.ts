@@ -1,5 +1,15 @@
 import { supabase } from '@/app/supabase/supabase';
+import { createErrorResponse, createResponse } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
+
+async function parseJson(request: NextRequest) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   console.log(request.url);
@@ -7,81 +17,173 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
 
-    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+    // Optimized query - select only necessary fields
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        id,
+        username,
+        email,
+        phone_number,
+        profile_image_link,
+        house_images,
+        payment_method,
+        status,
+        created_at,
+        role,
+        role!users_role_fkey (
+          id,
+          type
+        )
+      `)
+      .eq('id', id)
+      .single();
 
     if (error) {
-      return new Response(JSON.stringify({ error: 'User not found', message: error.message }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('User not found', 404, error.message);
     }
 
-    return new Response(JSON.stringify({ message: 'Success', data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+    return createResponse({ message: 'Success', data }, 200, {
+      cache: 'private, max-age=300'
     });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500 },
-    );
+    return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const body = await request.json();
-
-    // Remove password from update if it's empty
-    if (body.password === '') {
-      delete body.password;
+    const body = await parseJson(request);
+    
+    if (!body) {
+      return createErrorResponse('Invalid JSON', 400);
     }
 
-    // If password is being updated, we need to update auth as well
-    if (body.password) {
+    // Validation schema for user updates
+    const userUpdateSchema = z
+      .object({
+        username: z.string().min(1, 'Username cannot be empty').max(50, 'Username too long').optional(),
+        email: z.email('Invalid email format').optional(),
+        phone_number: z.string().min(10, 'Phone number must be at least 10 digits').max(15, 'Phone number too long').optional(),
+        profile_image_link: z.url('Invalid URL format').or(z.literal('')).optional(),
+        house_images: z.array(z.url('Invalid URL format')).max(10, 'Too many house images').optional(),
+        payment_method: z.string().max(50, 'Payment method name too long').optional(),
+        status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING']).optional(),
+        password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+      })
+      .strict()
+      .refine(data => Object.keys(data).length > 0, {
+        message: 'At least one field must be provided for update'
+      });
+
+    const parsed = userUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return createErrorResponse('Validation error', 400, parsed.error.issues);
+    }
+
+    const updateData = parsed.data;
+
+    // Handle password update separately if provided
+    if (updateData.password) {
       const { error: authError } = await supabase.auth.admin.updateUserById(id, {
-        password: body.password,
+        password: updateData.password,
       });
 
       if (authError) {
-        return new Response(
-          JSON.stringify({ error: 'Failed to update password', message: authError.message }),
-          { status: 400 },
-        );
+        return createErrorResponse('Failed to update password', 400, authError.message);
       }
     }
 
-    // Update user profile data
-    const updateData = { ...body };
-    delete updateData.password; // Remove password from profile update
+    // Remove password from profile update
+    const { password, ...profileUpdateData } = updateData;
 
-    const { data, error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    // Only proceed with profile update if there are fields to update
+    if (Object.keys(profileUpdateData).length > 0) {
+      // Check if user exists first
+      const { data: existingUser, error: existingUserError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', id)
+        .single();
 
-    if (error) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to update user', message: error.message }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
+      if (existingUserError || !existingUser) {
+        return createErrorResponse('User not found', 404);
+      }
+
+      // Check for duplicate username if username is being updated
+      if (profileUpdateData.username) {
+        const { data: duplicateUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('username', profileUpdateData.username)
+          .neq('id', id)
+          .single();
+
+        if (duplicateUser) {
+          return createErrorResponse('Username already exists', 409);
+        }
+      }
+
+      // Check for duplicate email if email is being updated
+      if (profileUpdateData.email) {
+        const { data: duplicateEmail } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', profileUpdateData.email)
+          .neq('id', id)
+          .single();
+
+        if (duplicateEmail) {
+          return createErrorResponse('Email already exists', 409);
+        }
+      }
+
+      // Update user profile data
+      const { data, error } = await supabase
+        .from('users')
+        .update(profileUpdateData)
+        .eq('id', id)
+        .select(`
+          id,
+          username,
+          email,
+          phone_number,
+          profile_image_link,
+          house_images,
+          payment_method,
+          status,
+          created_at,
+          role,
+          role!users_role_fkey (
+            id,
+            type
+          )
+        `)
+        .single();
+
+      if (error) {
+        return createErrorResponse('Failed to update user', 400, error.message);
+      }
+
+      return createResponse({ 
+        message: 'User updated successfully', 
+        data,
+        updated_fields: Object.keys(profileUpdateData)
+      });
     }
 
-    return new Response(JSON.stringify({ message: 'User updated successfully', data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // If only password was updated
+    if (password) {
+      return createResponse({ 
+        message: 'Password updated successfully',
+        updated_fields: ['password']
+      });
+    }
+
+    return createErrorResponse('No valid fields provided for update', 400);
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500 },
-    );
+    return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
 
@@ -93,36 +195,32 @@ export async function DELETE(
   try {
     const { id } = await params;
 
+    // Check if user exists first
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (existingUserError || !existingUser) {
+      return createErrorResponse('User not found', 404);
+    }
+
     // First delete from auth
     const { error: authError } = await supabase.auth.admin.deleteUser(id);
     if (authError) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete user from auth', message: authError.message }),
-        { status: 400 },
-      );
+      return createErrorResponse('Failed to delete user from auth', 400, authError.message);
     }
 
     // Then delete from users table
     const { error } = await supabase.from('users').delete().eq('id', id);
 
     if (error) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete user', message: error.message }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
+      return createErrorResponse('Failed to delete user', 400, error.message);
     }
 
-    return new Response(JSON.stringify({ message: 'User deleted successfully' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return createResponse({ message: 'User deleted successfully' });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500 },
-    );
+    return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
