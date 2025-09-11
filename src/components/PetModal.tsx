@@ -498,7 +498,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
                   {showTooltip && (
                     <span className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                      This tells adopters what your pet is comfortable around.
+                      This tells adopters
+                      <br />
+                      what your pet is comfortable around.
                     </span>
                   )}
                 </span>

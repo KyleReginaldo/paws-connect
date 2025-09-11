@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { Dog, HandCoins, LayoutDashboard, PanelLeftIcon, UsersRound } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function RootLayout({
   children,
@@ -24,6 +25,12 @@ export default function RootLayout({
   const isActive = (path: string) => pathname === path;
   const router = useRouter();
   const { signOut } = useAuth();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+    setIsSheetOpen(false); // Close the sheet after navigation
+  };
 
   return (
     <RouteGuard>
@@ -86,7 +93,7 @@ export default function RootLayout({
           {/* Mobile top bar */}
           <div className="md:hidden bg-white border-b">
             <div className="flex items-center justify-between px-3 py-2">
-              <Sheet>
+              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
                     <PanelLeftIcon />
@@ -102,7 +109,7 @@ export default function RootLayout({
                         <Button
                           variant="ghost"
                           className="w-full text-left"
-                          onClick={() => router.push('/dashboard')}
+                          onClick={() => handleNavigation('/dashboard')}
                         >
                           Dashboard
                         </Button>
@@ -111,7 +118,7 @@ export default function RootLayout({
                         <Button
                           variant="ghost"
                           className="w-full text-left"
-                          onClick={() => router.push('/manage-users')}
+                          onClick={() => handleNavigation('/manage-users')}
                         >
                           Manage Users
                         </Button>
@@ -120,7 +127,7 @@ export default function RootLayout({
                         <Button
                           variant="ghost"
                           className="w-full text-left"
-                          onClick={() => router.push('/manage-pet')}
+                          onClick={() => handleNavigation('/manage-pet')}
                         >
                           Manage Pets
                         </Button>
@@ -129,7 +136,7 @@ export default function RootLayout({
                         <Button
                           variant="ghost"
                           className="w-full text-left"
-                          onClick={() => router.push('/fundraising')}
+                          onClick={() => handleNavigation('/fundraising')}
                         >
                           Fundraising
                         </Button>
@@ -142,6 +149,7 @@ export default function RootLayout({
                       className="w-full text-left"
                       onClick={async () => {
                         await signOut();
+                        setIsSheetOpen(false);
                       }}
                     >
                       Logout
