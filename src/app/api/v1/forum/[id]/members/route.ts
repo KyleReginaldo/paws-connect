@@ -121,7 +121,37 @@ export async function GET(request: NextRequest, context: any) {
   }
 }
 
-// POST /api/v1/forum/[id]/members - Add a member to a private forum
+/**
+ * POST /api/v1/forum/[id]/members - Add member(s) to a forum (supports single and bulk addition)
+ * 
+ * This endpoint supports both single member addition and bulk member addition:
+ * 
+ * Single Member Addition:
+ * POST /api/v1/forum/123/members
+ * {
+ *   "member": "uuid-of-user",
+ *   "added_by": "uuid-of-forum-creator"
+ * }
+ * 
+ * Bulk Member Addition:
+ * POST /api/v1/forum/123/members
+ * {
+ *   "members": ["uuid-1", "uuid-2", "uuid-3"],
+ *   "added_by": "uuid-of-forum-creator"
+ * }
+ * 
+ * Features:
+ * - Validates all member UUIDs
+ * - Checks which users exist in the database
+ * - Identifies existing members to avoid duplicates
+ * - Supports up to 50 members per bulk operation
+ * - Provides detailed response with operation summary
+ * - Maintains backward compatibility for single member operations
+ * 
+ * Response for bulk operations includes:
+ * - summary: counts of requested, added, already_members, invalid_users
+ * - details: arrays of added_members, already_members, invalid_user_ids
+ */
 export async function POST(request: NextRequest, context: any) {
   try {
     const params = await context.params;
@@ -132,21 +162,44 @@ export async function POST(request: NextRequest, context: any) {
     const body = await parseJson(request);
     if (!body) return createErrorResponse('Invalid JSON', 400);
 
-    const memberAddSchema = z
+    // Define schemas for both single and bulk operations
+    const singleMemberSchema = z
       .object({
         member: z.uuid('Invalid member ID'),
         added_by: z.uuid('Invalid user ID'),
       })
       .strict();
 
-    const parsed = memberAddSchema.safeParse(body);
-    if (!parsed.success) {
-      return createErrorResponse('Validation error', 400, parsed.error.issues);
+    const bulkMemberSchema = z
+      .object({
+        members: z.array(z.uuid('Invalid member ID')).min(1, 'At least one member required').max(50, 'Maximum 50 members allowed'),
+        added_by: z.uuid('Invalid user ID'),
+      })
+      .strict();
+
+    // Determine if this is a bulk or single operation
+    const isBulk = Array.isArray(body.members);
+    
+    let memberIds: string[];
+    let added_by: string;
+
+    if (isBulk) {
+      const parsed = bulkMemberSchema.safeParse(body);
+      if (!parsed.success) {
+        return createErrorResponse('Validation error', 400, parsed.error.issues);
+      }
+      memberIds = parsed.data.members;
+      added_by = parsed.data.added_by;
+    } else {
+      const parsed = singleMemberSchema.safeParse(body);
+      if (!parsed.success) {
+        return createErrorResponse('Validation error', 400, parsed.error.issues);
+      }
+      memberIds = [parsed.data.member];
+      added_by = parsed.data.added_by;
     }
 
-    const { member, added_by } = parsed.data;
-
-    // Check if forum exists and if it's private
+    // Check if forum exists
     const { data: forum, error: forumError } = await supabase
       .from('forum')
       .select('id, private, created_by')
@@ -157,67 +210,116 @@ export async function POST(request: NextRequest, context: any) {
       return createErrorResponse('Forum not found', 404);
     }
 
-    // Only allow adding members to private forums
-    // if (!forum.private) {
-    //   return createErrorResponse('Members can only be added to private forums', 400);
-    // }
-
     // Only forum creator can add members
     if (forum.created_by !== added_by) {
       return createErrorResponse('Only the forum creator can add members', 403);
     }
 
-    // Check if user exists
-    const { data: user, error: userError } = await supabase
+    // Remove duplicates from member IDs
+    const uniqueMemberIds = [...new Set(memberIds)];
+
+    // Check which users exist
+    const { data: existingUsers, error: usersError } = await supabase
       .from('users')
       .select('id')
-      .eq('id', member)
-      .single();
+      .in('id', uniqueMemberIds);
 
-    if (userError || !user) {
-      return createErrorResponse('User not found', 404);
+    if (usersError) {
+      return createErrorResponse(usersError.message, 500);
     }
 
-    // Check if member is already in the forum
-    const { data: existingMember } = await supabase
+    const existingUserIds = existingUsers?.map(user => user.id) || [];
+    const invalidUserIds = uniqueMemberIds.filter(id => !existingUserIds.includes(id));
+
+    // Check which users are already members
+    const { data: existingMembers, error: membersError } = await supabase
       .from('forum_members')
-      .select('id')
+      .select('member')
       .eq('forum', forumId)
-      .eq('member', member)
-      .single();
+      .in('member', existingUserIds);
 
-    if (existingMember) {
-      return createErrorResponse('User is already a member of this forum', 409);
+    if (membersError) {
+      return createErrorResponse(membersError.message, 500);
     }
 
-    // Add member to forum
-    const { data, error } = await supabase
-      .from('forum_members')
-      .insert({
-        forum: forumId,
-        member,
-        created_at: new Date().toISOString(),
-      })
-      .select(`
-        id,
-        created_at,
-        member,
-        users!forum_members_member_fkey (
+    const existingMemberIds = existingMembers?.map(member => member.member) || [];
+    const newMemberIds = existingUserIds.filter(id => !existingMemberIds.includes(id));
+
+    // Prepare bulk insert data
+    const insertData = newMemberIds.map(memberId => ({
+      forum: forumId,
+      member: memberId,
+      created_at: new Date().toISOString(),
+    }));
+
+    interface AddedMember {
+      id: number;
+      created_at: string;
+      member: string;
+      users: {
+        id: string;
+        username: string | null;
+        profile_image_link: string | null;
+      };
+    }
+
+    let addedMembers: AddedMember[] = [];
+    if (insertData.length > 0) {
+      // Add new members to forum
+      const { data, error } = await supabase
+        .from('forum_members')
+        .insert(insertData)
+        .select(`
           id,
-          username,
-          profile_image_link
-        )
-      `)
-      .single();
+          created_at,
+          member,
+          users!forum_members_member_fkey (
+            id,
+            username,
+            profile_image_link
+          )
+        `);
 
-    if (error) {
-      return createErrorResponse(error.message, 500);
+      if (error) {
+        return createErrorResponse(error.message, 500);
+      }
+      addedMembers = (data as AddedMember[]) || [];
     }
 
-    return createResponse({
-      message: 'Member added successfully',
-      data
-    }, 201);
+    // Prepare response with detailed results
+    const result = {
+      message: isBulk ? 'Bulk member operation completed' : 'Member operation completed',
+      summary: {
+        requested: uniqueMemberIds.length,
+        added: addedMembers.length,
+        already_members: existingMemberIds.length,
+        invalid_users: invalidUserIds.length
+      },
+      details: {
+        added_members: addedMembers,
+        already_members: existingMemberIds,
+        invalid_user_ids: invalidUserIds
+      }
+    };
+
+    // For single member operations, maintain backward compatibility
+    if (!isBulk) {
+      if (addedMembers.length === 1) {
+        return createResponse({
+          message: 'Member added successfully',
+          data: addedMembers[0]
+        }, 201);
+      } else if (existingMemberIds.length === 1) {
+        return createErrorResponse('User is already a member of this forum', 409);
+      } else if (invalidUserIds.length === 1) {
+        return createErrorResponse('User not found', 404);
+      }
+    }
+
+    // For bulk operations, return detailed summary
+    const statusCode = addedMembers.length > 0 ? 201 : 200;
+    return createResponse(result, statusCode);
+
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
