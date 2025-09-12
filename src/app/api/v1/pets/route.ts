@@ -1,29 +1,174 @@
 import { supabase } from '@/app/supabase/supabase';
 import { createPetSchema } from '@/config/schema/petSchema';
 
-export async function GET() {
-  const { data, error } = await supabase
-    .from('pets')
-    .select('*, photo')
-    .order('created_at', { ascending: false });
-  if (error) {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  
+  // Extract query parameters for filtering
+  const type = searchParams.get('type');
+  const breed = searchParams.get('breed');
+  const gender = searchParams.get('gender');
+  const size = searchParams.get('size');
+  const age_min = searchParams.get('age_min');
+  const age_max = searchParams.get('age_max');
+  const is_vaccinated = searchParams.get('is_vaccinated');
+  const is_spayed_or_neutured = searchParams.get('is_spayed_or_neutured');
+  const is_trained = searchParams.get('is_trained');
+  const health_status = searchParams.get('health_status');
+  const request_status = searchParams.get('request_status');
+  const good_with = searchParams.get('good_with');
+  const location = searchParams.get('location');
+  const search = searchParams.get('search');
+  const limit = searchParams.get('limit');
+  const offset = searchParams.get('offset');
+
+  try {
+    // Start building the query
+    let query = supabase
+      .from('pets')
+      .select('*, photo', { count: 'exact' });
+
+    // Apply filters based on query parameters
+    if (type) {
+      query = query.ilike('type', `%${type}%`);
+    }
+    
+    if (breed) {
+      query = query.ilike('breed', `%${breed}%`);
+    }
+    
+    if (gender) {
+      query = query.ilike('gender', `%${gender}%`);
+    }
+    
+    if (size) {
+      query = query.ilike('size', `%${size}%`);
+    }
+    
+    if (age_min) {
+      const minAge = parseInt(age_min);
+      if (!isNaN(minAge)) {
+        query = query.gte('age', minAge);
+      }
+    }
+    
+    if (age_max) {
+      const maxAge = parseInt(age_max);
+      if (!isNaN(maxAge)) {
+        query = query.lte('age', maxAge);
+      }
+    }
+    
+    if (is_vaccinated) {
+      const vaccinated = is_vaccinated.toLowerCase() === 'true';
+      query = query.eq('is_vaccinated', vaccinated);
+    }
+    
+    if (is_spayed_or_neutured) {
+      const spayed = is_spayed_or_neutured.toLowerCase() === 'true';
+      query = query.eq('is_spayed_or_neutured', spayed);
+    }
+    
+    if (is_trained) {
+      const trained = is_trained.toLowerCase() === 'true';
+      query = query.eq('is_trained', trained);
+    }
+    
+    if (health_status) {
+      query = query.ilike('health_status', `%${health_status}%`);
+    }
+    
+    if (request_status) {
+      query = query.eq('request_status', request_status);
+    }
+    
+    if (good_with) {
+      // Support searching for pets good with specific groups (children, cats, dogs, etc.)
+      query = query.contains('good_with', [good_with]);
+    }
+    
+    if (location) {
+      query = query.ilike('rescue_address', `%${location}%`);
+    }
+    
+    if (search) {
+      // Global search across name, description, breed, and type
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,breed.ilike.%${search}%,type.ilike.%${search}%`);
+    }
+
+    // Apply pagination
+    if (limit) {
+      const limitNum = parseInt(limit);
+      if (!isNaN(limitNum) && limitNum > 0 && limitNum <= 100) {
+        query = query.limit(limitNum);
+      }
+    }
+    
+    if (offset) {
+      const offsetNum = parseInt(offset);
+      const limitNum = limit ? parseInt(limit) : 50;
+      if (!isNaN(offsetNum) && offsetNum >= 0) {
+        query = query.range(offsetNum, offsetNum + limitNum - 1);
+      }
+    }
+
+    // Apply default ordering
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to fetch pets',
+          message: error.message,
+        }),
+        { status: 500 },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Success',
+        data: data,
+        metadata: {
+          total_count: count,
+          returned_count: data?.length || 0,
+          applied_filters: {
+            type,
+            breed,
+            gender,
+            size,
+            age_range: age_min || age_max ? { min: age_min, max: age_max } : null,
+            is_vaccinated: is_vaccinated ? is_vaccinated === 'true' : null,
+            is_spayed_or_neutured: is_spayed_or_neutured ? is_spayed_or_neutured === 'true' : null,
+            is_trained: is_trained ? is_trained === 'true' : null,
+            health_status,
+            request_status,
+            good_with,
+            location,
+            search,
+          },
+          pagination: {
+            limit: limit ? parseInt(limit) : null,
+            offset: offset ? parseInt(offset) : null,
+          },
+        },
+      }),
+      {
+        status: 200,
+      },
+    );
+  } catch (error) {
+    console.error('Error fetching pets:', error);
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch pets',
-        message: error.message,
+        message: 'An unexpected error occurred',
       }),
-      { status: 404 },
+      { status: 500 },
     );
   }
-  return new Response(
-    JSON.stringify({
-      message: 'Success',
-      data: data,
-    }),
-    {
-      status: 200,
-    },
-  );
 }
 
 export async function POST(request: Request) {
