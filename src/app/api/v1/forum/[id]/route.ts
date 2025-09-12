@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/app/supabase/supabase';
-import { FORUM_SELECT_FIELDS, createErrorResponse, createResponse } from '@/lib/db-utils';
+import { FORUM_SELECT_FIELDS, createErrorResponse, createResponse, fetchForumWithMembers } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -19,15 +19,14 @@ export async function GET(_request: NextRequest, context: any) {
     if (Number.isNaN(pathId))
       return createErrorResponse('Invalid id', 400);
 
-    const { data, error } = await supabase
-      .from('forum')
-      .select(FORUM_SELECT_FIELDS)
-      .eq('id', pathId)
-      .single();
-      
-    if (error) return createErrorResponse(error.message, 500);
+    // Use the new utility function to get forum with members
+    const forumWithMembers = await fetchForumWithMembers(pathId, true);
+    
+    if (!forumWithMembers) {
+      return createErrorResponse('Forum not found', 404);
+    }
 
-    return createResponse({ data }, 200, { 
+    return createResponse({ data: forumWithMembers }, 200, { 
       cache: 'public, s-maxage=60, stale-while-revalidate=120' 
     });
   } catch (err) {

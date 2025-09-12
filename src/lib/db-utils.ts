@@ -112,11 +112,267 @@ export const FORUM_SELECT_FIELDS = `
   created_at,
   updated_at,
   created_by,
+  private,
   users!forum_created_by_fkey (
     id,
     username
   )
 `;
+
+export const FORUM_WITH_MEMBERS_SELECT_FIELDS = `
+  id,
+  forum_name,
+  created_at,
+  updated_at,
+  created_by,
+  private,
+  users!forum_created_by_fkey (
+    id,
+    username
+  ),
+  forum_members!forum_members_forum_fkey (
+    id,
+    created_at,
+    member,
+    users!forum_members_member_fkey (
+      id,
+      username,
+      profile_image_link
+    )
+  )
+`;
+
+// Forum fetching utilities
+export interface ForumWithMembers {
+  id: number;
+  forum_name: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  private: boolean | null;
+  users?: {
+    id: string;
+    username: string;
+  } | null;
+  forum_members?: Array<{
+    id: number;
+    created_at: string;
+    member: string;
+    users?: {
+      id: string;
+      username: string;
+      profile_image_link: string | null;
+    } | null;
+  }>;
+}
+
+export interface ProcessedForum {
+  id: number;
+  forum_name: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  private: boolean | null;
+  users?: {
+    id: string;
+    username: string;
+  } | null;
+  members: Array<{
+    id: string;
+    username: string;
+    profile_image_link: string | null;
+    joined_at: string;
+  }>;
+  member_count: number;
+}
+
+// Process forum data to flatten members and add creator if not explicit member
+export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum {
+  const explicitMembers = forum.forum_members || [];
+  
+  // Flatten the member structure
+  const flattenedMembers = explicitMembers.map(member => ({
+    id: member.users?.id || member.member,
+    username: member.users?.username || '',
+    profile_image_link: member.users?.profile_image_link || null,
+    joined_at: member.created_at
+  }));
+
+  // Calculate member count properly - don't double count creator
+  const creatorIsExplicitMember = flattenedMembers.some(m => m.id === forum.created_by);
+  const memberCount = flattenedMembers.length + (forum.created_by && !creatorIsExplicitMember ? 1 : 0);
+
+  return {
+    id: forum.id,
+    forum_name: forum.forum_name,
+    created_at: forum.created_at,
+    updated_at: forum.updated_at,
+    created_by: forum.created_by,
+    private: forum.private,
+    users: forum.users,
+    members: flattenedMembers,
+    member_count: memberCount
+  };
+}
+
+// Fetch a single forum with members
+export async function fetchForumWithMembers(forumId: number, useCache = true): Promise<ProcessedForum | null> {
+  const cacheKey = `forum_with_members_${forumId}`;
+  
+  if (useCache) {
+    const cached = cache.get(cacheKey);
+    if (cached !== null) return cached as ProcessedForum;
+  }
+
+  const { data, error } = await supabase
+    .from('forum')
+    .select(FORUM_WITH_MEMBERS_SELECT_FIELDS)
+    .eq('id', forumId)
+    .single();
+
+  if (error || !data) return null;
+
+  const processedForum = processForumWithMembers(data as ForumWithMembers);
+  
+  if (useCache) {
+    cache.set(cacheKey, processedForum, 60); // Cache for 1 minute
+  }
+  
+  return processedForum;
+}
+
+// Fetch multiple forums with members (with pagination)
+export async function fetchForumsWithMembers(options: {
+  page?: number;
+  limit?: number;
+  createdBy?: string;
+  userId?: string; // For privacy filtering
+  useCache?: boolean;
+} = {}): Promise<{ data: ProcessedForum[]; count: number | null }> {
+  const {
+    page = 1,
+    limit = 20,
+    createdBy,
+    userId,
+    useCache = true
+  } = options;
+
+  const offset = (page - 1) * limit;
+  const cacheKey = `forums_with_members_${JSON.stringify(options)}`;
+  
+  if (useCache) {
+    const cached = cache.get(cacheKey);
+    if (cached !== null) return cached as { data: ProcessedForum[]; count: number | null };
+  }
+
+  // Build query with privacy filtering if userId provided
+  let query = supabase
+    .from('forum')
+    .select(FORUM_WITH_MEMBERS_SELECT_FIELDS, { count: 'exact' });
+
+  // Apply privacy filter if user provided
+  if (userId) {
+    // Get accessible forum IDs
+    const [memberForums, createdForums] = await Promise.all([
+      supabase.from('forum_members').select('forum').eq('member', userId),
+      supabase.from('forum').select('id').eq('created_by', userId)
+    ]);
+
+    const memberForumIds = memberForums.data?.map(f => f.forum) || [];
+    const createdForumIds = createdForums.data?.map(f => f.id) || [];
+    const accessibleForumIds = [...new Set([...memberForumIds, ...createdForumIds])];
+
+    if (accessibleForumIds.length > 0) {
+      query = query.or(`private.is.null,private.eq.false,id.in.(${accessibleForumIds.join(',')})`);
+    } else {
+      query = query.or('private.is.null,private.eq.false');
+    }
+  } else {
+    // No user provided, only show public forums
+    query = query.or('private.is.null,private.eq.false');
+  }
+
+  // Apply additional filters
+  if (createdBy) {
+    query = query.eq('created_by', createdBy);
+  }
+
+  // Apply ordering and pagination
+  query = query
+    .order('created_at', { ascending: false, nullsFirst: false })
+    .range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    return { data: [], count: 0 };
+  }
+
+  const processedForums = (data || []).map(forum => processForumWithMembers(forum as ForumWithMembers));
+  
+  const result = { data: processedForums, count };
+  
+  if (useCache) {
+    cache.set(cacheKey, result, 30); // Cache for 30 seconds
+  }
+  
+  return result;
+}
+
+// Fetch forums where user is creator or member
+export async function fetchUserForums(userId: string, useCache = true): Promise<ProcessedForum[]> {
+  const cacheKey = `user_forums_${userId}`;
+  
+  if (useCache) {
+    const cached = cache.get(cacheKey);
+    if (cached !== null) return cached as ProcessedForum[];
+  }
+
+  // Get forums where user is the creator
+  const { data: createdForums } = await supabase
+    .from('forum')
+    .select(FORUM_WITH_MEMBERS_SELECT_FIELDS)
+    .eq('created_by', userId)
+    .order('created_at', { ascending: false });
+
+  // Get forums where user is a member
+  const { data: memberForums } = await supabase
+    .from('forum_members')
+    .select(`
+      forum!inner (${FORUM_WITH_MEMBERS_SELECT_FIELDS})
+    `)
+    .eq('member', userId);
+
+  // Combine and deduplicate forums
+  const allForums = [...(createdForums || [])];
+  const memberForumsList = memberForums?.map(mf => mf.forum).filter(Boolean) || [];
+  
+  // Add member forums that aren't already in created forums
+  memberForumsList.forEach(memberForum => {
+    const isDuplicate = allForums.some(forum => forum.id === memberForum.id);
+    if (!isDuplicate) {
+      allForums.push(memberForum);
+    }
+  });
+
+  // Sort by creation date
+  allForums.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  // Process all forums
+  const processedForums = allForums.map(forum => {
+    const processed = processForumWithMembers(forum as ForumWithMembers);
+    return {
+      ...processed,
+      user_role: forum.created_by === userId ? 'creator' : 'member'
+    };
+  });
+  
+  if (useCache) {
+    cache.set(cacheKey, processedForums, 60); // Cache for 1 minute
+  }
+  
+  return processedForums;
+}
 
 // Standard response helpers
 export function createResponse(data: unknown, status = 200, options: { cache?: string } = {}) {
