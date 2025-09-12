@@ -12,23 +12,30 @@ async function parseJson(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest, context: any) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const params = await context.params;
     const pathId = Number((params as { id: string }).id);
     if (Number.isNaN(pathId))
       return createErrorResponse('Invalid id', 400);
 
+    // Check for refresh parameter to bypass cache
+    const url = new URL(request.url);
+    const refresh = url.searchParams.get('refresh') === 'true';
+
     // Use the new utility function to get forum with members
-    const forumWithMembers = await fetchForumWithMembers(pathId, true);
+    const forumWithMembers = await fetchForumWithMembers(pathId, !refresh);
     
     if (!forumWithMembers) {
       return createErrorResponse('Forum not found', 404);
     }
 
-    return createResponse({ data: forumWithMembers }, 200, { 
-      cache: 'public, s-maxage=60, stale-while-revalidate=120' 
-    });
+    // Set appropriate cache headers based on refresh parameter
+    const cacheHeaders = refresh 
+      ? { cache: 'no-cache, no-store, must-revalidate' }
+      : { cache: 'public, s-maxage=60, stale-while-revalidate=120' };
+
+    return createResponse({ data: forumWithMembers }, 200, cacheHeaders);
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/app/supabase/supabase';
-import { createErrorResponse, createResponse } from '@/lib/db-utils';
+import { createErrorResponse, createResponse, invalidateForumCache } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -305,6 +305,8 @@ export async function POST(request: NextRequest, context: any) {
     // For single member operations, maintain backward compatibility
     if (!isBulk) {
       if (addedMembers.length === 1) {
+        // Invalidate forum cache for immediate data refresh
+        invalidateForumCache(forumId);
         return createResponse({
           message: 'Member added successfully',
           data: addedMembers[0]
@@ -318,6 +320,12 @@ export async function POST(request: NextRequest, context: any) {
 
     // For bulk operations, return detailed summary
     const statusCode = addedMembers.length > 0 ? 201 : 200;
+    
+    // Invalidate forum cache if any members were added to ensure fresh data
+    if (addedMembers.length > 0) {
+      invalidateForumCache(forumId);
+    }
+    
     return createResponse(result, statusCode);
 
   } catch (err) {

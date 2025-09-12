@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/app/supabase/supabase';
-import { createErrorResponse, createResponse } from '@/lib/db-utils';
+import { createErrorResponse, createResponse, invalidateForumCache } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -125,6 +125,9 @@ export async function DELETE(request: NextRequest, context: any) {
     if (error) {
       return createErrorResponse(error.message, 500);
     }
+
+    // Invalidate forum cache to ensure fresh data
+    invalidateForumCache(forumId);
 
     return createResponse({
       message: 'Member removed successfully',

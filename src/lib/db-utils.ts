@@ -29,6 +29,10 @@ class SimpleCache {
     return item.data;
   }
 
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+
   clear() {
     this.cache.clear();
   }
@@ -372,6 +376,17 @@ export async function fetchUserForums(userId: string, useCache = true): Promise<
   }
   
   return processedForums;
+}
+
+// Cache invalidation utilities
+export function invalidateForumCache(forumId: number) {
+  const cacheKey = `forum_with_members_${forumId}`;
+  cache.delete(cacheKey);
+}
+
+export function invalidateUserForumsCache(userId: string) {
+  const cacheKey = `user_forums_${userId}`;
+  cache.delete(cacheKey);
 }
 
 // Standard response helpers
