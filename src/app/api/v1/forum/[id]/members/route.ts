@@ -114,7 +114,7 @@ export async function GET(request: NextRequest, context: any) {
         totalPages: Math.ceil(total / limit)
       }
     }, 200, {
-      cache: 'private, max-age=60'
+      cache: 'no-cache, no-store, must-revalidate'
     });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
@@ -332,3 +332,6 @@ export async function POST(request: NextRequest, context: any) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
 }
+
+
+

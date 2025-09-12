@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 20));
 
-    // Use the new utility function
+    // Use the new utility function without caching
     const { data: forumsWithMemberInfo, count } = await fetchForumsWithMembers({
       page,
       limit,
       createdBy: createdBy || undefined,
       userId: userId || undefined,
-      useCache: true
+      useCache: false
     });
 
     return new Response(JSON.stringify({ 
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=30'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       },
     });
   } catch (err) {

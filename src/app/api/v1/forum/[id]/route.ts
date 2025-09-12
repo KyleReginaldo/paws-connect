@@ -19,23 +19,17 @@ export async function GET(request: NextRequest, context: any) {
     if (Number.isNaN(pathId))
       return createErrorResponse('Invalid id', 400);
 
-    // Check for refresh parameter to bypass cache
-    const url = new URL(request.url);
-    const refresh = url.searchParams.get('refresh') === 'true';
-
-    // Use the new utility function to get forum with members
-    const forumWithMembers = await fetchForumWithMembers(pathId, !refresh);
+    // Always fetch fresh data without caching
+    const forumWithMembers = await fetchForumWithMembers(pathId, false);
     
     if (!forumWithMembers) {
       return createErrorResponse('Forum not found', 404);
     }
 
-    // Set appropriate cache headers based on refresh parameter
-    const cacheHeaders = refresh 
-      ? { cache: 'no-cache, no-store, must-revalidate' }
-      : { cache: 'public, s-maxage=60, stale-while-revalidate=120' };
-
-    return createResponse({ data: forumWithMembers }, 200, cacheHeaders);
+    // No cache headers - always fetch fresh data
+    return createResponse({ data: forumWithMembers }, 200, {
+      cache: 'no-cache, no-store, must-revalidate'
+    });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }

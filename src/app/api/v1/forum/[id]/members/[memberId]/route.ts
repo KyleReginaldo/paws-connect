@@ -48,7 +48,7 @@ export async function GET(_request: NextRequest, context: any) {
     }
 
     return createResponse({ data }, 200, {
-      cache: 'private, max-age=300'
+      cache: 'no-cache, no-store, must-revalidate'
     });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);

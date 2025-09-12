@@ -9,15 +9,18 @@ export async function GET(_request: NextRequest, context: any) {
     if (!userId)
       return new Response(JSON.stringify({ error: 'Missing userId param' }), { status: 400 });
 
-    // Use the new utility function
-    const forumsWithRoles = await fetchUserForums(userId, true);
+    // Use the new utility function without caching
+    const forumsWithRoles = await fetchUserForums(userId, false);
 
     return new Response(JSON.stringify({ 
       data: forumsWithRoles,
       total: forumsWithRoles.length
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      },
     });
   } catch (err) {
     return new Response(

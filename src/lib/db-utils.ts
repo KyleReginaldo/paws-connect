@@ -40,8 +40,8 @@ class SimpleCache {
 
 export const cache = new SimpleCache();
 
-// Optimized forum existence check with caching
-export async function checkForumExists(forumId: number, useCache = true): Promise<boolean> {
+// Optimized forum existence check with minimal caching
+export async function checkForumExists(forumId: number, useCache = false): Promise<boolean> {
   const cacheKey = `forum_exists_${forumId}`;
   
   if (useCache) {
@@ -58,14 +58,14 @@ export async function checkForumExists(forumId: number, useCache = true): Promis
   const exists = !error && !!data;
   
   if (useCache) {
-    cache.set(cacheKey, exists, 60); // Cache for 1 minute
+    cache.set(cacheKey, exists, 10); // Cache for only 10 seconds if enabled
   }
   
   return exists;
 }
 
-// Optimized user existence check with caching
-export async function checkUserExists(userId: string, useCache = true): Promise<boolean> {
+// Optimized user existence check with minimal caching
+export async function checkUserExists(userId: string, useCache = false): Promise<boolean> {
   const cacheKey = `user_exists_${userId}`;
   
   if (useCache) {
@@ -82,7 +82,7 @@ export async function checkUserExists(userId: string, useCache = true): Promise<
   const exists = !error && !!data;
   
   if (useCache) {
-    cache.set(cacheKey, exists, 300); // Cache for 5 minutes
+    cache.set(cacheKey, exists, 30); // Cache for only 30 seconds if enabled
   }
   
   return exists;
@@ -219,8 +219,8 @@ export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum
   };
 }
 
-// Fetch a single forum with members
-export async function fetchForumWithMembers(forumId: number, useCache = true): Promise<ProcessedForum | null> {
+// Fetch a single forum with members - no caching by default
+export async function fetchForumWithMembers(forumId: number, useCache = false): Promise<ProcessedForum | null> {
   const cacheKey = `forum_with_members_${forumId}`;
   
   if (useCache) {
@@ -239,13 +239,13 @@ export async function fetchForumWithMembers(forumId: number, useCache = true): P
   const processedForum = processForumWithMembers(data as ForumWithMembers);
   
   if (useCache) {
-    cache.set(cacheKey, processedForum, 60); // Cache for 1 minute
+    cache.set(cacheKey, processedForum, 5); // Cache for only 5 seconds if enabled
   }
   
   return processedForum;
 }
 
-// Fetch multiple forums with members (with pagination)
+// Fetch multiple forums with members (with pagination) - no caching by default
 export async function fetchForumsWithMembers(options: {
   page?: number;
   limit?: number;
@@ -258,7 +258,7 @@ export async function fetchForumsWithMembers(options: {
     limit = 20,
     createdBy,
     userId,
-    useCache = true
+    useCache = false
   } = options;
 
   const offset = (page - 1) * limit;
@@ -317,14 +317,14 @@ export async function fetchForumsWithMembers(options: {
   const result = { data: processedForums, count };
   
   if (useCache) {
-    cache.set(cacheKey, result, 30); // Cache for 30 seconds
+    cache.set(cacheKey, result, 5); // Cache for only 5 seconds if enabled
   }
   
   return result;
 }
 
-// Fetch forums where user is creator or member
-export async function fetchUserForums(userId: string, useCache = true): Promise<ProcessedForum[]> {
+// Fetch forums where user is creator or member - no caching by default
+export async function fetchUserForums(userId: string, useCache = false): Promise<ProcessedForum[]> {
   const cacheKey = `user_forums_${userId}`;
   
   if (useCache) {
@@ -372,7 +372,7 @@ export async function fetchUserForums(userId: string, useCache = true): Promise<
   });
   
   if (useCache) {
-    cache.set(cacheKey, processedForums, 60); // Cache for 1 minute
+    cache.set(cacheKey, processedForums, 5); // Cache for only 5 seconds if enabled
   }
   
   return processedForums;

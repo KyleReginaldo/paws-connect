@@ -113,7 +113,7 @@ export async function GET(request: NextRequest, context: any) {
         excluded_count: excludeUserIds.size
       }
     }, 200, {
-      cache: 'private, max-age=60'
+      cache: 'no-cache, no-store, must-revalidate'
     });
 
   } catch (err) {
