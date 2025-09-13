@@ -277,7 +277,7 @@ export async function POST(request: NextRequest, context: any) {
     const insertData = newMemberIds.map((memberId) => ({
       forum: forumId,
       member: memberId,
-      invitation_status: 'APPROVED' as const, // Members added by creator are automatically approved
+      invitation_status: isCreator ? 'APPROVED' as const : 'PENDING' as const, // Only creator can directly approve, others create pending invitations
       created_at: new Date().toISOString(),
     }));
 
