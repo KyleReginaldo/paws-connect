@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { pushNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -224,6 +225,18 @@ export async function POST(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
+    const{data: forum_members, error: forum_list_error} = await supabase
+    .from('forum_members')
+    .select('member, invitation_status')
+    .eq('forum', forumId);
+    if (forum_list_error || !forum_members) {
+      return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
+    }
+    for(const member of forum_members){
+      if(member.member !== sender && member.invitation_status === 'APPROVED'){
+        await pushNotification(member.member, `New message in forum: ${message}`,`/forum-chat/${forumId}`);
+      }
+    }
     return new Response(JSON.stringify({ data }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
