@@ -369,7 +369,8 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
       forum!inner (${FORUM_WITH_MEMBERS_SELECT_FIELDS})
     `,
     )
-    .eq('member', userId);
+    .eq('member', userId)
+    .neq('invitation_status', 'REJECTED'); // Exclude rejected memberships
 
   // Combine and deduplicate forums
   const allForums = [...(createdForums || [])];
