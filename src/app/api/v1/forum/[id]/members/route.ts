@@ -255,6 +255,7 @@ export async function POST(request: NextRequest, context: any) {
     const insertData = newMemberIds.map((memberId) => ({
       forum: forumId,
       member: memberId,
+      invitation_status: 'APPROVED' as const, // Members added by creator are automatically approved
       created_at: new Date().toISOString(),
     }));
 
