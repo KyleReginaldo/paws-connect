@@ -244,13 +244,19 @@ export async function fetchForumWithMembers(
   const forumCopy = { ...data };
   
   // Filter members based on user role
-  if (!isCreator && forumCopy.forum_members) {
-    // Non-creators can only see approved members
-    forumCopy.forum_members = forumCopy.forum_members.filter(
-      (member) => member.invitation_status === 'APPROVED',
-    );
+  if (forumCopy.forum_members) {
+    if (isCreator) {
+      // Creators can see pending and approved members, but not rejected
+      forumCopy.forum_members = forumCopy.forum_members.filter(
+        (member) => member.invitation_status !== 'REJECTED',
+      );
+    } else {
+      // Non-creators can only see approved members
+      forumCopy.forum_members = forumCopy.forum_members.filter(
+        (member) => member.invitation_status === 'APPROVED',
+      );
+    }
   }
-  // Creators can see all members (no filtering needed)
 
   const processedForum = processForumWithMembers(forumCopy as ForumWithMembers);
 
@@ -388,13 +394,19 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
     const forumCopy = { ...forum };
 
     // Filter members based on user role
-    if (!isCreator && forumCopy.forum_members) {
-      // Non-creators can only see approved members
-      forumCopy.forum_members = forumCopy.forum_members.filter(
-        (member) => member.invitation_status === 'APPROVED',
-      );
+    if (forumCopy.forum_members) {
+      if (isCreator) {
+        // Creators can see pending and approved members, but not rejected
+        forumCopy.forum_members = forumCopy.forum_members.filter(
+          (member) => member.invitation_status !== 'REJECTED',
+        );
+      } else {
+        // Non-creators can only see approved members
+        forumCopy.forum_members = forumCopy.forum_members.filter(
+          (member) => member.invitation_status === 'APPROVED',
+        );
+      }
     }
-    // Creators can see all members (no filtering needed)
 
     const processed = processForumWithMembers(forumCopy as ForumWithMembers);
     return {
