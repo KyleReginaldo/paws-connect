@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Determine user role for filtering
     let effectiveUserRole: number | null = null;
-    
+
     if (userId) {
       // Automatic role detection: lookup user role from database
       const { data: userData, error: userError } = await supabase
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         .select('role')
         .eq('id', userId)
         .single();
-      
+
       if (!userError && userData) {
         effectiveUserRole = userData.role;
       }
@@ -70,15 +70,13 @@ export async function GET(request: NextRequest) {
           // If status is specified, validate it's allowed for regular users
           const allowedStatusesForUsers = ['ONGOING', 'COMPLETE'];
           if (allowedStatusesForUsers.includes(status)) {
-            query = query.eq(
-              'status',
-              status as 'ONGOING' | 'COMPLETE',
-            );
+            query = query.eq('status', status as 'ONGOING' | 'COMPLETE');
           } else {
             // If user tries to access admin-only statuses, return empty result
             return new Response(
               JSON.stringify({
-                message: 'Access denied: You can only view ONGOING and COMPLETE fundraising campaigns',
+                message:
+                  'Access denied: You can only view ONGOING and COMPLETE fundraising campaigns',
                 data: [],
                 count: 0,
                 pagination: {
@@ -149,12 +147,13 @@ export async function GET(request: NextRequest) {
         },
         filters: {
           applied_role: effectiveUserRole,
-          allowed_statuses: effectiveUserRole === 1 
-            ? ['PENDING', 'ONGOING', 'COMPLETE', 'REJECTED', 'CANCELLED']
-            : effectiveUserRole !== null 
-            ? ['ONGOING', 'COMPLETE']
-            : 'all'
-        }
+          allowed_statuses:
+            effectiveUserRole === 1
+              ? ['PENDING', 'ONGOING', 'COMPLETE', 'REJECTED', 'CANCELLED']
+              : effectiveUserRole !== null
+                ? ['ONGOING', 'COMPLETE']
+                : 'all',
+        },
       }),
       {
         status: 200,

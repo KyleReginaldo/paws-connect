@@ -3,7 +3,7 @@ import { supabase } from '@/app/supabase/supabase';
 import { createErrorResponse, createResponse, invalidateForumCache } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-
+type Status = 'APPROVED' | 'REJECTED';
 async function parseJson(request: NextRequest) {
   try {
     return await request.json();
@@ -19,13 +19,15 @@ export async function GET(_request: NextRequest, context: any) {
     const forumId = Number((params as { id: string }).id);
     const memberId = Number((params as { memberId: string }).memberId);
     
+
     if (Number.isNaN(forumId) || Number.isNaN(memberId)) {
       return createErrorResponse('Invalid id', 400);
     }
 
     const { data, error } = await supabase
       .from('forum_members')
-      .select(`
+      .select(
+        `
         id,
         created_at,
         member,
@@ -34,7 +36,8 @@ export async function GET(_request: NextRequest, context: any) {
           username,
           profile_image_link
         )
-      `)
+      `,
+      )
       .eq('id', memberId)
       .eq('forum', forumId)
       .single();
@@ -48,7 +51,7 @@ export async function GET(_request: NextRequest, context: any) {
     }
 
     return createResponse({ data }, 200, {
-      cache: 'no-cache, no-store, must-revalidate'
+      cache: 'no-cache, no-store, must-revalidate',
     });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
@@ -61,7 +64,7 @@ export async function DELETE(request: NextRequest, context: any) {
     const params = await context.params;
     const forumId = Number((params as { id: string }).id);
     const memberId = Number((params as { memberId: string }).memberId);
-    
+
     if (Number.isNaN(forumId) || Number.isNaN(memberId)) {
       return createErrorResponse('Invalid id', 400);
     }
@@ -110,7 +113,10 @@ export async function DELETE(request: NextRequest, context: any) {
     const isMemberThemselves = memberInfo.member === parsedRequesterId.data;
 
     if (!isForumCreator && !isMemberThemselves) {
-      return createErrorResponse('Unauthorized: Only the forum creator or the member themselves can remove membership', 403);
+      return createErrorResponse(
+        'Unauthorized: Only the forum creator or the member themselves can remove membership',
+        403,
+      );
     }
 
     // Remove member from forum
@@ -131,9 +137,30 @@ export async function DELETE(request: NextRequest, context: any) {
 
     return createResponse({
       message: 'Member removed successfully',
-      data
+      data,
     });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
+}
+
+export async function PUT(request: NextRequest, context: any) {
+  const { searchParams } = new URL(request.url);
+  const params = await context.params;
+  const forumId = Number((params as { id: string }).id);
+  const forumMemberId = Number((params as { memberId: string }).memberId);
+  const status = searchParams.get('status') as Status | null;
+  const {data: existingMember, error: fetchError} = await supabase.from('forum_members').select().eq('id',forumMemberId).eq('forum',forumId).single();
+  if(fetchError) {
+    return createErrorResponse('Failed to fetch member. Please double check if the member is part of the forum', 400, fetchError.message);
+  }
+  if(!existingMember) {
+    return createErrorResponse('Member not found', 404);
+  }
+  if(!status) return createErrorResponse('Missing status param', 400);
+  const {data,error} = await supabase.from('forum_members').update({'invitation_status': status}).eq('id',forumMemberId).select().single();
+  if (error) {
+    return createErrorResponse('Failed to update member', 400, error.message);
+  }
+  return createResponse({message: 'Member updated successfully', data});
 }

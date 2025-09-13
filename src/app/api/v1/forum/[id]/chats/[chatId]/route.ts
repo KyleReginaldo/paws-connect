@@ -17,14 +17,15 @@ export async function GET(_request: NextRequest, context: any) {
     const params = await context.params;
     const forumId = Number((params as { id: string }).id);
     const chatId = Number((params as { chatId: string }).chatId);
-    
+
     if (Number.isNaN(forumId) || Number.isNaN(chatId)) {
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
     }
 
     const { data, error } = await supabase
       .from('forum_chats')
-      .select(`
+      .select(
+        `
         id,
         message,
         sent_at,
@@ -33,7 +34,8 @@ export async function GET(_request: NextRequest, context: any) {
           id,
           username
         )
-      `)
+      `,
+      )
       .eq('id', chatId)
       .eq('forum', forumId)
       .single();
@@ -48,9 +50,9 @@ export async function GET(_request: NextRequest, context: any) {
 
     return new Response(JSON.stringify({ data }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=300'
+        'Cache-Control': 'private, max-age=300',
       },
     });
   } catch (err) {
@@ -69,7 +71,7 @@ export async function PUT(request: NextRequest, context: any) {
     const params = await context.params;
     const forumId = Number((params as { id: string }).id);
     const chatId = Number((params as { chatId: string }).chatId);
-    
+
     if (Number.isNaN(forumId) || Number.isNaN(chatId)) {
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
     }
@@ -111,7 +113,10 @@ export async function PUT(request: NextRequest, context: any) {
 
     // Verify ownership
     if (existingChat.sender !== sender) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: You can only edit your own messages' }), { status: 403 });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: You can only edit your own messages' }),
+        { status: 403 },
+      );
     }
 
     // Update with optimized return fields
@@ -120,7 +125,8 @@ export async function PUT(request: NextRequest, context: any) {
       .update({ message })
       .eq('id', chatId)
       .eq('forum', forumId)
-      .select(`
+      .select(
+        `
         id,
         message,
         sent_at,
@@ -129,7 +135,8 @@ export async function PUT(request: NextRequest, context: any) {
           id,
           username
         )
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -156,7 +163,7 @@ export async function DELETE(request: NextRequest, context: any) {
     const params = await context.params;
     const forumId = Number((params as { id: string }).id);
     const chatId = Number((params as { chatId: string }).chatId);
-    
+
     if (Number.isNaN(forumId) || Number.isNaN(chatId)) {
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
     }
@@ -184,7 +191,10 @@ export async function DELETE(request: NextRequest, context: any) {
 
     // Verify ownership
     if (existingChat.sender !== senderId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: You can only delete your own messages' }), { status: 403 });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: You can only delete your own messages' }),
+        { status: 403 },
+      );
     }
 
     // Delete the chat message

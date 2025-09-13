@@ -18,11 +18,18 @@ export const createFundraisingSchema = z.object({
   created_by: z.string().min(1, 'User ID is required'),
   images: z.array(z.string()).optional(),
   status: statusEnum.optional().default('PENDING'),
-  end_date: z.string().optional().transform(val => val === '' ? null : val),
-  facebook_link: z.string().optional().transform(val => val === '' ? null : val).refine(
-    val => val === null || val === undefined || z.string().url().safeParse(val).success,
-    'Invalid Facebook URL'
-  ),
+  end_date: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? null : val)),
+  facebook_link: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (val) => val === null || val === undefined || z.string().url().safeParse(val).success,
+      'Invalid Facebook URL',
+    ),
   // Note: raised_amount is NOT included in create schema - it starts at 0 and is updated via donations
 });
 
@@ -45,11 +52,18 @@ export const updateFundraisingSchema = z.object({
   raised_amount: z.number().min(0, 'Raised amount cannot be negative').optional(),
   status: statusEnum.optional(),
   images: z.array(z.string()).optional(),
-  end_date: z.string().transform(val => val === '' ? null : val).optional(),
-  facebook_link: z.string().transform(val => val === '' ? null : val).refine(
-    val => val === null || val === undefined || z.string().url().safeParse(val).success,
-    'Invalid Facebook URL'
-  ).optional(),
+  end_date: z
+    .string()
+    .transform((val) => (val === '' ? null : val))
+    .optional(),
+  facebook_link: z
+    .string()
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (val) => val === null || val === undefined || z.string().url().safeParse(val).success,
+      'Invalid Facebook URL',
+    )
+    .optional(),
 });
 
 export type CreateFundraisingDto = z.infer<typeof createFundraisingSchema>;

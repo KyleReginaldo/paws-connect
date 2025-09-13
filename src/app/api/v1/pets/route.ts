@@ -3,7 +3,7 @@ import { createPetSchema } from '@/config/schema/petSchema';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  
+
   // Extract query parameters for filtering
   const type = searchParams.get('type');
   const breed = searchParams.get('breed');
@@ -24,76 +24,76 @@ export async function GET(request: Request) {
 
   try {
     // Start building the query
-    let query = supabase
-      .from('pets')
-      .select('*, photo', { count: 'exact' });
+    let query = supabase.from('pets').select('*, photo', { count: 'exact' });
 
     // Apply filters based on query parameters
     if (type) {
       query = query.ilike('type', `%${type}%`);
     }
-    
+
     if (breed) {
       query = query.ilike('breed', `%${breed}%`);
     }
-    
+
     if (gender) {
       query = query.ilike('gender', `%${gender}%`);
     }
-    
+
     if (size) {
       query = query.ilike('size', `%${size}%`);
     }
-    
+
     if (age_min) {
       const minAge = parseInt(age_min);
       if (!isNaN(minAge)) {
         query = query.gte('age', minAge);
       }
     }
-    
+
     if (age_max) {
       const maxAge = parseInt(age_max);
       if (!isNaN(maxAge)) {
         query = query.lte('age', maxAge);
       }
     }
-    
+
     if (is_vaccinated) {
       const vaccinated = is_vaccinated.toLowerCase() === 'true';
       query = query.eq('is_vaccinated', vaccinated);
     }
-    
+
     if (is_spayed_or_neutured) {
       const spayed = is_spayed_or_neutured.toLowerCase() === 'true';
       query = query.eq('is_spayed_or_neutured', spayed);
     }
-    
+
     if (is_trained) {
       const trained = is_trained.toLowerCase() === 'true';
       query = query.eq('is_trained', trained);
     }
-    
+
     if (health_status) {
       query = query.ilike('health_status', `%${health_status}%`);
     }
-    
+
     if (request_status) {
       query = query.eq('request_status', request_status);
     }
-    
+
     if (good_with) {
       // Support searching for pets good with specific groups (children, cats, dogs, etc.)
       query = query.contains('good_with', [good_with]);
     }
-    
+
     if (location) {
       query = query.ilike('rescue_address', `%${location}%`);
     }
-    
+
     if (search) {
       // Global search across name, description, breed, and type
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,breed.ilike.%${search}%,type.ilike.%${search}%`);
+      query = query.or(
+        `name.ilike.%${search}%,description.ilike.%${search}%,breed.ilike.%${search}%,type.ilike.%${search}%`,
+      );
     }
 
     // Apply pagination
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
         query = query.limit(limitNum);
       }
     }
-    
+
     if (offset) {
       const offsetNum = parseInt(offset);
       const limitNum = limit ? parseInt(limit) : 50;

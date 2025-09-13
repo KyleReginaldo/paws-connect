@@ -12,16 +12,19 @@ export async function GET(_request: NextRequest, context: any) {
     // Use the new utility function without caching
     const forumsWithRoles = await fetchUserForums(userId, false);
 
-    return new Response(JSON.stringify({ 
-      data: forumsWithRoles,
-      total: forumsWithRoles.length
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    return new Response(
+      JSON.stringify({
+        data: forumsWithRoles,
+        total: forumsWithRoles.length,
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
       },
-    });
+    );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),

@@ -6,19 +6,19 @@ import { NextRequest } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate the request body
     const result = createDonationSchema.safeParse(body);
     if (!result.success) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request data', 
-          issues: result.error.issues.map(e => ({ 
-            field: e.path.join('.'), 
-            message: e.message 
-          }))
+        JSON.stringify({
+          error: 'Invalid request data',
+          issues: result.error.issues.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -32,19 +32,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (fundError || !fundData) {
-      return new Response(
-        JSON.stringify({ error: 'Fundraising campaign not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Fundraising campaign not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     if (fundData.status !== 'ONGOING') {
       return new Response(
-        JSON.stringify({ 
-          error: 'Cannot donate to this campaign', 
-          message: `Campaign status is ${fundData.status}` 
+        JSON.stringify({
+          error: 'Cannot donate to this campaign',
+          message: `Campaign status is ${fundData.status}`,
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (userError || !userData) {
-        return new Response(
-          JSON.stringify({ error: 'Donor user not found' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Donor user not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
     }
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       console.error('Failed to insert donation:', insertError.message);
       return new Response(
         JSON.stringify({ error: 'Failed to create donation', message: insertError.message }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -108,23 +108,23 @@ export async function POST(request: NextRequest) {
           donation,
           updateError: updateError.message,
         }),
-        { status: 201, headers: { 'Content-Type': 'application/json' } }
+        { status: 201, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
     return new Response(
-      JSON.stringify({ 
-        message: 'Donation created successfully', 
-        donation, 
-        fundraising: updatedFund 
+      JSON.stringify({
+        message: 'Donation created successfully',
+        donation,
+        fundraising: updatedFund,
       }),
-      { status: 201, headers: { 'Content-Type': 'application/json' } }
+      { status: 201, headers: { 'Content-Type': 'application/json' } },
     );
   } catch (err) {
     console.error('Donation POST error', err);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    
+
     // Validate query parameters
     const queryResult = getDonationsQuerySchema.safeParse({
       limit: searchParams.get('limit') || '10',
@@ -141,14 +141,14 @@ export async function GET(request: NextRequest) {
 
     if (!queryResult.success) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Invalid query parameters', 
-          issues: queryResult.error.issues.map(e => ({ 
-            field: e.path.join('.'), 
-            message: e.message 
-          }))
+        JSON.stringify({
+          error: 'Invalid query parameters',
+          issues: queryResult.error.issues.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -156,14 +156,16 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('donations')
-      .select(`
+      .select(
+        `
         id,
         amount,
         message,
         donated_at,
         donor:users(id, username, email),
         fundraising:fundraising(id, title, description, target_amount, raised_amount)
-      `)
+      `,
+      )
       .order('donated_at', { ascending: false })
       .limit(limit);
 
@@ -178,26 +180,26 @@ export async function GET(request: NextRequest) {
       console.error('Failed to fetch donations:', error.message);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch donations', message: error.message }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
     return new Response(
-      JSON.stringify({ 
-        message: 'Success', 
+      JSON.stringify({
+        message: 'Success',
         data,
         pagination: {
           limit,
-          count: data.length
-        }
+          count: data.length,
+        },
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
   } catch (err) {
     console.error('Donations GET error', err);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }

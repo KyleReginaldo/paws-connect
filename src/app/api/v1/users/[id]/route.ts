@@ -18,18 +18,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
 
     // Optimized query - select only necessary fields
-    const { data, error } = await supabase
-      .from('users')
-      .select()
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('users').select().eq('id', id).single();
 
     if (error) {
       return createErrorResponse('User not found', 404, error.message);
     }
 
     return createResponse({ message: 'Success', data }, 200, {
-      cache: 'private, max-age=300'
+      cache: 'private, max-age=300',
     });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
@@ -40,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const body = await parseJson(request);
-    
+
     if (!body) {
       return createErrorResponse('Invalid JSON', 400);
     }
@@ -50,16 +46,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .object({
         username: z.string().optional(),
         email: z.email('Invalid email format').optional(),
-        phone_number: z.string().min(10, 'Phone number must be at least 10 digits').max(15, 'Phone number too long').optional(),
+        phone_number: z
+          .string()
+          .min(10, 'Phone number must be at least 10 digits')
+          .max(15, 'Phone number too long')
+          .optional(),
         profile_image_link: z.url('Invalid URL format').or(z.literal('')).optional(),
-        house_images: z.array(z.url('Invalid URL format')).max(10, 'Too many house images').optional(),
+        house_images: z
+          .array(z.url('Invalid URL format'))
+          .max(10, 'Too many house images')
+          .optional(),
         payment_method: z.string().max(50, 'Payment method name too long').optional(),
         status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING']).optional(),
         password: z.string().min(6, 'Password must be at least 6 characters').optional(),
       })
       .strict()
-      .refine(data => Object.keys(data).length > 0, {
-        message: 'At least one field must be provided for update'
+      .refine((data) => Object.keys(data).length > 0, {
+        message: 'At least one field must be provided for update',
       });
 
     const parsed = userUpdateSchema.safeParse(body);
@@ -129,7 +132,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         .from('users')
         .update(profileUpdateData)
         .eq('id', id)
-        .select(`
+        .select(
+          `
           id,
           username,
           email,
@@ -144,25 +148,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             id,
             type
           )
-        `)
+        `,
+        )
         .single();
 
       if (error) {
         return createErrorResponse('Failed to update user', 400, error.message);
       }
 
-      return createResponse({ 
-        message: 'User updated successfully', 
+      return createResponse({
+        message: 'User updated successfully',
         data,
-        updated_fields: Object.keys(profileUpdateData)
+        updated_fields: Object.keys(profileUpdateData),
       });
     }
 
     // If only password was updated
     if (password) {
-      return createResponse({ 
+      return createResponse({
         message: 'Password updated successfully',
-        updated_fields: ['password']
+        updated_fields: ['password'],
       });
     }
 

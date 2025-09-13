@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, context: any) {
     if (forum.private && userId) {
       // Check if user is the creator or a member
       const isCreator = forum.created_by === userId;
-      
+
       if (!isCreator) {
         const { data: membership } = await supabase
           .from('forum_members')
@@ -51,17 +51,22 @@ export async function GET(request: NextRequest, context: any) {
           .single();
 
         if (!membership) {
-          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), { status: 403 });
+          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), {
+            status: 403,
+          });
         }
       }
     } else if (forum.private && !userId) {
-      return new Response(JSON.stringify({ error: 'Authentication required for private forum' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'Authentication required for private forum' }), {
+        status: 401,
+      });
     }
 
     // Build optimized query
     let query = supabase
       .from('forum_chats')
-      .select(`
+      .select(
+        `
         id,
         message,
         sent_at,
@@ -70,7 +75,9 @@ export async function GET(request: NextRequest, context: any) {
           id,
           username
         )
-      `, { count: 'exact' })
+      `,
+        { count: 'exact' },
+      )
       .eq('forum', forumId)
       .order('sent_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -89,21 +96,24 @@ export async function GET(request: NextRequest, context: any) {
     // Reverse to show oldest first in chat
     const reversedData = data?.reverse() || [];
 
-    return new Response(JSON.stringify({ 
-      data: reversedData,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit)
-      }
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, no-cache, no-store, must-revalidate'
+    return new Response(
+      JSON.stringify({
+        data: reversedData,
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit),
+        },
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        },
       },
-    });
+    );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
@@ -159,7 +169,7 @@ export async function POST(request: NextRequest, context: any) {
     // Check access for private forums
     if (forum.private) {
       const isCreator = forum.created_by === sender;
-      
+
       if (!isCreator) {
         const { data: membership } = await supabase
           .from('forum_members')
@@ -169,7 +179,9 @@ export async function POST(request: NextRequest, context: any) {
           .single();
 
         if (!membership) {
-          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), { status: 403 });
+          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), {
+            status: 403,
+          });
         }
       }
     }
@@ -194,7 +206,8 @@ export async function POST(request: NextRequest, context: any) {
         sender,
         sent_at: new Date().toISOString(),
       })
-      .select(`
+      .select(
+        `
         id,
         message,
         sent_at,
@@ -203,7 +216,8 @@ export async function POST(request: NextRequest, context: any) {
           id,
           username
         )
-      `)
+      `,
+      )
       .single();
 
     if (error) {

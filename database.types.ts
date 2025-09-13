@@ -278,18 +278,27 @@ export type Database = {
           created_at: string
           forum: number
           id: number
+          invitation_status:
+            | Database["public"]["Enums"]["invitation_status"]
+            | null
           member: string
         }
         Insert: {
           created_at?: string
           forum: number
           id?: number
+          invitation_status?:
+            | Database["public"]["Enums"]["invitation_status"]
+            | null
           member: string
         }
         Update: {
           created_at?: string
           forum?: number
           id?: number
+          invitation_status?:
+            | Database["public"]["Enums"]["invitation_status"]
+            | null
           member?: string
         }
         Relationships: [
@@ -524,6 +533,7 @@ export type Database = {
         | "COMPLETE"
         | "REJECTED"
         | "CANCELLED"
+      invitation_status: "PENDING" | "APPROVED" | "REJECTED"
       user_role: "CUSTOMER" | "ADMIN" | "STAFF"
     }
     CompositeTypes: {
@@ -659,6 +669,7 @@ export const Constants = {
         "REJECTED",
         "CANCELLED",
       ],
+      invitation_status: ["PENDING", "APPROVED", "REJECTED"],
       user_role: ["CUSTOMER", "ADMIN", "STAFF"],
     },
   },

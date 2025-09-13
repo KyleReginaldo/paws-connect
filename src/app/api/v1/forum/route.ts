@@ -25,30 +25,33 @@ export async function GET(request: NextRequest) {
       limit,
       createdBy: createdBy || undefined,
       userId: userId || undefined,
-      useCache: false
+      useCache: false,
     });
 
-    return new Response(JSON.stringify({ 
-      data: forumsWithMemberInfo,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit)
-      }
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    return new Response(
+      JSON.stringify({
+        data: forumsWithMemberInfo,
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit),
+        },
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
       },
-    });
+    );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       },
     );
   }
@@ -63,7 +66,7 @@ export async function POST(request: NextRequest) {
       .object({
         forum_name: z.string().min(1, 'Forum name is required').max(100, 'Forum name too long'),
         created_by: z.uuid('Invalid user ID'),
-        private: z.boolean().optional()
+        private: z.boolean().optional(),
       })
       .strict();
 
@@ -79,17 +82,18 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date().toISOString();
-    const row = { 
-      ...parsed.data, 
+    const row = {
+      ...parsed.data,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     };
 
     // Optimized insert with selective return fields
     const { data, error } = await supabase
       .from('forum')
       .insert(row)
-      .select(`
+      .select(
+        `
         id,
         forum_name,
         created_at,
@@ -100,13 +104,14 @@ export async function POST(request: NextRequest) {
           id,
           username
         )
-      `)
+      `,
+      )
       .single();
-      
+
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { 
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -119,7 +124,7 @@ export async function POST(request: NextRequest) {
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       },
     );
   }

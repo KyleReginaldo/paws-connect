@@ -6,13 +6,13 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const username = searchParams.get('username');
   const role = searchParams.get('role');
-  
+
   if (username) {
     return await searchUsers(username, role);
   } else {
     // Get all users or filter by role
     let query = supabase.from('users').select();
-    
+
     // Add role filter if provided
     if (role) {
       const roleNumber = parseInt(role);
@@ -20,24 +20,24 @@ export async function GET(request: NextRequest) {
         query = query.eq('role', roleNumber);
       } else {
         return new Response(
-          JSON.stringify({ error: 'Bad Request', message: 'Role must be a valid number' }), 
+          JSON.stringify({ error: 'Bad Request', message: 'Role must be a valid number' }),
           {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
-          }
+          },
         );
       }
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       return new Response(JSON.stringify({ error: 'Bad Request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    
+
     return new Response(JSON.stringify({ message: 'Success', data }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 }
 async function searchUsers(query: string, role?: string | null): Promise<Response> {
   let supabaseQuery = supabase.from('users').select().ilike('username', `%${query}%`);
-  
+
   // Add role filter if provided
   if (role) {
     const roleNumber = parseInt(role);
@@ -54,35 +54,35 @@ async function searchUsers(query: string, role?: string | null): Promise<Respons
       supabaseQuery = supabaseQuery.eq('role', roleNumber);
     } else {
       return new Response(
-        JSON.stringify({ error: 'Bad Request', message: 'Role must be a valid number' }), 
+        JSON.stringify({ error: 'Bad Request', message: 'Role must be a valid number' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
   }
-  
+
   const { data, error } = await supabaseQuery;
-  
+
   if (error) {
     return new Response(JSON.stringify({ error: 'Not Found' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  
+
   if (data.length === 0) {
-    const message = role 
+    const message = role
       ? `No users found with username containing "${query}" and role ${role}`
       : `User with username containing "${query}" not found`;
-      
+
     return new Response(JSON.stringify({ error: 'Not Found', message }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  
+
   return new Response(
     JSON.stringify({
       message: 'Success',
@@ -124,7 +124,6 @@ export async function POST(request: NextRequest) {
 
     // Additional validation after sanitization
 
-
     // If no password provided or too weak/short, generate a default strong password
     if (!password || String(password).length < 8) {
       // Default pattern: 1 upper, 1 lower, 1 digit, 1 symbol + random digits
@@ -160,7 +159,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Basic c2tfdGVzdF9rU2tHREtnNDNMSkpFWWJlOTNHR2N6aEw6', // Replace with actual auth header
+          Authorization: 'Basic c2tfdGVzdF9rU2tHREtnNDNMSkpFWWJlOTNHR2N6aEw6', // Replace with actual auth header
           // Add other required headers here
         },
         body: JSON.stringify({
@@ -170,9 +169,9 @@ export async function POST(request: NextRequest) {
               last_name: 'NA', // You can modify this later
               phone: `+${phone_number}`,
               email: email,
-              default_device: 'phone'
-            }
-          }
+              default_device: 'phone',
+            },
+          },
         }),
       });
 

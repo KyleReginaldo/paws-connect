@@ -6,51 +6,53 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const donationId = parseInt(id, 10);
-    
+
     if (isNaN(donationId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid donation ID' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Invalid donation ID' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const { data, error } = await supabase
       .from('donations')
-      .select(`
+      .select(
+        `
         id,
         amount,
         message,
         donated_at,
         donor:users(id, username, email),
         fundraising:fundraising(id, title, description, target_amount, raised_amount)
-      `)
+      `,
+      )
       .eq('id', donationId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return new Response(
-          JSON.stringify({ error: 'Donation not found' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Donation not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-      
+
       console.error('Failed to fetch donation:', error.message);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch donation', message: error.message }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
-    return new Response(
-      JSON.stringify({ message: 'Success', data }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ message: 'Success', data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     console.error('Donation GET error', err);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }
@@ -59,16 +61,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = await params;
     const donationId = parseInt(id, 10);
-    
+
     if (isNaN(donationId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid donation ID' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Invalid donation ID' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const body = await request.json();
-    
+
     // Only allow updating message for now (administrative corrections)
     const allowedUpdates: Partial<DonationUpdate> = {};
     if (body.message !== undefined) {
@@ -76,10 +78,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     if (Object.keys(allowedUpdates).length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'No valid fields to update' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'No valid fields to update' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Check if donation exists
@@ -91,16 +93,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
-        return new Response(
-          JSON.stringify({ error: 'Donation not found' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Donation not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-      
+
       console.error('Failed to fetch donation:', fetchError.message);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch donation', message: fetchError.message }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -109,47 +111,52 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .from('donations')
       .update(allowedUpdates)
       .eq('id', donationId)
-      .select(`
+      .select(
+        `
         id,
         amount,
         message,
         donated_at,
         donor:users(id, username, email),
         fundraising:fundraising(id, title, description, target_amount, raised_amount)
-      `)
+      `,
+      )
       .single();
 
     if (error) {
       console.error('Failed to update donation:', error.message);
       return new Response(
         JSON.stringify({ error: 'Failed to update donation', message: error.message }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
-    return new Response(
-      JSON.stringify({ message: 'Donation updated successfully', data }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ message: 'Donation updated successfully', data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     console.error('Donation PATCH error', err);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const donationId = parseInt(id, 10);
-    
+
     if (isNaN(donationId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid donation ID' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Invalid donation ID' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Get donation details before deletion to adjust fundraising total
@@ -161,30 +168,27 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
-        return new Response(
-          JSON.stringify({ error: 'Donation not found' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Donation not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-      
+
       console.error('Failed to fetch donation:', fetchError.message);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch donation', message: fetchError.message }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
     // Delete the donation
-    const { error: deleteError } = await supabase
-      .from('donations')
-      .delete()
-      .eq('id', donationId);
+    const { error: deleteError } = await supabase.from('donations').delete().eq('id', donationId);
 
     if (deleteError) {
       console.error('Failed to delete donation:', deleteError.message);
       return new Response(
         JSON.stringify({ error: 'Failed to delete donation', message: deleteError.message }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
@@ -198,28 +202,31 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
       if (!fundFetchError && fundData) {
         const newRaised = Math.max(0, (fundData.raised_amount || 0) - donation.amount);
-        
+
         const { error: updateError } = await supabase
           .from('fundraising')
           .update({ raised_amount: newRaised })
           .eq('id', donation.fundraising);
 
         if (updateError) {
-          console.error('Failed to update fundraising total after donation deletion:', updateError.message);
+          console.error(
+            'Failed to update fundraising total after donation deletion:',
+            updateError.message,
+          );
           // Non-fatal error - donation is already deleted
         }
       }
     }
 
-    return new Response(
-      JSON.stringify({ message: 'Donation deleted successfully' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ message: 'Donation deleted successfully' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     console.error('Donation DELETE error', err);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }
