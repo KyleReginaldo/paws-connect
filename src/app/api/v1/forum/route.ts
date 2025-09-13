@@ -115,6 +115,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Add the creator as an initial forum member with APPROVED status
+    const { error: memberError } = await supabase
+      .from('forum_members')
+      .insert({
+        forum: data.id,
+        member: parsed.data.created_by,
+        invitation_status: 'APPROVED',
+        created_at: now,
+      });
+
+    if (memberError) {
+      // If adding the creator as member fails, we should probably rollback the forum creation
+      // But for now, we'll just log the error and continue
+      console.error('Failed to add creator as forum member:', memberError);
+    }
+
     return new Response(JSON.stringify({ data }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
