@@ -176,6 +176,7 @@ export interface ProcessedForum {
     username: string;
   } | null;
   members: Array<{
+    forum_member_id: number; // Optional: ID from forum_members table
     id: string;
     username: string;
     profile_image_link: string | null;
@@ -191,6 +192,7 @@ export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum
 
   // Flatten the member structure
   const flattenedMembers = explicitMembers.map((member) => ({
+    forum_member_id: member.id,
     id: member.users?.id || member.member,
     username: member.users?.username || '',
     profile_image_link: member.users?.profile_image_link || null,
