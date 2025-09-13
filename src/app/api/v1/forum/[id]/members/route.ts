@@ -216,9 +216,31 @@ export async function POST(request: NextRequest, context: any) {
       return createErrorResponse('Forum not found', 404);
     }
 
-    // Only forum creator can add members
-    if (forum.created_by !== added_by) {
-      return createErrorResponse('Only the forum creator can add members', 403);
+    // Check permission to add members
+    const isCreator = forum.created_by === added_by;
+    const isPrivateForum = forum.private === true;
+
+    if (isPrivateForum) {
+      // Private forums: Only creator can add members
+      if (!isCreator) {
+        return createErrorResponse('Only the forum creator can add members to private forums', 403);
+      }
+    } else {
+      // Public forums: Creator or approved members can add members
+      if (!isCreator) {
+        // Check if the user trying to add members is an approved member
+        const { data: memberCheck, error: memberError } = await supabase
+          .from('forum_members')
+          .select('invitation_status')
+          .eq('forum', forumId)
+          .eq('member', added_by)
+          .eq('invitation_status', 'APPROVED')
+          .single();
+
+        if (memberError || !memberCheck) {
+          return createErrorResponse('Only approved members can invite others to public forums', 403);
+        }
+      }
     }
 
     // Remove duplicates from member IDs
