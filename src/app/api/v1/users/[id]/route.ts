@@ -20,18 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Optimized query - select only necessary fields
     const { data, error } = await supabase
       .from('users')
-      .select(`
-        id,
-        username,
-        email,
-        phone_number,
-        profile_image_link,
-        house_images,
-        payment_method,
-        status,
-        created_at,
-        role
-      `)
+      .select()
       .eq('id', id)
       .single();
 
