@@ -219,9 +219,10 @@ export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum
 // Fetch a single forum with members - no caching by default
 export async function fetchForumWithMembers(
   forumId: number,
+  userId: string,
   useCache = false,
 ): Promise<ProcessedForum | null> {
-  const cacheKey = `forum_with_members_${forumId}`;
+  const cacheKey = `forum_with_members_${forumId}_${userId}`;
 
   if (useCache) {
     const cached = cache.get(cacheKey);
@@ -236,7 +237,22 @@ export async function fetchForumWithMembers(
 
   if (error || !data) return null;
 
-  const processedForum = processForumWithMembers(data as ForumWithMembers);
+  // Check if user is the creator
+  const isCreator = data.created_by === userId;
+  
+  // Create a copy of the forum to modify
+  const forumCopy = { ...data };
+  
+  // Filter members based on user role
+  if (!isCreator && forumCopy.forum_members) {
+    // Non-creators can only see approved members
+    forumCopy.forum_members = forumCopy.forum_members.filter(
+      (member) => member.invitation_status === 'APPROVED',
+    );
+  }
+  // Creators can see all members (no filtering needed)
+
+  const processedForum = processForumWithMembers(forumCopy as ForumWithMembers);
 
   if (useCache) {
     cache.set(cacheKey, processedForum, 5); // Cache for only 5 seconds if enabled

@@ -19,12 +19,13 @@ async function parseJson(request: NextRequest) {
 
 export async function GET(request: NextRequest, context: any) {
   try {
+    const { searchParams } = new URL(request.url);
     const params = await context.params;
     const pathId = Number((params as { id: string }).id);
+    const userId = searchParams.get('userId') as string | null;
     if (Number.isNaN(pathId)) return createErrorResponse('Invalid id', 400);
-
-    const forumWithMembers = await fetchForumWithMembers(pathId, false);
-
+    if(!userId) return createErrorResponse('Missing userId query parameter', 400);
+    const forumWithMembers = await fetchForumWithMembers(pathId, userId,false);
     if (!forumWithMembers) {
       return createErrorResponse('Forum not found', 404);
     }
