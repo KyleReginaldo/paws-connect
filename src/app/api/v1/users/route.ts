@@ -191,7 +191,6 @@ export async function POST(request: NextRequest) {
     // Send welcome email (POST to internal send-email endpoint)
     if(parsed.created_by){
       try {
-    const baseUrl = process.env.BASE_URL;
     const emailHtml = `<!doctype html>
 <html lang="en">
   <head>
