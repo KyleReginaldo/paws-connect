@@ -16,8 +16,8 @@ export async function POST(request: Request) {
         port: Number(process.env.SMTP_PORT) || 587,
         secure: false, // true for 465, false for other ports
         auth: {
-            user: process.env.EMAIL_FROM,
-            pass: process.env.SMTP_PASS,
+            user: "kyledennis099@gmail.com",
+            pass: "ncpo gjap arhe fzlv",
         },
         tls: {
             rejectUnauthorized: false,
