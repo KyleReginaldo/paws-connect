@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // First, check if user exists and get their details
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, created_by, passwordChanged')
+      .select('id, created_by, password_changed')
       .eq('id', userId)
       .single();
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     if (isCreatedByOther) {
       const { error: updateError } = await supabase
         .from('users')
-        .update({ passwordChanged: true })
+        .update({ password_changed: true })
         .eq('id', userId);
 
       if (updateError) {
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: userData.id,
           wasCreatedByOther: isCreatedByOther,
-          passwordChanged: isCreatedByOther ? true : userData.passwordChanged
+          passwordChanged: isCreatedByOther ? true : userData.password_changed
         }
       }),
       {

@@ -25,7 +25,7 @@ export async function GET(
     // Get user details
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, username, created_by, passwordChanged, created_at')
+      .select('id, username, created_by, password_changed, created_at')
       .eq('id', userId)
       .single();
 
@@ -43,11 +43,11 @@ export async function GET(
     }
 
     // Check if account was created by another user
-    const isCreatedByOther = userData.created_by !== null;
+    const isCreatedByOther = userData.password_changed !== null;
     
     // Get creator info if available
     let creatorInfo = null;
-    if (isCreatedByOther && userData.created_by) {
+    if (isCreatedByOther && userData.password_changed && userData.created_by) {
       const { data: creatorData } = await supabase
         .from('users')
         .select('id, username, role')
@@ -70,8 +70,8 @@ export async function GET(
           userId: userData.id,
           username: userData.username,
           isCreatedByOther,
-          passwordChanged: userData.passwordChanged || false,
-          needsPasswordChange: isCreatedByOther && !userData.passwordChanged,
+          passwordChanged: userData.password_changed || false,
+          needsPasswordChange: isCreatedByOther && !userData.password_changed,
           createdAt: userData.created_at,
           createdBy: creatorInfo
         }

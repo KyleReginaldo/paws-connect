@@ -282,6 +282,7 @@ export type Database = {
             | Database["public"]["Enums"]["invitation_status"]
             | null
           member: string
+          mute: boolean | null
         }
         Insert: {
           created_at?: string
@@ -291,6 +292,7 @@ export type Database = {
             | Database["public"]["Enums"]["invitation_status"]
             | null
           member: string
+          mute?: boolean | null
         }
         Update: {
           created_at?: string
@@ -300,6 +302,7 @@ export type Database = {
             | Database["public"]["Enums"]["invitation_status"]
             | null
           member?: string
+          mute?: boolean | null
         }
         Relationships: [
           {
@@ -476,7 +479,7 @@ export type Database = {
           email: string | null
           house_images: string[] | null
           id: string
-          passwordChanged: boolean | null
+          password_changed: boolean | null
           payment_method: string | null
           paymongo_id: string | null
           phone_number: string
@@ -491,7 +494,7 @@ export type Database = {
           email?: string | null
           house_images?: string[] | null
           id: string
-          passwordChanged?: boolean | null
+          password_changed?: boolean | null
           payment_method?: string | null
           paymongo_id?: string | null
           phone_number: string
@@ -506,7 +509,7 @@ export type Database = {
           email?: string | null
           house_images?: string[] | null
           id?: string
-          passwordChanged?: boolean | null
+          password_changed?: boolean | null
           payment_method?: string | null
           paymongo_id?: string | null
           phone_number?: string
