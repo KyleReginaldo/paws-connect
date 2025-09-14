@@ -158,20 +158,33 @@ export async function POST(request: NextRequest) {
     let externalCustomerId: string | null = null;
     console.log('=== STARTING EXTERNAL API CALL ===');
     try {
+      // Format phone number for PayMongo (must be +[area code][10 digits])
+      let formattedPhone = phone_number;
+      if (phone_number && !phone_number.startsWith('+')) {
+        // If phone doesn't start with +, assume it's Philippine number and add +63
+        formattedPhone = phone_number.startsWith('09') 
+          ? `+63${phone_number.substring(1)}` 
+          : `+${phone_number}`;
+      }
+      // Remove any non-digit characters except the + sign
+      formattedPhone = formattedPhone.replace(/[^\d+]/g, '');
+      
       console.log('📤 Calling PayMongo API to create customer...');
       console.log('📋 Customer data:', {
         first_name: username,
         last_name: 'NA',
-        phone: `+${phone_number}`,
+        phone: formattedPhone,
         email: email,
         default_device: 'phone'
       });
+      console.log('📋 Original phone:', phone_number);
+      console.log('📋 Formatted phone:', formattedPhone);
 
       const externalApiResponse = await fetch('https://api.paymongo.com/v1/customers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Basic c2tfdGVzdF9rU2tHREtnNDNMSkpFWWJlOTNHR2N6aEw6', // Replace with actual auth header
+          Authorization: 'Basic c2tfdGVzdF9aQ0xCYldHa0pnVGtmeDVKb0FUbVY5RTE6', // Replace with actual auth header
           // Add other required headers here
         },
         body: JSON.stringify({
@@ -179,7 +192,7 @@ export async function POST(request: NextRequest) {
             attributes: {
               first_name: username, // Using username as first_name for now
               last_name: 'NA', // You can modify this later
-              phone: `+${phone_number}`,
+              phone: formattedPhone,
               email: email,
               default_device: 'phone',
             },
