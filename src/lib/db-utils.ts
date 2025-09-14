@@ -131,6 +131,7 @@ export const FORUM_WITH_MEMBERS_SELECT_FIELDS = `
     created_at,
     member,
     invitation_status,
+    mute,
     users!forum_members_member_fkey (
       id,
       username,
@@ -155,6 +156,7 @@ export interface ForumWithMembers {
     id: number;
     created_at: string;
     member: string;
+    mute: boolean | null;
     users?: {
       id: string;
       username: string;
@@ -181,6 +183,7 @@ export interface ProcessedForum {
     username: string;
     profile_image_link: string | null;
     joined_at: string;
+    mute: boolean | null;
     invitation_status: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
   }>;
   member_count: number;
@@ -197,6 +200,7 @@ export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum
     username: member.users?.username || '',
     profile_image_link: member.users?.profile_image_link || null,
     joined_at: member.created_at,
+    mute: member.mute,
     invitation_status: member.invitation_status,
   }));
 
