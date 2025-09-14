@@ -95,10 +95,16 @@ export function FundraisingModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('=== FORM SUBMISSION START ===');
+    console.log('📝 Current formData:', formData);
+    console.log('🖼️ Current image previews:', imagePreviews.length);
+    console.log('⬆️ Is uploading:', isUploading);
+
     setIsSubmitting(true);
     setError(null);
 
     if (isUploading) {
+      console.log('❌ Upload in progress, blocking submission');
       setError('Please wait for image uploads to finish before submitting.');
       setIsSubmitting(false);
       return;
@@ -106,28 +112,37 @@ export function FundraisingModal({
 
     try {
       // Validate required fields before submission
+      console.log('🔍 Validating form fields...');
       if (!formData.title || formData.title.length < 2) {
+        console.log('❌ Title validation failed');
         setError('Title must be at least 2 characters');
         return;
       }
       if (!formData.description || formData.description.length < 10) {
+        console.log('❌ Description validation failed');
         setError('Description must be at least 10 characters');
         return;
       }
       if (!formData.target_amount || formData.target_amount < 100) {
+        console.log('❌ Target amount validation failed');
         setError('Target amount must be at least ₱100');
         return;
       }
       if (!formData.created_by) {
+        console.log('❌ User ID validation failed');
         setError('User ID is required');
         return;
       }
 
+      console.log('✅ Form validation passed');
+
       let result;
       if (editingCampaign) {
+        console.log('📝 Updating existing campaign:', editingCampaign.id);
         // For editing, we don't need created_by
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { created_by, ...updateData } = formData;
+        console.log('📤 Update data:', updateData);
         result = await onSubmit(updateData);
       } else {
         // Ensure proper data types for create
@@ -136,20 +151,26 @@ export function FundraisingModal({
           target_amount: Number(formData.target_amount),
           images: formData.images || [],
         };
-        console.log('Submitting campaign data:', submitData);
+        console.log('📤 Submitting new campaign data:', submitData);
+        console.log('🖼️ Images being submitted:', submitData.images);
         result = await onSubmit(submitData);
       }
 
+      console.log('📨 Submission result:', result);
+
       if (result.success) {
+        console.log('✅ Campaign submission successful');
         onOpenChange(false);
       } else {
+        console.log('❌ Campaign submission failed:', result.error);
         setError(result.error || 'An error occurred while saving the campaign');
       }
     } catch (error) {
-      console.error('Error submitting campaign data:', error);
+      console.error('❌ Error submitting campaign data:', error);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
+      console.log('=== FORM SUBMISSION END ===');
     }
   };
 
@@ -160,59 +181,131 @@ export function FundraisingModal({
     }));
   };
 
-  const handleImageFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setError(null); // Clear any previous errors
+  const handleImageUpload = async (files: FileList) => {
+    console.log('=== IMAGE UPLOAD START ===');
+    console.log('📁 Files to upload:', files.length);
+
+    if (files.length === 0) {
+      console.log('❌ No files selected');
+      return;
+    }
+
+    setError(null);
     setIsUploading(true);
     const uploadedUrls: string[] = [];
     const localPreviews: string[] = [];
 
+    console.log('🔄 Starting upload process...');
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      console.log(`📤 Processing file ${i + 1}/${files.length}:`, {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
 
       // create local preview
       const localUrl = URL.createObjectURL(file);
       localPreviews.push(localUrl);
+      console.log('🖼️ Local preview created:', localUrl);
 
       try {
-        console.log(`Uploading file: ${file.name}`);
+        console.log(`⬆️ Uploading file: ${file.name}`);
         const fd = new FormData();
         fd.append('file', file);
+
         const res = await fetch('/api/v1/fundraising/upload', {
           method: 'POST',
           body: fd,
         });
+
         const json = await res.json();
-        console.log(`Upload response for ${file.name}:`, json);
+        console.log(`📨 Upload response for ${file.name}:`, json);
 
         if (!res.ok) {
           const details = json?.details || json?.error || 'Unknown';
-          console.error('Upload failed for file', file.name, details);
+          console.error(
+            '❌ Upload failed for file',
+            file.name,
+            'Status:',
+            res.status,
+            'Details:',
+            details,
+          );
           setError(`Failed to upload ${file.name}: ${details}`);
           continue;
         }
 
         if (json?.url) {
           uploadedUrls.push(json.url);
-          console.log(`Successfully uploaded ${file.name}, URL: ${json.url}`);
+          console.log(`✅ Successfully uploaded ${file.name}, URL: ${json.url}`);
         } else {
-          console.error('Upload did not return a url for file', file.name, json);
+          console.error('❌ Upload did not return a url for file', file.name, json);
           setError(`Upload did not return a url for ${file.name}`);
         }
       } catch (err) {
-        console.error('Error uploading file', err);
+        console.error('❌ Error uploading file', file.name, err);
         setError(`Error uploading ${file.name}. See console for details.`);
       }
     }
 
-    console.log('All uploads completed. URLs:', uploadedUrls);
-    // Add uploaded URLs to form and show local previews while uploading
-    setFormData((prev) => ({
-      ...prev,
-      images: [...(prev.images || []), ...uploadedUrls],
-    }));
-    setImagePreviews((prev) => [...prev, ...localPreviews]);
+    console.log('🎯 All uploads completed. URLs:', uploadedUrls);
+    console.log('📊 Upload summary:', {
+      totalFiles: files.length,
+      successfulUploads: uploadedUrls.length,
+      failedUploads: files.length - uploadedUrls.length,
+    });
+
+    // Add uploaded URLs to form and show local previews
+    setFormData((prev) => {
+      const newImages = [...(prev.images || []), ...uploadedUrls];
+      console.log('💾 Updated formData.images:', newImages);
+      return {
+        ...prev,
+        images: newImages,
+      };
+    });
+
+    setImagePreviews((prev) => {
+      const newPreviews = [...prev, ...localPreviews];
+      console.log('🖼️ Updated image previews:', newPreviews.length, 'total previews');
+      return newPreviews;
+    });
+
     setIsUploading(false);
+    console.log('=== IMAGE UPLOAD END ===');
+  };
+
+  const handleImageFiles = (files: FileList | null) => {
+    if (files && files.length > 0) {
+      console.log('📁 Files selected for upload:');
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const filesToUpload: File[] = [];
+      const rejectedFiles: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+        console.log(`  📄 ${file.name}: ${fileSizeMB}MB (${file.type})`);
+
+        if (file.size > MAX_FILE_SIZE) {
+          rejectedFiles.push(`${file.name} (${fileSizeMB}MB - too large)`);
+        } else {
+          filesToUpload.push(file);
+        }
+      }
+
+      if (rejectedFiles.length > 0) {
+        setError(`Some files are too large (max 10MB): ${rejectedFiles.join(', ')}`);
+      }
+
+      if (filesToUpload.length > 0) {
+        const fileList = new DataTransfer();
+        filesToUpload.forEach((file) => fileList.items.add(file));
+        handleImageUpload(fileList.files);
+      }
+    }
   };
 
   return (
@@ -284,6 +377,10 @@ export function FundraisingModal({
                 multiple
                 onChange={(e) => handleImageFiles(e.target.files)}
               />
+              <p className="text-xs text-muted-foreground">
+                Upload images for your campaign. Max 10MB per file. Supported formats: JPG, PNG,
+                GIF, WebP
+              </p>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {imagePreviews.map((src, idx) => (
                   <div key={idx} className="w-20 h-20 relative">
@@ -381,8 +478,8 @@ export function FundraisingModal({
                       ? 'Uploading...'
                       : 'Uploading...'
                     : editingCampaign
-                    ? 'Updating...'
-                    : 'Creating...'}
+                      ? 'Updating...'
+                      : 'Creating...'}
                 </>
               ) : editingCampaign ? (
                 'Update Campaign'

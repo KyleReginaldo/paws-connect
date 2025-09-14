@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import ClientProviders from './components/ClientProviders';
 import './globals.css';
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -14,11 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Paws Connect - Find Your Perfect Pet Companion',
+  title: 'Paws Connect',
   description:
     'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
   keywords: ['pets', 'adoption', 'dogs', 'cats', 'animal rescue', 'fundraising'],
   authors: [{ name: 'Paws Connect Team' }],
+
   creator: 'Paws Connect',
   publisher: 'Paws Connect',
   openGraph: {
@@ -27,6 +27,9 @@ export const metadata: Metadata = {
       'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
     type: 'website',
     locale: 'en_US',
+  },
+  icons: {
+    icon: '/pawsconnectlogo.ico',
   },
   twitter: {
     card: 'summary_large_image',

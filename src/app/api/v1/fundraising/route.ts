@@ -170,12 +170,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== FUNDRAISING CREATE START ===');
     const body = await request.json();
-    console.log('Received fundraising POST body:', body);
+    console.log('📝 Received fundraising POST body:', body);
 
     const result = createFundraisingSchema.safeParse(body);
     if (!result.success) {
-      console.log('Validation failed:', result.error.issues);
+      console.log('❌ Validation failed:', result.error.issues);
       return new Response(
         JSON.stringify({
           error: 'Invalid request data',
@@ -203,26 +204,31 @@ export async function POST(request: NextRequest) {
     };
     const { title, description, created_by, target_amount, status, images } = parsed;
 
-    console.log('Creating fundraising campaign with:', {
+    console.log('✅ Validation successful. Creating fundraising campaign with:', {
       title,
       description,
       created_by,
       target_amount,
       status,
-      images,
+      images: images ? `${images.length} image(s)` : 'no images',
+      imageUrls: images
     });
+
+    const insertData = {
+      title,
+      description,
+      target_amount,
+      images: images || [],
+      raised_amount: 0, // Initialize with 0
+      status: status || 'PENDING', // Default to PENDING if not provided
+      created_by,
+    };
+
+    console.log('💾 Inserting to database:', insertData);
 
     const { data, error } = await supabase
       .from('fundraising')
-      .insert({
-        title,
-        description,
-        target_amount,
-        images: images || [],
-        raised_amount: 0, // Initialize with 0
-        status: status || 'PENDING', // Default to PENDING if not provided
-        created_by,
-      })
+      .insert(insertData)
       .select(
         `
         *,
@@ -232,7 +238,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.log('Supabase insert error:', error.message);
+      console.log('❌ Supabase insert error:', error.message);
       return new Response(
         JSON.stringify({ error: 'Failed to create fundraising campaign', message: error.message }),
         {
@@ -242,7 +248,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Successfully created campaign:', data);
+    console.log('✅ Successfully created campaign:', data);
+    console.log('📷 Campaign images saved:', data.images);
+    console.log('=== FUNDRAISING CREATE END ===');
+    
     return new Response(
       JSON.stringify({
         message: 'Fundraising campaign created successfully',
