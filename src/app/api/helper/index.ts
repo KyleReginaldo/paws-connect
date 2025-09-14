@@ -1,12 +1,15 @@
 import axios from "axios";
 
-export async function pushNotification(userId: string, message: string,route?: string) {
+export async function pushNotification(userId: string,headings: string, message: string,route?: string) {
     try{
         const response = await axios.post('https://api.onesignal.com/notifications?c=push', {
     "app_id": "323cc2fb-7bab-418b-954e-a578788499bd",
     "contents": {
         "en": message
     },
+    "headings": {
+        "en": headings
+    },    
     "target_channel": "push",
     "huawei_category": "MARKETING",
     "huawei_msg_type": "message",
