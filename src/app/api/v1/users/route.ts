@@ -156,7 +156,17 @@ export async function POST(request: NextRequest) {
 
     // Make external API call to create customer
     let externalCustomerId: string | null = null;
+    console.log('=== STARTING EXTERNAL API CALL ===');
     try {
+      console.log('📤 Calling PayMongo API to create customer...');
+      console.log('📋 Customer data:', {
+        first_name: username,
+        last_name: 'NA',
+        phone: `+${phone_number}`,
+        email: email,
+        default_device: 'phone'
+      });
+
       const externalApiResponse = await fetch('https://api.paymongo.com/v1/customers', {
         method: 'POST',
         headers: {
@@ -177,14 +187,25 @@ export async function POST(request: NextRequest) {
         }),
       });
 
+      console.log('📨 PayMongo response status:', externalApiResponse.status);
+      console.log('📨 PayMongo response headers:', Object.fromEntries(externalApiResponse.headers.entries()));
+
       if (!externalApiResponse.ok) {
-        console.error('External API call failed:', await externalApiResponse.text());
+        const errorText = await externalApiResponse.text();
+        console.error('❌ External API call failed with status:', externalApiResponse.status);
+        console.error('❌ Error response body:', errorText);
+        console.error('❌ Error response headers:', Object.fromEntries(externalApiResponse.headers.entries()));
         // Continue with user creation even if external API fails
       } else {
         const externalApiData = await externalApiResponse.json();
+        console.log('✅ PayMongo API response:', JSON.stringify(externalApiData, null, 2));
+        
         if (externalApiData?.data?.id) {
           externalCustomerId = externalApiData.data.id;
-          console.log('External customer created with ID:', externalCustomerId);
+          console.log('✅ External customer created with ID:', externalCustomerId);
+        } else {
+          console.warn('⚠️ PayMongo API succeeded but no customer ID returned');
+          console.warn('⚠️ Full response:', externalApiData);
         }
       }
       
@@ -289,28 +310,43 @@ export async function POST(request: NextRequest) {
     }
     }
     } catch (externalApiError) {
-      console.error('Error calling external API:', externalApiError);
+      console.error('❌ Error calling external API:', externalApiError);
       // Continue with user creation even if external API fails
     }
+    
+    console.log('=== FINAL EXTERNAL CUSTOMER ID CHECK ===');
+    console.log(`🆔 externalCustomerId final value: ${externalCustomerId}`);
+    console.log(`🔍 Type of externalCustomerId: ${typeof externalCustomerId}`);
+    console.log(`❓ Is null: ${externalCustomerId === null}`);
+    console.log(`❓ Is undefined: ${externalCustomerId === undefined}`);
+    
+    console.log('=== INSERTING USER TO DATABASE ===');
+    const insertData = {
+      id: data.user.id,
+      username,
+      email,
+      phone_number: `+${phone_number}`,
+      role,
+      created_by: parsed.created_by,
+      paymongo_id: externalCustomerId, // Store the external ID
+    };
+    console.log('📝 User insert data:', insertData);
+
     const { data: user, error: userError } = await supabase
       .from('users')
-      .insert({
-        id: data.user.id,
-        username,
-        email,
-        phone_number: `+${phone_number}`,
-        role,
-        created_by: parsed.created_by,
-        paymongo_id: externalCustomerId, // Store the external ID
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (userError) {
+      console.error('❌ Database insert error:', userError);
       return new Response(JSON.stringify({ error: 'Bad Request', message: userError.message }), {
         status: 400,
       });
     }
+
+    console.log('✅ User created successfully in database:', user);
+    console.log('🆔 Saved paymongo_id:', user.paymongo_id);
 
     return new Response(JSON.stringify({ message: 'User created successfully', data: user }), {
       status: 201,
