@@ -16,8 +16,8 @@ export async function POST(request: Request) {
         port: Number(process.env.SMTP_PORT) || 587,
         secure: false, // true for 465, false for other ports
         auth: {
-            user: "kyledennis099@gmail.com",
-            pass: "ncpo gjap arhe fzlv",
+            user: "pawsconnecttof@gmail.com",
+            pass: "etjg upbq huvf tusd",
         },
         tls: {
             rejectUnauthorized: false,
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     try {
         // Send mail with defined transport object
         const info = await transporter.sendMail({
-            from: `"Paws Connect" <${process.env.EMAIL_FROM}>`, // sender address
+            from: `"Paws Connect Support" <${process.env.EMAIL_FROM}>`, // sender address
             to, // list of receivers
             subject, // Subject line
             html: text, // plain text body
