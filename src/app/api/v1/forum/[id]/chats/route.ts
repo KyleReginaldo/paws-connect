@@ -190,7 +190,7 @@ export async function POST(request: NextRequest, context: any) {
     // Verify user exists
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, username')
       .eq('id', sender)
       .single();
 
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest, context: any) {
     }
     for(const member of forum_members){
       if(member.member.id !== sender && member.invitation_status === 'APPROVED' && !member.mute){
-        await pushNotification(member.member.id,member.member.username??forum.forum_name ??'PawsConnect',message,`/forum-chat/${forumId}`);
+        await pushNotification(member.member.id,user.username??forum.forum_name ??'PawsConnect',message,`/forum-chat/${forumId}`);
       }
     }
     return new Response(JSON.stringify({ data }), {
