@@ -227,13 +227,13 @@ export async function POST(request: NextRequest, context: any) {
 
     const{data: forum_members, error: forum_list_error} = await supabase
     .from('forum_members')
-    .select('member, invitation_status')
+    .select('member, invitation_status, mute')
     .eq('forum', forumId);
     if (forum_list_error || !forum_members) {
       return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
     }
     for(const member of forum_members){
-      if(member.member !== sender && member.invitation_status === 'APPROVED'){
+      if(member.member !== sender && member.invitation_status === 'APPROVED' && !member.mute){
         await pushNotification(member.member, `New message in forum: ${message}`,`/forum-chat/${forumId}`);
       }
     }
