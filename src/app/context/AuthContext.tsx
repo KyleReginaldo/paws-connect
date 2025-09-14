@@ -15,6 +15,7 @@ export enum AuthStatus {
 
 type AuthContextType = {
   userId: string | null;
+  userRole: number | null;
   onLogin: (email: string, password: string) => void;
   status: AuthStatus;
   errorMessage: string | undefined;
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<number | null>(null);
   const [status, setStatus] = useState<AuthStatus>(AuthStatus.loading);
   const [user, setUser] = useState<User | null>(null);
   const [errorMessage, setError] = useState<string | undefined>(undefined);
@@ -48,7 +50,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setStatus(AuthStatus.error);
       setError(error.message);
     } else {
-      setStatus(AuthStatus.authenticated);
+      // After successful authentication, check user's role
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Fetch user details to check role
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userError || !userData) {
+            // If we can't fetch user data, sign them out
+            await supabase.auth.signOut();
+            setStatus(AuthStatus.error);
+            setError('Unable to verify user permissions');
+            return;
+          }
+
+          // Check if user has admin (1) or staff (2) role
+          if (userData.role !== 1 && userData.role !== 2) {
+            // Sign out users with role 3 or other roles
+            await supabase.auth.signOut();
+            setStatus(AuthStatus.error);
+            setError('Access denied. Only admin and staff members can sign in.');
+            return;
+          }
+
+          // User has valid role, proceed with authentication
+          setUserRole(userData.role);
+          setStatus(AuthStatus.authenticated);
+        }
+      } catch {
+        // If role check fails, sign out the user
+        await supabase.auth.signOut();
+        setStatus(AuthStatus.error);
+        setError('Unable to verify user permissions');
+      }
     }
   };
 
@@ -79,24 +120,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setUserId(null);
+    setUserRole(null);
     setUser(null);
     setStatus(AuthStatus.unauthenticated);
   };
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, 'Session:', !!session?.user);
 
       if (event === 'INITIAL_SESSION') {
         if (session?.user) {
-          setUserId(session.user.id);
-          setStatus(AuthStatus.authenticated);
+          // Check user's role before setting authenticated status
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+
+            if (userError || !userData || (userData.role !== 1 && userData.role !== 2)) {
+              // Invalid role or error fetching user data - sign out
+              await supabase.auth.signOut();
+              setUserId(null);
+              setStatus(AuthStatus.unauthenticated);
+              return;
+            }
+
+            // Valid role - proceed with authentication
+            setUserId(session.user.id);
+            setUserRole(userData.role);
+            setStatus(AuthStatus.authenticated);
+          } catch {
+            // Error checking role - sign out
+            await supabase.auth.signOut();
+            setUserId(null);
+            setUserRole(null);
+            setStatus(AuthStatus.unauthenticated);
+          }
         } else {
           setUserId(null);
+          setUserRole(null);
           setStatus(AuthStatus.unauthenticated);
           // Don't automatically redirect here - let RouteGuard handle it for protected routes only
         }
       } else if (event === 'SIGNED_IN') {
+        // Role check is already handled in onLogin function
         setUserId(session?.user?.id || null);
         setStatus(AuthStatus.authenticated);
 
@@ -110,6 +179,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } else if (event === 'SIGNED_OUT') {
         setUserId(null);
+        setUserRole(null);
         setStatus(AuthStatus.unauthenticated);
         // Only redirect to signin if user is currently on a protected page
         if (typeof window !== 'undefined') {
@@ -132,7 +202,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ userId, onLogin, status, errorMessage, onSignup, user, signOut }}
+      value={{ userId, userRole, onLogin, status, errorMessage, onSignup, user, signOut }}
     >
       {children}
     </AuthContext.Provider>

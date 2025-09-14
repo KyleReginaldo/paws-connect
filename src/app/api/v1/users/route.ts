@@ -1,5 +1,6 @@
 import { supabase } from '@/app/supabase/supabase';
 import { createUserSchema } from '@/config/schema/userChema';
+import axios from 'axios';
 import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
       username: string;
       phone_number: string;
       role: number;
+      created_by?: string;
     };
     const { email, username, role } = parsed;
     const phone_number = parsed.phone_number;
@@ -185,11 +187,112 @@ export async function POST(request: NextRequest) {
           console.log('External customer created with ID:', externalCustomerId);
         }
       }
+      
+    // Send welcome email (POST to internal send-email endpoint)
+    if(parsed.created_by){
+      try {
+    const baseUrl = process.env.BASE_URL;
+    const emailHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account Creation Confirmation</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #fdf2e9;
+        margin: 0;
+        padding: 30px;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        padding: 30px;
+        max-width: 600px;
+        margin: auto;
+        border: 1px solid #fcd9b6;
+        text-align: center;
+      }
+      h1 {
+        color: #d35400;
+        font-size: 1.9em;
+        margin-bottom: 20px;
+      }
+      p {
+        color: #5c5c5c;
+        line-height: 1.6;
+        margin: 12px 0;
+      }
+      strong {
+        color: #e67e22;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 0.9em;
+        color: #999999;
+        border-top: 1px solid #f1f1f1;
+        padding-top: 15px;
+      }
+      .btn {
+        display: inline-block;
+        margin-top: 25px;
+        background: #e67e22;
+        color: #ffffff !important;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 12px 28px;
+        border-radius: 8px;
+        transition:
+          background 0.3s ease,
+          transform 0.2s ease;
+      }
+      .btn:hover {
+        background: #ca6f1e;
+        transform: translateY(-2px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Hello ${username},</h1>
+      <p>Your account has been successfully created.</p>
+      <p>
+        <strong>Username:</strong> ${username}<br />
+        <strong>Email:</strong> ${email}<br />
+        <strong>Password:</strong> ${password}
+      </p>
+      <p>Please log in and change your password immediately for security reasons.</p>
+      <a
+        class="btn"
+        href="https://paws-connect-sable.vercel.app/signin?email=${email}&password=${password}"
+        >Login</a
+      >
+      <div class="footer">
+        <p>Best regards,<br />The Team</p>
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
+    const emailResponse = await axios.post(`${baseUrl}/send-email`, {
+      to: email,
+      subject: 'Your PawsConnect account has been created',
+      text: emailHtml,
+    });
+
+    console.log('Email sent response:', emailResponse.data);
+    } catch (emailError) {
+    console.error('Failed to send welcome email:', emailError);
+    // Continue with user creation even if email fails
+    }
+    }
     } catch (externalApiError) {
       console.error('Error calling external API:', externalApiError);
       // Continue with user creation even if external API fails
     }
-
     const { data: user, error: userError } = await supabase
       .from('users')
       .insert({
@@ -198,6 +301,7 @@ export async function POST(request: NextRequest) {
         email,
         phone_number: `+${phone_number}`,
         role,
+        created_by: parsed.created_by,
         paymongo_id: externalCustomerId, // Store the external ID
       })
       .select()

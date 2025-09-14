@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/components/ui/notification';
 import { User } from '@/config/models/users';
+import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
 import { Download, Plus, Search, Shield, UserCheck, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 
 const ManageStaff = () => {
-  const { userId } = useAuth();
+  const { userId, userRole } = useAuth();
   const { users, addUser, updateUser, deleteUser, updateUserStatus } = useUsers();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -22,7 +23,26 @@ const ManageStaff = () => {
   const [pageSize] = useState<number>(10);
   const { warning } = useNotifications();
 
+  // Permission helpers
+  const canManageUser = (targetUserRole: number) => {
+    // Admins (role 1) can manage everyone
+    if (userRole === 1) return true;
+    // Staff (role 2) cannot manage admins (role 1)
+    if (userRole === 2 && targetUserRole === 1) return false;
+    // Staff can manage other staff and regular users
+    return userRole === 2;
+  };
+
+  const canCreateAdmin = () => {
+    // Only admins can create other admins
+    return userRole === 1;
+  };
+
   const openEditModal = (user: User) => {
+    if (!canManageUser(user.role)) {
+      warning('You do not have permission to edit admin users.');
+      return;
+    }
     setEditingUser(user);
     setModalOpen(true);
   };
@@ -50,14 +70,41 @@ const ManageStaff = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (userId !== id) {
-      await deleteUser(id);
-    } else {
+    if (userId === id) {
       warning('You cannot delete your own account while logged in.');
+      return;
     }
+
+    // Find the user to check their role
+    const userToDelete = users?.find((u) => u.id === id);
+    if (!userToDelete) {
+      warning('User not found.');
+      return;
+    }
+
+    // Check if staff is trying to delete an admin
+    if (!canManageUser(userToDelete.role)) {
+      warning('You do not have permission to delete admin users.');
+      return;
+    }
+
+    await deleteUser(id);
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    // Find the user to check their role
+    const userToUpdate = users?.find((u) => u.id === id);
+    if (!userToUpdate) {
+      warning('User not found.');
+      return;
+    }
+
+    // Check if staff is trying to change status of an admin
+    if (!canManageUser(userToUpdate.role)) {
+      warning('You do not have permission to change admin user status.');
+      return;
+    }
+
     console.log('Updating user status:', id, newStatus);
     await updateUserStatus(id, newStatus);
   };
@@ -69,7 +116,7 @@ const ManageStaff = () => {
 
       const query = searchQuery.toLowerCase().trim();
       return (
-        user.username.toLowerCase().includes(query) ||
+        user.username?.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query) ||
         user.phone_number.toLowerCase().includes(query) ||
         user.status.toLowerCase().includes(query)
@@ -244,15 +291,35 @@ const ManageStaff = () => {
         onOpenChange={setModalOpen}
         onSubmit={async (userData) => {
           if (!editingUser) {
-            // Adding a new user
-            const newUser = await addUser(userData);
+            // Adding a new user - check if staff is trying to create admin
+            const createData = userData as CreateUserDto;
+            if (createData.role === 1 && !canCreateAdmin()) {
+              warning('You do not have permission to create admin users.');
+              return;
+            }
+
+            const newUser = await addUser(createData);
             if (newUser) {
               console.log('User added successfully:', newUser);
             }
           } else {
-            // Updating existing user
+            // Updating existing user - check permissions
+            const updateData = userData as UpdateUserDto;
+
+            // Check if staff is trying to update an admin
+            if (!canManageUser(editingUser.role)) {
+              warning('You do not have permission to edit admin users.');
+              return;
+            }
+
+            // Check if staff is trying to change someone's role to admin
+            if (updateData.role === 1 && !canCreateAdmin()) {
+              warning('You do not have permission to assign admin role.');
+              return;
+            }
+
             console.log(`Editing user: ${editingUser.id}`);
-            const updatedUser = await updateUser(editingUser.id, userData);
+            const updatedUser = await updateUser(editingUser.id, updateData);
             if (updatedUser) {
               console.log('User updated successfully:', updatedUser);
             }

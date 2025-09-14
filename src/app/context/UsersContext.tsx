@@ -1,13 +1,13 @@
 'use client';
 import { User } from '@/config/models/users';
-import { CreateUserDto } from '@/config/schema/userChema';
+import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface UsersContextType {
   users: User[] | null;
   status: 'loading' | 'success' | 'error';
   addUser: (userData: CreateUserDto) => Promise<User | null>;
-  updateUser: (userId: string, userData: Partial<CreateUserDto>) => Promise<User | null>;
+  updateUser: (userId: string, userData: UpdateUserDto) => Promise<User | null>;
   deleteUser: (userId: string) => Promise<boolean>;
   updateUserStatus: (userId: string, status: string) => Promise<boolean>;
   refreshUsers: () => Promise<void>;
@@ -81,10 +81,7 @@ export function UsersProvider({ children }: UsersProviderProps) {
     }
   };
 
-  const updateUser = async (
-    userId: string,
-    userData: Partial<CreateUserDto>,
-  ): Promise<User | null> => {
+  const updateUser = async (userId: string, userData: UpdateUserDto): Promise<User | null> => {
     try {
       const response = await fetch(`/api/v1/users/${userId}`, {
         method: 'PUT',
@@ -96,6 +93,7 @@ export function UsersProvider({ children }: UsersProviderProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error response data:', errorData);
         throw new Error(errorData.message || 'Failed to update user');
       }
 

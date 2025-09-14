@@ -472,6 +472,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string
+          created_by: string | null
           email: string | null
           house_images: string[] | null
           id: string
@@ -485,6 +486,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           email?: string | null
           house_images?: string[] | null
           id: string
@@ -498,6 +500,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           email?: string | null
           house_images?: string[] | null
           id?: string
@@ -510,6 +513,13 @@ export type Database = {
           username?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "users_role_fkey"
             columns: ["role"]

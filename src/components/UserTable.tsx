@@ -92,15 +92,15 @@ export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTable
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
-                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.username}`}
-                      alt={user.username}
+                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`}
+                      alt={user.username || 'Unknown User'}
                     />
                     <AvatarFallback className="bg-muted">
-                      {user.username.charAt(0).toUpperCase()}
+                      {(user.username || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium">{user.username}</div>
+                    <div className="font-medium">{user.username || 'Unknown User'}</div>
                     <div className="text-sm text-muted-foreground">
                       ID: {user.id.slice(0, 8)}...
                     </div>

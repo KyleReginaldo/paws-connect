@@ -9,7 +9,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { User } from '@/config/models/users';
 import { Fundraising } from '@/config/types/fundraising';
+import { Pet } from '@/config/types/pet';
 import {
   Activity,
   ArrowUpRight,
@@ -26,6 +28,170 @@ import router from 'next/router';
 import { useEffect, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 // Charts
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import { Bar, BarChart, Line, LineChart, XAxis, YAxis } from 'recharts';
+
+// Chart Configurations
+const chartConfig = {
+  users: {
+    label: 'Users',
+  },
+  donations: {
+    label: 'Donations',
+  },
+  pets: {
+    label: 'Pets',
+  },
+  activity: {
+    label: 'Activity',
+  },
+} satisfies ChartConfig;
+
+// Analytics Components
+function UserGrowthChart() {
+  const data = [
+    { month: 'Jan', users: 12 },
+    { month: 'Feb', users: 19 },
+    { month: 'Mar', users: 24 },
+    { month: 'Apr', users: 31 },
+    { month: 'May', users: 42 },
+    { month: 'Jun', users: 56 },
+  ];
+
+  return (
+    <ChartContainer config={chartConfig} className="h-[200px]">
+      <LineChart data={data}>
+        <XAxis
+          dataKey="month"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+        />
+        <YAxis hide />
+        <ChartTooltip
+          content={<ChartTooltipContent hideLabel />}
+          cursor={{ stroke: 'hsl(var(--border))' }}
+        />
+        <Line
+          type="monotone"
+          dataKey="users"
+          stroke="hsl(var(--foreground))"
+          strokeWidth={1.5}
+          dot={false}
+        />
+      </LineChart>
+    </ChartContainer>
+  );
+}
+
+function UserRoleChart({ users }: { users: User[] | null }) {
+  if (!users) return <div className="text-sm text-muted-foreground">Loading...</div>;
+
+  const roleData = [
+    { name: 'Admins', value: users.filter((u) => u.role === 1).length },
+    { name: 'Staff', value: users.filter((u) => u.role === 2).length },
+    { name: 'Users', value: users.filter((u) => u.role === 3).length },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {roleData.map((item, index) => (
+        <div key={index} className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">{item.name}</span>
+          <span className="text-sm font-medium">{item.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DonationTrendsChart() {
+  const monthlyData = [
+    { month: 'Jan', donations: 2400 },
+    { month: 'Feb', donations: 1398 },
+    { month: 'Mar', donations: 9800 },
+    { month: 'Apr', donations: 3908 },
+    { month: 'May', donations: 4800 },
+    { month: 'Jun', donations: 3800 },
+  ];
+
+  return (
+    <ChartContainer config={chartConfig} className="h-[200px]">
+      <BarChart data={monthlyData}>
+        <XAxis
+          dataKey="month"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+        />
+        <YAxis hide />
+        <ChartTooltip
+          content={<ChartTooltipContent hideLabel />}
+          cursor={{ fill: 'hsl(var(--muted)/10)' }}
+        />
+        <Bar dataKey="donations" fill="hsl(var(--muted-foreground))" radius={2} />
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
+function PetStatusChart({ pets }: { pets: Pet[] | null }) {
+  if (!pets) return <div className="text-sm text-muted-foreground">Loading...</div>;
+
+  const statusData = [
+    { name: 'Available', value: pets.filter((p) => p.request_status === 'available').length },
+    { name: 'Adopted', value: pets.filter((p) => p.request_status === 'adopted').length },
+    { name: 'Pending', value: pets.filter((p) => p.request_status === 'pending').length },
+    { name: 'Medical Care', value: pets.filter((p) => p.request_status === 'medical').length },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {statusData.map((item, index) => (
+        <div key={index} className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">{item.name}</span>
+          <span className="text-sm font-medium">{item.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityChart() {
+  const activityData = [
+    { day: 'Mon', total: 24 },
+    { day: 'Tue', total: 23 },
+    { day: 'Wed', total: 27 },
+    { day: 'Thu', total: 32 },
+    { day: 'Fri', total: 33 },
+    { day: 'Sat', total: 57 },
+    { day: 'Sun', total: 48 },
+  ];
+
+  return (
+    <ChartContainer config={chartConfig} className="h-[200px]">
+      <BarChart data={activityData}>
+        <XAxis
+          dataKey="day"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+        />
+        <YAxis hide />
+        <ChartTooltip
+          content={<ChartTooltipContent hideLabel />}
+          cursor={{ fill: 'hsl(var(--muted)/10)' }}
+        />
+        <Bar dataKey="total" fill="hsl(var(--muted-foreground))" radius={2} />
+      </BarChart>
+    </ChartContainer>
+  );
+}
 
 const Page = () => {
   const { pets } = usePets();
@@ -245,8 +411,8 @@ const Page = () => {
                 it.type === 'user'
                   ? 'bg-blue-100'
                   : it.type === 'adoption'
-                  ? 'bg-green-100'
-                  : 'bg-orange-100'
+                    ? 'bg-green-100'
+                    : 'bg-orange-100'
               }`}
             >
               {it.type === 'user' ? (
@@ -354,6 +520,71 @@ const Page = () => {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Analytics Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-xl font-semibold tracking-tight">Analytics Overview</h3>
+          <p className="text-muted-foreground">Detailed insights into your platform performance</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* User Growth Chart */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>User Registration Trend</CardTitle>
+              <CardDescription>Monthly user registrations over the past 6 months</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UserGrowthChart />
+            </CardContent>
+          </Card>
+
+          {/* User Role Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>User Distribution</CardTitle>
+              <CardDescription>Breakdown by user roles</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UserRoleChart users={users} />
+            </CardContent>
+          </Card>
+
+          {/* Donation Trends */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Donation Trends</CardTitle>
+              <CardDescription>Monthly donation amounts and campaign performance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DonationTrendsChart />
+            </CardContent>
+          </Card>
+
+          {/* Pet Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pet Status</CardTitle>
+              <CardDescription>Current status of all pets</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PetStatusChart pets={pets} />
+            </CardContent>
+          </Card>
+
+          {/* Activity Heatmap */}
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Platform Activity</CardTitle>
+              <CardDescription>Daily activity across different platform features</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ActivityChart />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

@@ -1,4 +1,5 @@
 'use client';
+import { useAuth } from '@/app/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useNotifications } from '@/components/ui/notification';
 import {
   Select,
   SelectContent,
@@ -19,13 +19,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { User } from '@/config/models/users';
-import { CreateUserDto } from '@/config/schema/userChema';
+import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
 import { useEffect, useState } from 'react';
 
 interface UserModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (userData: CreateUserDto) => Promise<void>;
+  onSubmit: (userData: CreateUserDto | UpdateUserDto) => Promise<void>;
   editingUser?: User | null;
 }
 
@@ -39,17 +39,17 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
     status: 'ACTIVE',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { warning } = useNotifications();
+  const { userId, userRole } = useAuth();
 
   useEffect(() => {
     if (editingUser) {
       setFormData({
-        username: editingUser.username,
-        email: editingUser.email,
-        phone_number: editingUser.phone_number,
-        role: editingUser.role,
+        username: editingUser.username || '',
+        email: editingUser.email || '',
+        phone_number: editingUser.phone_number || '',
+        role: editingUser.role || 3,
+        status: editingUser.status || 'ACTIVE',
         password: '', // Don't pre-fill password for security
-        status: editingUser.status,
       });
     } else {
       setFormData({
@@ -68,22 +68,53 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
     setIsSubmitting(true);
 
     try {
-      // Client-side phone validation: ensure exactly 11 digits
-      const sanitizedPhone = formData.phone_number.replace(/\D/g, '');
-      if (sanitizedPhone.length !== 11) {
-        warning('Phone number must be exactly 11 digits');
-        setIsSubmitting(false);
-        return;
+      if (editingUser) {
+        // For updates, only send fields that have values and exclude password if empty
+        const updatePayload: Partial<UpdateUserDto> = {};
+
+        if (formData.username && formData.username.trim()) {
+          updatePayload.username = formData.username.trim();
+        }
+        if (formData.email && formData.email.trim()) {
+          updatePayload.email = formData.email.trim();
+        }
+        if (formData.phone_number && formData.phone_number.trim()) {
+          updatePayload.phone_number = formData.phone_number.trim();
+        }
+        // Only include role if it's different from the original
+        if (
+          formData.role !== undefined &&
+          formData.role !== null &&
+          formData.role !== editingUser.role
+        ) {
+          updatePayload.role = formData.role;
+        }
+        if (formData.status && formData.status.trim()) {
+          updatePayload.status = formData.status as
+            | 'ACTIVE'
+            | 'INACTIVE'
+            | 'SUSPENDED'
+            | 'PENDING'
+            | 'BANNED';
+        }
+        // Only include password if it's provided and has minimum length
+        if (formData.password && formData.password.length >= 6) {
+          updatePayload.password = formData.password;
+        }
+
+        await onSubmit(updatePayload as UpdateUserDto);
+      } else {
+        // For new users, include created_by and generate password if needed
+        const createPayload = { ...formData, created_by: userId } as CreateUserDto;
+
+        if (!createPayload.password || createPayload.password.length < 8) {
+          const rand = Math.random().toString(36).slice(2, 8);
+          createPayload.password = `A@${rand}1`;
+        }
+
+        await onSubmit(createPayload);
       }
 
-      // If creating user and no password supplied, generate a default strong password
-      const payload = { ...formData } as CreateUserDto;
-      if (!editingUser && (!payload.password || payload.password.length < 8)) {
-        const rand = Math.random().toString(36).slice(2, 8);
-        payload.password = `A@${rand}1`;
-      }
-
-      await onSubmit(payload);
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting user data:', error);
@@ -158,7 +189,8 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Admin</SelectItem>
+                  {/* Only show Admin option to actual admins */}
+                  {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
                   <SelectItem value="2">Staff</SelectItem>
                   <SelectItem value="3">User</SelectItem>
                 </SelectContent>
@@ -180,23 +212,6 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                   <SelectItem value="BANNED">Banned</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">
-                Password {editingUser ? '(leave blank to keep current)' : '*'}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                placeholder="Enter password"
-                required={!editingUser}
-              />
-              <p className="text-xs text-muted-foreground">
-                Minimum 8 characters. Default strong password will be generated if left empty.
-              </p>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import { supabase } from '@/app/supabase/supabase';
+import { updateUserSchema } from '@/config/schema/userChema';
 import { createErrorResponse, createResponse } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
-import { z } from 'zod';
 
 async function parseJson(request: NextRequest) {
   try {
@@ -42,30 +42,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Validation schema for user updates
-    const userUpdateSchema = z
-      .object({
-        username: z.string().optional(),
-        email: z.email('Invalid email format').optional(),
-        phone_number: z
-          .string()
-          .min(10, 'Phone number must be at least 10 digits')
-          .max(15, 'Phone number too long')
-          .optional(),
-        profile_image_link: z.url('Invalid URL format').or(z.literal('')).optional(),
-        house_images: z
-          .array(z.url('Invalid URL format'))
-          .max(10, 'Too many house images')
-          .optional(),
-        payment_method: z.string().max(50, 'Payment method name too long').optional(),
-        status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING']).optional(),
-        password: z.string().min(6, 'Password must be at least 6 characters').optional(),
-      })
-      .strict()
-      .refine((data) => Object.keys(data).length > 0, {
-        message: 'At least one field must be provided for update',
-      });
-
-    const parsed = userUpdateSchema.safeParse(body);
+    
+    const parsed = updateUserSchema.safeParse(body);
     if (!parsed.success) {
       return createErrorResponse('Validation error', 400, parsed.error.issues);
     }
@@ -143,11 +121,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           payment_method,
           status,
           created_at,
-          role,
-          role!users_role_fkey (
-            id,
-            type
-          )
+          role
         `,
         )
         .single();
