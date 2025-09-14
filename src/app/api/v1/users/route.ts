@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
 </html>
 `;
 
-    const emailResponse = await axios.post(`${baseUrl}/send-email`, {
+    const emailResponse = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/send-email`, {
       to: email,
       subject: 'Your PawsConnect account has been created',
       text: emailHtml,
