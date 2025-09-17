@@ -24,7 +24,7 @@ export default function RootLayout({
   const pathname = usePathname();
   const isActive = (path: string) => pathname === path;
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, userRole } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const handleNavigation = (path: string) => {
@@ -38,7 +38,7 @@ export default function RootLayout({
         <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-[#333446]">
           <div>
             <h1 className="p-[10px] font-semibold text-[#FE5D26] mb-[8px] self-center text-[18px]">
-              Admin
+              {userRole === 1 ? 'Admin' : 'Staff'}
             </h1>
 
             <ul className="flex flex-col gap-[16px] text-[#3D3C42] w-full">

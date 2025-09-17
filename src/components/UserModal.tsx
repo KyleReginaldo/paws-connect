@@ -179,23 +179,25 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
-              <Select
-                value={formData.role.toString()}
-                onValueChange={(value) => handleInputChange('role', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Only show Admin option to actual admins */}
-                  {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
-                  <SelectItem value="2">Staff</SelectItem>
-                  <SelectItem value="3">User</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {editingUser ? null : (
+              <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
+                <Select
+                  value={formData.role.toString()}
+                  onValueChange={(value) => handleInputChange('role', parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Only show Admin option to actual admins */}
+                    {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
+                    <SelectItem value="2">Staff</SelectItem>
+                    <SelectItem value="3">User</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>

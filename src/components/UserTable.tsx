@@ -128,10 +128,12 @@ export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTable
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit?.(user)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
+                    {user.role !== 1 ? (
+                      <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                    ) : null}
                     {user.status !== 'ACTIVE' && (
                       <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'ACTIVE')}>
                         <UserCheck className="h-4 w-4 mr-2" />
