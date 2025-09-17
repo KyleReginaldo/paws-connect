@@ -37,10 +37,11 @@ export default function RootLayout({
       <div className="flex h-screen bg-[#FFFCFB]">
         <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-[#333446]">
           <div>
-            <h1 className="p-[10px] font-semibold text-[#FE5D26] mb-[8px] self-center text-[18px]">
-              {userRole === 1 ? 'Admin' : 'Staff'}
-            </h1>
-
+           <div className="flex justify-center">
+              <h1 className="p-[10px] font-semibold text-[#FE5D26] mb-[8px] text-[18px]">
+                {userRole === 1 ? 'Admin' : 'Staff'}
+              </h1>
+            </div>
             <ul className="flex flex-col gap-[16px] text-[#3D3C42] w-full">
               <SideBarTile
                 title="Dashboard"

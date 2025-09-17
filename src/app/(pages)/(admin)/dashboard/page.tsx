@@ -1,7 +1,4 @@
 'use client';
-import { useFundraising } from '@/app/context/FundraisingContext';
-import { usePets } from '@/app/context/PetsContext';
-import { useUsers } from '@/app/context/UsersContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,23 +6,22 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
-import { User } from '@/config/models/users';
-import { Fundraising } from '@/config/types/fundraising';
-import { Pet } from '@/config/types/pet';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Activity,
   ArrowUpRight,
-  Calendar as CalendarIcon,
+  CalendarIcon,
   Dog,
   DollarSign,
   Heart,
   PawPrint,
+  Shield,
   TrendingUp,
+  User,
+  UserCheck,
   Users,
 } from 'lucide-react';
-import Image from 'next/image';
-import router from 'next/router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 // Charts
 import {
@@ -34,130 +30,362 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { Bar, BarChart, Line, LineChart, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
 
-// Chart Configurations
+const mockPets = [
+  {
+    id: 1,
+    name: 'Buddy',
+    type: 'Dog',
+    request_status: 'available',
+    breed: 'Aspin',
+    date_added: '2024-01-15',
+  },
+  {
+    id: 2,
+    name: 'Whiskers',
+    type: 'Cat',
+    request_status: 'adopted',
+    breed: 'Persian',
+    date_added: '2024-01-20',
+  },
+  {
+    id: 3,
+    name: 'Max',
+    type: 'Dog',
+    request_status: 'pending',
+    breed: 'Aspin',
+    date_added: '2024-02-01',
+  },
+  {
+    id: 4,
+    name: 'Luna',
+    type: 'Cat',
+    request_status: 'medical',
+    breed: 'Siamese',
+    date_added: '2024-02-10',
+  },
+  {
+    id: 5,
+    name: 'Charlie',
+    type: 'Dog',
+    request_status: 'available',
+    breed: 'Aspin',
+    date_added: '2024-02-15',
+  },
+  {
+    id: 6,
+    name: 'Bella',
+    type: 'Dog',
+    request_status: 'adopted',
+    breed: 'Aspin',
+    date_added: '2024-03-01',
+  },
+  {
+    id: 7,
+    name: 'Milo',
+    type: 'Cat',
+    request_status: 'available',
+    breed: 'Maine Coon',
+    date_added: '2024-03-05',
+  },
+  {
+    id: 8,
+    name: 'Rocky',
+    type: 'Dog',
+    request_status: 'adopted',
+    breed: 'Aspin',
+    date_added: '2024-03-10',
+  },
+];
+
+const mockUsers = [
+  { id: 1, name: 'John Doe', role: 'admin', date_joined: '2024-01-01' },
+  { id: 2, name: 'Jane Smith', role: 'staff', date_joined: '2024-01-15' },
+  { id: 3, name: 'Bob Johnson', role: 'user', date_joined: '2024-02-01' },
+  { id: 4, name: 'Alice Brown', role: 'user', date_joined: '2024-02-15' },
+  { id: 5, name: 'Dr. Wilson', role: 'staff', date_joined: '2024-03-01' },
+  { id: 6, name: 'Sarah Connor', role: 'staff', date_joined: '2024-03-10' },
+];
+
+const mockCampaigns = [
+  {
+    id: 1,
+    title: 'Emergency Medical Fund',
+    description: 'Help cover medical expenses for rescued pets',
+    target_amount: 50000,
+    raised_amount: 32000,
+  },
+  {
+    id: 2,
+    title: 'New Shelter Construction',
+    description: 'Building a new facility to house more animals',
+    target_amount: 200000,
+    raised_amount: 85000,
+  },
+  {
+    id: 3,
+    title: 'Food & Supplies Drive',
+    description: 'Monthly food and supply needs for all animals',
+    target_amount: 25000,
+    raised_amount: 18500,
+  },
+];
+
 const chartConfig = {
   users: {
     label: 'Users',
+    color: '#FFA726', // Lighter orange
   },
   donations: {
     label: 'Donations',
+    color: '#FFB74D', // Even lighter orange
   },
   pets: {
     label: 'Pets',
+    color: '#FFCC80', // Soft orange
   },
   activity: {
     label: 'Activity',
+    color: '#FFE0B2', // Very light orange
+  },
+  dogs: {
+    label: 'Dogs',
+    color: '#FFA726',
+  },
+  cats: {
+    label: 'Cats',
+    color: '#FFB74D',
   },
 } satisfies ChartConfig;
 
-// Analytics Components
-function UserGrowthChart() {
-  const data = [
-    { month: 'Jan', users: 12 },
-    { month: 'Feb', users: 19 },
-    { month: 'Mar', users: 24 },
-    { month: 'Apr', users: 31 },
-    { month: 'May', users: 42 },
-    { month: 'Jun', users: 56 },
+function EnhancedUserGrowthChart({ period }: { period: string }) {
+  const weeklyData = [
+    { period: 'Week 1', users: 3, newUsers: 3 },
+    { period: 'Week 2', users: 5, newUsers: 2 },
+    { period: 'Week 3', users: 8, newUsers: 3 },
+    { period: 'Week 4', users: 12, newUsers: 4 },
   ];
 
-  return (
-    <ChartContainer config={chartConfig} className="h-[200px]">
-      <LineChart data={data}>
-        <XAxis
-          dataKey="month"
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-        />
-        <YAxis hide />
-        <ChartTooltip
-          content={<ChartTooltipContent hideLabel />}
-          cursor={{ stroke: 'hsl(var(--border))' }}
-        />
-        <Line
-          type="monotone"
-          dataKey="users"
-          stroke="hsl(var(--foreground))"
-          strokeWidth={1.5}
-          dot={false}
-        />
-      </LineChart>
-    </ChartContainer>
-  );
-}
-
-function UserRoleChart({ users }: { users: User[] | null }) {
-  if (!users) return <div className="text-sm text-muted-foreground">Loading...</div>;
-
-  const roleData = [
-    { name: 'Admins', value: users.filter((u) => u.role === 1).length },
-    { name: 'Staff', value: users.filter((u) => u.role === 2).length },
-    { name: 'Users', value: users.filter((u) => u.role === 3).length },
+  const monthlyData = [
+    { period: 'Jan', users: 12, newUsers: 12 },
+    { period: 'Feb', users: 19, newUsers: 7 },
+    { period: 'Mar', users: 24, newUsers: 5 },
+    { period: 'Apr', users: 31, newUsers: 7 },
+    { period: 'May', users: 42, newUsers: 11 },
+    { period: 'Jun', users: 56, newUsers: 14 },
   ];
 
+  const annualData = [
+    { period: '2022', users: 145, newUsers: 145 },
+    { period: '2023', users: 298, newUsers: 153 },
+    { period: '2024', users: 456, newUsers: 158 },
+  ];
+
+  const data = period === 'weekly' ? weeklyData : period === 'monthly' ? monthlyData : annualData;
+
   return (
-    <div className="space-y-3">
-      {roleData.map((item, index) => (
-        <div key={index} className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{item.name}</span>
-          <span className="text-sm font-medium">{item.value}</span>
-        </div>
-      ))}
+    <div className="w-full overflow-hidden">
+      <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#FFA726" stopOpacity={0.2} />
+              <stop offset="95%" stopColor="#FFA726" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="newUserGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#FFB74D" stopOpacity={0.2} />
+              <stop offset="95%" stopColor="#FFB74D" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="period"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+          />
+          <YAxis hide />
+          <ChartTooltip
+            content={<ChartTooltipContent />}
+            cursor={{ stroke: 'hsl(var(--border))' }}
+          />
+          <Area
+            type="monotone"
+            dataKey="users"
+            stackId="1"
+            stroke="#FFA726"
+            fill="url(#userGradient)"
+            strokeWidth={2}
+          />
+          <Area
+            type="monotone"
+            dataKey="newUsers"
+            stackId="2"
+            stroke="#FFB74D"
+            fill="url(#newUserGradient)"
+            strokeWidth={2}
+          />
+        </AreaChart>
+      </ChartContainer>
     </div>
   );
 }
 
-function DonationTrendsChart() {
-  const monthlyData = [
-    { month: 'Jan', donations: 2400 },
-    { month: 'Feb', donations: 1398 },
-    { month: 'Mar', donations: 9800 },
-    { month: 'Apr', donations: 3908 },
-    { month: 'May', donations: 4800 },
-    { month: 'Jun', donations: 3800 },
+function EnhancedDonationTrendsChart({ period }: { period: string }) {
+  const weeklyData = [
+    { period: 'Week 1', donations: 1200, campaigns: 2 },
+    { period: 'Week 2', donations: 2400, campaigns: 3 },
+    { period: 'Week 3', donations: 1800, campaigns: 2 },
+    { period: 'Week 4', donations: 3200, campaigns: 4 },
   ];
 
+  const monthlyData = [
+    { period: 'Jan', donations: 2400, campaigns: 3 },
+    { period: 'Feb', donations: 1398, campaigns: 2 },
+    { period: 'Mar', donations: 9800, campaigns: 5 },
+    { period: 'Apr', donations: 3908, campaigns: 4 },
+    { period: 'May', donations: 4800, campaigns: 3 },
+    { period: 'Jun', donations: 3800, campaigns: 4 },
+  ];
+
+  const annualData = [
+    { period: '2022', donations: 45000, campaigns: 12 },
+    { period: '2023', donations: 67000, campaigns: 18 },
+    { period: '2024', donations: 89000, campaigns: 24 },
+  ];
+
+  const data = period === 'weekly' ? weeklyData : period === 'monthly' ? monthlyData : annualData;
+
   return (
-    <ChartContainer config={chartConfig} className="h-[200px]">
-      <BarChart data={monthlyData}>
-        <XAxis
-          dataKey="month"
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-        />
-        <YAxis hide />
-        <ChartTooltip
-          content={<ChartTooltipContent hideLabel />}
-          cursor={{ fill: 'hsl(var(--muted)/10)' }}
-        />
-        <Bar dataKey="donations" fill="hsl(var(--muted-foreground))" radius={2} />
-      </BarChart>
-    </ChartContainer>
+    <div className="w-full overflow-hidden">
+      <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
+        <BarChart data={data}>
+          <defs>
+            <linearGradient id="donationGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#FFB74D" stopOpacity={0.6} />
+              <stop offset="95%" stopColor="#FFB74D" stopOpacity={0.2} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="period"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+          />
+          <YAxis hide />
+          <ChartTooltip
+            content={<ChartTooltipContent />}
+            cursor={{ fill: 'hsl(var(--muted)/10)' }}
+          />
+          <Bar dataKey="donations" fill="url(#donationGradient)" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ChartContainer>
+    </div>
   );
 }
 
-function PetStatusChart({ pets }: { pets: Pet[] | null }) {
-  if (!pets) return <div className="text-sm text-muted-foreground">Loading...</div>;
-
-  const statusData = [
-    { name: 'Available', value: pets.filter((p) => p.request_status === 'available').length },
-    { name: 'Adopted', value: pets.filter((p) => p.request_status === 'adopted').length },
-    { name: 'Pending', value: pets.filter((p) => p.request_status === 'pending').length },
-    { name: 'Medical Care', value: pets.filter((p) => p.request_status === 'medical').length },
+function EnhancedPetAnalytics({ period }: { period: string; pets: typeof mockPets }) {
+  const weeklyData = [
+    { period: 'Week 1', dogs: 2, cats: 1, total: 3 },
+    { period: 'Week 2', dogs: 1, cats: 2, total: 3 },
+    { period: 'Week 3', dogs: 3, cats: 1, total: 4 },
+    { period: 'Week 4', dogs: 2, cats: 2, total: 4 },
   ];
 
+  const monthlyData = [
+    { period: 'Jan', dogs: 2, cats: 0, total: 2 },
+    { period: 'Feb', dogs: 2, cats: 1, total: 3 },
+    { period: 'Mar', dogs: 2, cats: 1, total: 3 },
+    { period: 'Apr', dogs: 0, cats: 0, total: 0 },
+    { period: 'May', dogs: 0, cats: 0, total: 0 },
+    { period: 'Jun', dogs: 0, cats: 0, total: 0 },
+  ];
+
+  const annualData = [
+    { period: '2022', dogs: 45, cats: 32, total: 77 },
+    { period: '2023', dogs: 67, cats: 43, total: 110 },
+    { period: '2024', dogs: 5, cats: 3, total: 8 },
+  ];
+
+  const data = period === 'weekly' ? weeklyData : period === 'monthly' ? monthlyData : annualData;
+
   return (
-    <div className="space-y-3">
-      {statusData.map((item, index) => (
-        <div key={index} className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{item.name}</span>
-          <span className="text-sm font-medium">{item.value}</span>
+    <div className="space-y-4 sm:space-y-6 overflow-hidden">
+      <div className="w-full overflow-hidden">
+        <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="dogGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#FFA726" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#FFA726" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="catGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#FFB74D" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#FFB74D" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="period"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            />
+            <YAxis hide />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Area
+              type="monotone"
+              dataKey="dogs"
+              stackId="1"
+              stroke="#FFA726"
+              fill="url(#dogGradient)"
+              strokeWidth={2}
+            />
+            <Area
+              type="monotone"
+              dataKey="cats"
+              stackId="1"
+              stroke="#FFB74D"
+              fill="url(#catGradient)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2 min-w-0">
+          <h4 className="text-sm font-semibold text-gray-900 truncate">Dog Breeds ({period})</h4>
+          <div className="space-y-1">
+            {[
+              'Aspin (Philippine Dog)',
+              'Mixed Breed',
+              'Labrador Mix',
+              'Golden Retriever Mix',
+              'Other',
+            ].map((breed) => (
+              <div key={breed} className="flex justify-between text-xs">
+                <span className="text-muted-foreground truncate flex-1 mr-2">{breed}</span>
+                <span className="font-medium text-orange-500 flex-shrink-0">
+                  {Math.floor(Math.random() * 5) + 1}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+        <div className="space-y-2 min-w-0">
+          <h4 className="text-sm font-semibold text-gray-900 truncate">Cat Breeds ({period})</h4>
+          <div className="space-y-1">
+            {['Persian', 'Siamese', 'Maine Coon', 'Mixed Breed', 'Other'].map((breed) => (
+              <div key={breed} className="flex justify-between text-xs">
+                <span className="text-muted-foreground truncate flex-1 mr-2">{breed}</span>
+                <span className="font-medium text-orange-500 flex-shrink-0">
+                  {Math.floor(Math.random() * 3) + 1}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -174,29 +402,156 @@ function ActivityChart() {
   ];
 
   return (
-    <ChartContainer config={chartConfig} className="h-[200px]">
-      <BarChart data={activityData}>
-        <XAxis
-          dataKey="day"
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-        />
-        <YAxis hide />
-        <ChartTooltip
-          content={<ChartTooltipContent hideLabel />}
-          cursor={{ fill: 'hsl(var(--muted)/10)' }}
-        />
-        <Bar dataKey="total" fill="hsl(var(--muted-foreground))" radius={2} />
-      </BarChart>
-    </ChartContainer>
+    <div className="w-full overflow-hidden">
+      <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
+        <BarChart data={activityData}>
+          <defs>
+            <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#FFCC80" stopOpacity={0.6} />
+              <stop offset="95%" stopColor="#FFCC80" stopOpacity={0.2} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+          />
+          <YAxis hide />
+          <ChartTooltip
+            content={<ChartTooltipContent />}
+            cursor={{ fill: 'hsl(var(--muted)/10)' }}
+          />
+          <Bar dataKey="total" fill="url(#activityGradient)" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+function StaffRoleAnalytics({ users }: { users: typeof mockUsers }) {
+  const staffData = [
+    {
+      role: 'Admin',
+      count: users.filter((u) => u.role === 'admin').length,
+      color: '#FFA726',
+      icon: Shield,
+      responsibilities: 'System management, user oversight',
+    },
+    {
+      role: 'Staff',
+      count: users.filter((u) => u.role === 'staff').length,
+      color: '#FFB74D',
+      icon: UserCheck,
+      responsibilities: 'Pet care, adoption coordination',
+    },
+    {
+      role: 'Users',
+      count: users.filter((u) => u.role === 'user').length,
+      color: '#FFCC80',
+      icon: User,
+      responsibilities: 'Adoption applications, donations',
+    },
+  ];
+
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      {staffData.map((item, index) => (
+        <div
+          key={index}
+          className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100 min-w-0"
+        >
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+            <div className="p-2 rounded-full bg-white shadow-sm flex-shrink-0">
+              <item.icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: item.color }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-semibold text-gray-900 block truncate">
+                {item.role}
+              </span>
+              <p className="text-xs text-muted-foreground truncate">{item.responsibilities}</p>
+            </div>
+          </div>
+          <Badge
+            variant="secondary"
+            className="bg-orange-50 text-orange-600 border-orange-100 font-semibold flex-shrink-0 ml-2"
+          >
+            {item.count}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecentActivity() {
+  const items = [
+    {
+      id: '1',
+      type: 'adoption' as const,
+      title: 'Adoption completed',
+      subtitle: 'Buddy - Aspin',
+      time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: '2',
+      type: 'donation' as const,
+      title: 'New donation received',
+      subtitle: '₱5,000 — For medical expenses',
+      time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: '3',
+      type: 'user' as const,
+      title: 'New user registered',
+      subtitle: 'alex.martinez@email.com',
+      time: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: '4',
+      type: 'adoption' as const,
+      title: 'Adoption application',
+      subtitle: 'Luna - Mixed Cat',
+      time: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {items.map((it) => (
+        <div key={it.id} className="flex items-start space-x-3 sm:space-x-4 min-w-0">
+          <div
+            className={`p-2 rounded-full flex-shrink-0 ${
+              it.type === 'user'
+                ? 'bg-orange-50'
+                : it.type === 'adoption'
+                  ? 'bg-orange-50'
+                  : 'bg-orange-50'
+            }`}
+          >
+            {it.type === 'user' ? (
+              <Users className="h-4 w-4 text-orange-500" />
+            ) : it.type === 'adoption' ? (
+              <Heart className="h-4 w-4 text-orange-500" />
+            ) : (
+              <DollarSign className="h-4 w-4 text-orange-500" />
+            )}
+          </div>
+          <div className="space-y-1 min-w-0 flex-1">
+            <p className="text-sm font-medium truncate">{it.title}</p>
+            {it.subtitle && <p className="text-xs text-muted-foreground truncate">{it.subtitle}</p>}
+            <p className="text-xs text-muted-foreground">{new Date(it.time).toLocaleString()}</p>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
 const Page = () => {
-  const { pets } = usePets();
-  const { campaigns, stats: fundraisingStats } = useFundraising();
-  const { users } = useUsers();
+  const pets = mockPets;
+  const campaigns = mockCampaigns;
+  const users = mockUsers;
 
   type Adoption = {
     id: number | string;
@@ -208,254 +563,123 @@ const Page = () => {
     image: string;
   };
 
-  const [recentAdoptions, setRecentAdoptions] = useState<Adoption[] | null>(null);
-  const [adoptionsLoading, setAdoptionsLoading] = useState(false);
-  const [adoptionsError, setAdoptionsError] = useState<string | null>(null);
+  const [recentAdoptions] = useState<Adoption[]>([
+    {
+      id: 1,
+      petName: 'Buddy',
+      petType: 'Aspin',
+      adopter: 'Sarah Johnson',
+      timeAgo: '2 hours ago',
+      status: 'completed',
+      image: '/golden-retriever.png',
+    },
+    {
+      id: 2,
+      petName: 'Whiskers',
+      petType: 'Persian Cat',
+      adopter: 'Mike Chen',
+      timeAgo: '5 hours ago',
+      status: 'pending',
+      image: '/fluffy-persian-cat.png',
+    },
+    {
+      id: 3,
+      petName: 'Luna',
+      petType: 'Mixed Cat',
+      adopter: 'Emma Davis',
+      timeAgo: '1 day ago',
+      status: 'completed',
+      image: '/majestic-husky.png',
+    },
+  ]);
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    const fetchAdoptions = async () => {
-      setAdoptionsLoading(true);
-      try {
-        // build optional query params for date range
-        const params: Record<string, string> = {};
-        if (dateRange?.from) params.from = new Date(dateRange.from).toISOString();
-        if (dateRange?.to) params.to = new Date(dateRange.to).toISOString();
-        const url = new URL('/api/v1/adoption', window.location.origin);
-        Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-        const response = await fetch(url.toString());
-        if (!response.ok) throw new Error('Failed to fetch adoptions');
-        const json = (await response.json()) as { data?: Array<Record<string, unknown>> };
-        if (!mounted) return;
-        const data = Array.isArray(json.data) ? json.data.slice(0, 5) : [];
-        const parsed = data.map((d: Record<string, unknown>) => {
-          const id = (d['id'] as number) ?? String(Math.random()).slice(2, 8);
-          const petName = (d['pet_name'] as string) || (d['pet'] as string) || 'Unknown';
-          const petType = (d['pet_type'] as string) || 'N/A';
-          const adopter = (d['user_name'] as string) || (d['user'] as string) || 'Anonymous';
-          const createdAt = (d['created_at'] as string) || new Date().toISOString();
-          const status = (d['status'] as string) || 'pending';
-          const image = (d['photo'] as string) || '/corgi.jpg';
-          return {
-            id,
-            petName,
-            petType,
-            adopter,
-            timeAgo: new Date(createdAt).toLocaleString(),
-            status,
-            image,
-          } as Adoption;
-        });
-        setRecentAdoptions(parsed);
-      } catch (err: unknown) {
-        console.error(err);
-        const msg = err instanceof Error ? err.message : String(err);
-        setAdoptionsError(msg || 'Failed to load adoptions');
-      } finally {
-        setAdoptionsLoading(false);
-      }
-    };
-    fetchAdoptions();
-    return () => {
-      mounted = false;
-    };
-  }, [dateRange]);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
 
-  // Build stats using available contexts
   const stats = [
     {
       title: 'Total Pets',
-      value: pets ? String(pets.length) : '—',
-      change: '+0% ',
-      changeType: 'neutral' as const,
+      value: String(pets.length),
+      change: '+12%',
+      changeType: 'positive' as const,
       icon: Dog,
       description: 'Available for adoption',
+      gradient: 'from-orange-25 to-orange-50',
+      iconColor: 'text-orange-500',
     },
     {
       title: 'Adoptions',
-      value: fundraisingStats ? String(fundraisingStats.total_campaigns || 0) : '—',
-      change: '+0% ',
-      changeType: 'neutral' as const,
+      value: String(pets.filter((p) => p.request_status === 'adopted').length),
+      change: '+23%',
+      changeType: 'positive' as const,
       icon: Heart,
       description: 'This month',
+      gradient: 'from-orange-25 to-orange-50',
+      iconColor: 'text-orange-500',
     },
     {
       title: 'Total Donations',
-      value: fundraisingStats ? `₱${(fundraisingStats.total_raised || 0).toLocaleString()}` : '—',
-      change: '+0% ',
-      changeType: 'neutral' as const,
+      value: `₱${campaigns.reduce((sum, c) => sum + c.raised_amount, 0).toLocaleString()}`,
+      change: '+8%',
+      changeType: 'positive' as const,
       icon: DollarSign,
       description: 'Raised this month',
+      gradient: 'from-orange-25 to-orange-50',
+      iconColor: 'text-orange-500',
     },
     {
       title: 'Active Users',
-      value: users ? String(users.length) : '—',
-      change: '+0% ',
-      changeType: 'neutral' as const,
+      value: String(users.length),
+      change: '+5%',
+      changeType: 'positive' as const,
       icon: Users,
       description: 'Registered users',
+      gradient: 'from-orange-25 to-orange-50',
+      iconColor: 'text-orange-500',
     },
   ];
 
-  const ongoingCampaigns =
-    campaigns?.map((c: Fundraising) => ({
-      id: c.id,
-      title: c.title ?? '',
-      description: c.description ?? '',
-      target: c.target_amount ?? 0,
-      raised: c.raised_amount ?? 0,
-      daysLeft: 0,
-      supporters: 0,
-    })) || [];
-
-  // Local RecentActivity component
-  function RecentActivity() {
-    const [items, setItems] = useState<
-      Array<{
-        id: string;
-        type: 'user' | 'adoption' | 'donation';
-        title: string;
-        subtitle?: string;
-        time: string;
-      }>
-    >([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-      let mounted = true;
-      const fetchItems = async () => {
-        try {
-          setLoading(true);
-          const [donRes, adoptRes, usersRes] = await Promise.all([
-            fetch('/api/v1/donations?limit=5'),
-            fetch('/api/v1/adoption'),
-            fetch('/api/v1/users'),
-          ]);
-
-          const donJson = donRes.ok ? await donRes.json() : { data: [] };
-          const adoptJson = adoptRes.ok ? await adoptRes.json() : { data: [] };
-          const usersJson = usersRes.ok ? await usersRes.json() : { data: [] };
-
-          const donations = Array.isArray(donJson.data) ? donJson.data : [];
-          const adoptions = Array.isArray(adoptJson.data) ? adoptJson.data : [];
-          const newUsers = Array.isArray(usersJson.data) ? usersJson.data : [];
-
-          const out: Array<{
-            id: string;
-            type: 'user' | 'adoption' | 'donation';
-            title: string;
-            subtitle?: string;
-            time: string;
-          }> = [];
-
-          donations.forEach((d: Record<string, unknown>, idx: number) => {
-            out.push({
-              id: `don_${idx}_${d.created_at}`,
-              type: 'donation',
-              title: 'New donation received',
-              subtitle: `₱${Number(d.amount || 0).toLocaleString()}${
-                d.message ? ` — ${d.message}` : ''
-              }`,
-              time: String(d.created_at || new Date().toISOString()),
-            });
-          });
-
-          adoptions.slice(0, 5).forEach((a: Record<string, unknown>, idx: number) => {
-            out.push({
-              id: `adopt_${idx}_${a.created_at}`,
-              type: 'adoption',
-              title: a.status === 'completed' ? 'Adoption completed' : 'Adoption application',
-              subtitle: String(a.pet_name || a.pet || 'Unknown'),
-              time: String(a.created_at || new Date().toISOString()),
-            });
-          });
-
-          newUsers.slice(0, 5).forEach((u: Record<string, unknown>, idx: number) => {
-            out.push({
-              id: `user_${idx}_${u.created_at}`,
-              type: 'user',
-              title: 'New user registered',
-              subtitle: String(u.username || u.email || 'New user'),
-              time: String(u.created_at || new Date().toISOString()),
-            });
-          });
-
-          // Sort by time desc
-          out.sort((a, b) => (a.time < b.time ? 1 : -1));
-
-          if (!mounted) return;
-          setItems(out.slice(0, 6));
-        } catch (err) {
-          console.error('Failed to fetch recent activity', err);
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      };
-      fetchItems();
-      return () => {
-        mounted = false;
-      };
-    }, []);
-
-    if (loading) return <div className="text-sm text-muted-foreground">Loading activity…</div>;
-    if (!items.length)
-      return <div className="text-sm text-muted-foreground">No recent activity found.</div>;
-
-    return (
-      <div className="space-y-3">
-        {items.map((it) => (
-          <div key={it.id} className="flex items-start space-x-4">
-            <div
-              className={`p-2 rounded-full ${
-                it.type === 'user'
-                  ? 'bg-blue-100'
-                  : it.type === 'adoption'
-                    ? 'bg-green-100'
-                    : 'bg-orange-100'
-              }`}
-            >
-              {it.type === 'user' ? (
-                <Users className="h-4 w-4 text-blue-600" />
-              ) : it.type === 'adoption' ? (
-                <Heart className="h-4 w-4 text-green-600" />
-              ) : (
-                <DollarSign className="h-4 w-4 text-orange-600" />
-              )}
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">{it.title}</p>
-              {it.subtitle && <p className="text-xs text-muted-foreground">{it.subtitle}</p>}
-              <p className="text-xs text-muted-foreground">{new Date(it.time).toLocaleString()}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const ongoingCampaigns = campaigns.map((c) => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    target: c.target_amount,
+    raised: c.raised_amount,
+    daysLeft: Math.floor(Math.random() * 30) + 1,
+    supporters: Math.floor(Math.random() * 100) + 10,
+  }));
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6">
+    <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 pt-6 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Welcome back! Here&apos;s what&apos;s happening with Paws Connect today.
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-400 bg-clip-text text-transparent break-words">
+            Dashboard
+          </h2>
+          <p className="text-muted-foreground text-base lg:text-lg break-words">
+            Welcome back! Here&apos;s what&apos;s happening with your pet adoption platform today.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
             <PopoverTrigger asChild>
-              <Button variant="outline">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange?.from
-                  ? dateRange.to
-                    ? `${new Date(dateRange.from).toLocaleDateString()} - ${new Date(
-                        dateRange.to,
-                      ).toLocaleDateString()}`
-                    : `${new Date(dateRange.from).toLocaleDateString()}`
-                  : 'Today'}
+              <Button
+                variant="outline"
+                className="border-orange-200 hover:bg-orange-25 bg-transparent whitespace-nowrap"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 text-orange-500 flex-shrink-0" />
+                <span className="hidden sm:inline">
+                  {dateRange?.from
+                    ? dateRange.to
+                      ? `${new Date(dateRange.from).toLocaleDateString()} - ${new Date(
+                          dateRange.to,
+                        ).toLocaleDateString()}`
+                      : `${new Date(dateRange.from).toLocaleDateString()}`
+                    : 'Today'}
+                </span>
+                <span className="sm:hidden">{dateRange?.from ? 'Custom' : 'Today'}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -503,200 +727,285 @@ const Page = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <Card key={index}>
+          <Card
+            key={index}
+            className={`bg-gradient-to-br ${stat.gradient} border-0 shadow-sm hover:shadow-md transition-shadow`}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700 truncate pr-2">
+                {stat.title}
+              </CardTitle>
+              <stat.icon className={`h-5 w-5 ${stat.iconColor} flex-shrink-0`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center text-xs text-muted-foreground">
-                <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-                <span className="text-green-500">{stat.change}</span>
-                <span className="ml-1">{stat.description}</span>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
+                {stat.value}
+              </div>
+              <div className="flex items-center text-xs mt-2">
+                <TrendingUp className="mr-1 h-3 w-3 text-orange-500 flex-shrink-0" />
+                <span className="text-orange-600 font-medium">{stat.change}</span>
+                <span className="ml-1 text-gray-600 truncate">{stat.description}</span>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Analytics Section */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-xl font-semibold tracking-tight">Analytics Overview</h3>
-          <p className="text-muted-foreground">Detailed insights into your platform performance</p>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+              Enhanced Analytics
+            </h3>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Comprehensive insights with weekly, monthly, and annual breakdowns
+            </p>
+          </div>
+          <Tabs
+            value={analyticsPeriod}
+            onValueChange={setAnalyticsPeriod}
+            className="w-auto flex-shrink-0"
+          >
+            <TabsList className="grid w-full grid-cols-3 bg-orange-50">
+              <TabsTrigger
+                value="weekly"
+                className="data-[state=active]:bg-orange-400 data-[state=active]:text-white text-xs sm:text-sm"
+              >
+                Weekly
+              </TabsTrigger>
+              <TabsTrigger
+                value="monthly"
+                className="data-[state=active]:bg-orange-400 data-[state=active]:text-white text-xs sm:text-sm"
+              >
+                Monthly
+              </TabsTrigger>
+              <TabsTrigger
+                value="annual"
+                className="data-[state=active]:bg-orange-400 data-[state=active]:text-white text-xs sm:text-sm"
+              >
+                Annual
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* User Growth Chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>User Registration Trend</CardTitle>
-              <CardDescription>Monthly user registrations over the past 6 months</CardDescription>
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3 xl:grid-cols-3">
+          {/* Enhanced User Analytics */}
+          <Card className="lg:col-span-2 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+                <Users className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                <span className="truncate">
+                  User Growth & New Registrations ({analyticsPeriod})
+                </span>
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Total users and new registrations over time
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <UserGrowthChart />
+            <CardContent className="overflow-hidden">
+              <div className="w-full min-h-0">
+                <EnhancedUserGrowthChart period={analyticsPeriod} />
+              </div>
             </CardContent>
           </Card>
 
-          {/* User Role Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>User Distribution</CardTitle>
-              <CardDescription>Breakdown by user roles</CardDescription>
+          {/* Staff Role Analytics */}
+          <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+                <Shield className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                <span className="truncate">Staff Role Distribution</span>
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Breakdown by staff roles and responsibilities
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <UserRoleChart users={users} />
+            <CardContent className="overflow-hidden">
+              <StaffRoleAnalytics users={users} />
             </CardContent>
           </Card>
 
-          {/* Donation Trends */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Donation Trends</CardTitle>
-              <CardDescription>Monthly donation amounts and campaign performance</CardDescription>
+          {/* Enhanced Donation Analytics */}
+          <Card className="lg:col-span-2 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+                <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                <span className="truncate">Donation Analytics ({analyticsPeriod})</span>
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Donation amounts and campaign performance over time
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <DonationTrendsChart />
+            <CardContent className="overflow-hidden">
+              <div className="w-full min-h-0">
+                <EnhancedDonationTrendsChart period={analyticsPeriod} />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Pet Status Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pet Status</CardTitle>
-              <CardDescription>Current status of all pets</CardDescription>
+          {/* Enhanced Pet Analytics */}
+          <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+                <PawPrint className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                <span className="truncate">Pet Intake Analytics ({analyticsPeriod})</span>
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Pet arrivals by type and breed breakdown
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <PetStatusChart pets={pets} />
+            <CardContent className="overflow-hidden">
+              <EnhancedPetAnalytics period={analyticsPeriod} pets={pets} />
             </CardContent>
           </Card>
 
           {/* Activity Heatmap */}
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Platform Activity</CardTitle>
-              <CardDescription>Daily activity across different platform features</CardDescription>
+          <Card className="lg:col-span-3 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+                <Activity className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                <span className="truncate">Platform Activity Overview</span>
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Daily activity across different platform features
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ActivityChart />
+            <CardContent className="overflow-hidden">
+              <div className="w-full min-h-0">
+                <ActivityChart />
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Adoptions */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PawPrint className="h-5 w-5" />
-              Recent Adoption Applications
+      {/* Recent Adoptions */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
+        <Card className="col-span-1 lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+              <PawPrint className="h-5 w-5 text-orange-500 flex-shrink-0" />
+              <span className="truncate">Recent Adoption Applications</span>
             </CardTitle>
-            <CardDescription>Latest adoption requests and their current status</CardDescription>
+            <CardDescription className="text-sm">
+              Latest adoption requests and their current status
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {adoptionsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading recent adoptions…</p>
-            ) : adoptionsError ? (
-              <p className="text-sm text-red-600">{adoptionsError}</p>
-            ) : recentAdoptions && recentAdoptions.length > 0 ? (
-              recentAdoptions.map((adoption) => (
-                <div key={adoption.id} className="flex items-center justify-between space-x-4">
-                  <div className="flex items-center space-x-4">
-                    <Avatar>
-                      <AvatarImage src={adoption.image} alt={adoption.petName} />
-                      <AvatarFallback>{adoption.petName?.[0] ?? 'P'}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium leading-none">
-                        {adoption.petName} • {adoption.petType}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Adopter: {adoption.adopter}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      variant={adoption.status === 'completed' ? 'default' : 'secondary'}
-                      className={
-                        adoption.status === 'completed' ? 'bg-green-100 text-green-800' : ''
-                      }
-                    >
-                      {adoption.status === 'completed' ? 'Completed' : 'Pending'}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{adoption.timeAgo}</span>
+          <CardContent className="space-y-4 overflow-hidden">
+            {recentAdoptions.map((adoption) => (
+              <div
+                key={adoption.id}
+                className="flex items-center justify-between space-x-4 p-3 sm:p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100 min-w-0"
+              >
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                  <Avatar className="ring-2 ring-orange-100 flex-shrink-0">
+                    <AvatarImage
+                      src={adoption.image || '/placeholder.svg'}
+                      alt={adoption.petName}
+                    />
+                    <AvatarFallback className="bg-orange-50 text-orange-600">
+                      {adoption.petName?.[0] ?? 'P'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-none text-gray-900 truncate">
+                      {adoption.petName} • {adoption.petType}
+                    </p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      Adopter: {adoption.adopter}
+                    </p>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center">
-                <div className="mb-4 flex justify-center">
-                  <Image
-                    src="/empty_pet.png"
-                    alt="No recent adoptions"
-                    width={96}
-                    height={96}
-                    className="w-24 h-24"
-                  />
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <Badge
+                    variant={adoption.status === 'completed' ? 'default' : 'secondary'}
+                    className={
+                      adoption.status === 'completed'
+                        ? 'bg-orange-50 text-orange-600 border-orange-100'
+                        : 'bg-amber-50 text-amber-600 border-amber-100'
+                    }
+                  >
+                    {adoption.status === 'completed' ? 'Completed' : 'Pending'}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    {adoption.timeAgo}
+                  </span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  No recent adoption applications found.
-                </p>
               </div>
-            )}
-            <Button variant="outline" className="w-full">
-              <ArrowUpRight className="mr-2 h-4 w-4" />
+            ))}
+            <Button
+              variant="outline"
+              className="w-full border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
+            >
+              <ArrowUpRight className="mr-2 h-4 w-4 flex-shrink-0" />
               View All Applications
             </Button>
           </CardContent>
         </Card>
 
         {/* Activity Feed */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Recent Activity
+        <Card className="col-span-1 lg:col-span-3 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+              <Activity className="h-5 w-5 text-orange-500 flex-shrink-0" />
+              <span className="truncate">Recent Activity</span>
             </CardTitle>
-            <CardDescription>Latest updates from your organization</CardDescription>
+            <CardDescription className="text-sm">
+              Latest updates from your organization
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 overflow-hidden">
             <RecentActivity />
           </CardContent>
         </Card>
       </div>
 
       {/* Donation Campaigns */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Active Fundraising Campaigns
+      <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
+            <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />
+            <span className="truncate">Active Fundraising Campaigns</span>
           </CardTitle>
-          <CardDescription>Current donation drives and their progress</CardDescription>
+          <CardDescription className="text-sm">
+            Current donation drives and their progress
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="overflow-hidden">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {ongoingCampaigns.map((campaign) => (
-              <Card key={campaign.id} className="border-l-4 border-l-orange-500">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <h4 className="font-semibold">{campaign.title}</h4>
-                      <p className="text-sm text-muted-foreground">{campaign.description}</p>
+              <Card
+                key={campaign.id}
+                className="border-l-4 border-l-orange-400 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-25 to-orange-50"
+              >
+                <CardContent className="p-4 sm:p-6">
+                  <div className="space-y-4">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-gray-900 truncate">{campaign.title}</h4>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {campaign.description}
+                      </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>₱{campaign.raised.toLocaleString()}</span>
-                        <span>₱{campaign.target.toLocaleString()}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm font-medium">
+                        <span className="text-orange-500 truncate">
+                          ₱{campaign.raised.toLocaleString()}
+                        </span>
+                        <span className="text-gray-600 truncate">
+                          ₱{campaign.target.toLocaleString()}
+                        </span>
                       </div>
-                      <Progress value={(campaign.raised / campaign.target) * 100} />
+                      <Progress
+                        value={(campaign.raised / campaign.target) * 100}
+                        className="h-2 bg-orange-50"
+                      />
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{campaign.supporters} supporters</span>
-                        <span>{campaign.daysLeft} days left</span>
+                        <span className="truncate">{campaign.supporters} supporters</span>
+                        <span className="truncate">{campaign.daysLeft} days left</span>
                       </div>
                     </div>
                   </div>
@@ -704,15 +1013,12 @@ const Page = () => {
               </Card>
             ))}
           </div>
-          <div className="mt-4">
+          <div className="mt-6">
             <Button
               variant="outline"
-              className="w-full"
-              onClick={() => {
-                router.push('/admin/donations');
-              }}
+              className="w-full border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
             >
-              <ArrowUpRight className="mr-2 h-4 w-4" />
+              <ArrowUpRight className="mr-2 h-4 w-4 flex-shrink-0" />
               View All Campaigns
             </Button>
           </div>

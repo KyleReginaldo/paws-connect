@@ -284,10 +284,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       age: formData.age || 1,
       date_of_birth: birthDate ? birthDate.toISOString().split('T')[0] : formData.date_of_birth,
       size: formData.size,
-      weight:
-        (typeof formData.weight === 'string'
-          ? formData.weight.replace(/[^\d.]/g, '')
-          : String(formData.weight)) || '1',
+      weight: formData.weight
+        ? formData.weight.endsWith('kg')
+          ? formData.weight
+          : `${formData.weight.replace(/[^\d.]/g, '')}kg`
+        : '1kg',
       is_vaccinated: formData.is_vaccinated,
       is_spayed_or_neutured: formData.is_spayed_or_neutured,
       health_status: formData.health_status || '',
@@ -439,12 +440,15 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 <Input
                   id="weight"
                   placeholder="e.g., 25"
-                  value={formData.weight}
-                  onChange={(e) => handleInputChange('weight', e.target.value)}
+                  value={formData.weight.replace(/kg$/, '')} // Display without kg suffix
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/[^\d.]/g, ''); // Only allow numbers and decimal
+                    handleInputChange('weight', numericValue);
+                  }}
                   className="rounded-r-none"
                 />
                 <div className="flex items-center px-3 bg-muted border border-l-0 rounded-r-md text-sm text-muted-foreground">
-                  lbs
+                  kg
                 </div>
               </div>
             </div>
@@ -637,8 +641,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   isDragOver
                     ? 'border-primary bg-primary/5'
                     : validationErrors.photo
-                    ? 'border-red-500 bg-red-50'
-                    : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-muted-foreground/25 hover:border-muted-foreground/50'
                 }`}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
