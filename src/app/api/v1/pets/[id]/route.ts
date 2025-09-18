@@ -107,3 +107,51 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
     },
   );
 }
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  // Validate id is a number
+  const petId = Number(id);
+  if (Number.isNaN(petId) || petId <= 0) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid pet id', message: 'id must be a positive integer' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  try {
+    const { data: pet, error } = await supabase.from('pets').select('*').eq('id', petId).single();
+    if (error) {
+      // If Supabase returns a specific not found message use 404, otherwise 400
+      if (error.code === 'PGRST116' || /not found/i.test(error.message || '')) {
+        return new Response(
+          JSON.stringify({ error: 'Not found', message: 'Pet not found' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch pet', message: error.message }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!pet) {
+      return new Response(JSON.stringify({ error: 'Not found', message: 'Pet not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ data: pet }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (e) {
+    console.error('GET /api/v1/pets/[id] error', e);
+    return new Response(
+      JSON.stringify({ error: 'Server error', message: 'An unexpected error occurred' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+}
