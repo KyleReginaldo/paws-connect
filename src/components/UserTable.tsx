@@ -92,7 +92,11 @@ export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTable
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
-                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`}
+                      src={
+                        user.profile_image_link
+                          ? user.profile_image_link
+                          : `https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`
+                      }
                       alt={user.username || 'Unknown User'}
                     />
                     <AvatarFallback className="bg-muted">

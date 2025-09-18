@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import useDashboardData, { type ChartDataPoint, type User } from '@/hooks/useDashboardData';
 import {
   Activity,
   ArrowUpRight,
@@ -14,11 +15,12 @@ import {
   Dog,
   DollarSign,
   Heart,
+  Loader2,
   PawPrint,
   Shield,
   TrendingUp,
-  User,
   UserCheck,
+  User as UserIcon,
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -31,106 +33,6 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
-
-const mockPets = [
-  {
-    id: 1,
-    name: 'Buddy',
-    type: 'Dog',
-    request_status: 'available',
-    breed: 'Aspin',
-    date_added: '2024-01-15',
-  },
-  {
-    id: 2,
-    name: 'Whiskers',
-    type: 'Cat',
-    request_status: 'adopted',
-    breed: 'Persian',
-    date_added: '2024-01-20',
-  },
-  {
-    id: 3,
-    name: 'Max',
-    type: 'Dog',
-    request_status: 'pending',
-    breed: 'Aspin',
-    date_added: '2024-02-01',
-  },
-  {
-    id: 4,
-    name: 'Luna',
-    type: 'Cat',
-    request_status: 'medical',
-    breed: 'Siamese',
-    date_added: '2024-02-10',
-  },
-  {
-    id: 5,
-    name: 'Charlie',
-    type: 'Dog',
-    request_status: 'available',
-    breed: 'Aspin',
-    date_added: '2024-02-15',
-  },
-  {
-    id: 6,
-    name: 'Bella',
-    type: 'Dog',
-    request_status: 'adopted',
-    breed: 'Aspin',
-    date_added: '2024-03-01',
-  },
-  {
-    id: 7,
-    name: 'Milo',
-    type: 'Cat',
-    request_status: 'available',
-    breed: 'Maine Coon',
-    date_added: '2024-03-05',
-  },
-  {
-    id: 8,
-    name: 'Rocky',
-    type: 'Dog',
-    request_status: 'adopted',
-    breed: 'Aspin',
-    date_added: '2024-03-10',
-  },
-];
-
-const mockUsers = [
-  { id: 1, name: 'John Doe', role: 'admin', date_joined: '2024-01-01' },
-  { id: 2, name: 'Jane Smith', role: 'staff', date_joined: '2024-01-15' },
-  { id: 3, name: 'Bob Johnson', role: 'user', date_joined: '2024-02-01' },
-  { id: 4, name: 'Alice Brown', role: 'user', date_joined: '2024-02-15' },
-  { id: 5, name: 'Dr. Wilson', role: 'staff', date_joined: '2024-03-01' },
-  { id: 6, name: 'Sarah Connor', role: 'staff', date_joined: '2024-03-10' },
-];
-
-const mockCampaigns = [
-  {
-    id: 1,
-    title: 'Emergency Medical Fund',
-    description: 'Help cover medical expenses for rescued pets',
-    target_amount: 50000,
-    raised_amount: 32000,
-  },
-  {
-    id: 2,
-    title: 'New Shelter Construction',
-    description: 'Building a new facility to house more animals',
-    target_amount: 200000,
-    raised_amount: 85000,
-  },
-  {
-    id: 3,
-    title: 'Food & Supplies Drive',
-    description: 'Monthly food and supply needs for all animals',
-    target_amount: 25000,
-    raised_amount: 18500,
-  },
-];
 
 const chartConfig = {
   users: {
@@ -159,35 +61,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-function EnhancedUserGrowthChart({ period }: { period: string }) {
-  const weeklyData = [
-    { period: 'Week 1', users: 3, newUsers: 3 },
-    { period: 'Week 2', users: 5, newUsers: 2 },
-    { period: 'Week 3', users: 8, newUsers: 3 },
-    { period: 'Week 4', users: 12, newUsers: 4 },
-  ];
-
-  const monthlyData = [
-    { period: 'Jan', users: 12, newUsers: 12 },
-    { period: 'Feb', users: 19, newUsers: 7 },
-    { period: 'Mar', users: 24, newUsers: 5 },
-    { period: 'Apr', users: 31, newUsers: 7 },
-    { period: 'May', users: 42, newUsers: 11 },
-    { period: 'Jun', users: 56, newUsers: 14 },
-  ];
-
-  const annualData = [
-    { period: '2022', users: 145, newUsers: 145 },
-    { period: '2023', users: 298, newUsers: 153 },
-    { period: '2024', users: 456, newUsers: 158 },
-  ];
-
-  const data = period === 'weekly' ? weeklyData : period === 'monthly' ? monthlyData : annualData;
-
+function EnhancedUserGrowthChart({ chartData }: { chartData: ChartDataPoint[] }) {
   return (
     <div className="w-full overflow-hidden">
       <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
-        <AreaChart data={data}>
+        <AreaChart data={chartData}>
           <defs>
             <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#FFA726" stopOpacity={0.2} />
@@ -231,35 +109,11 @@ function EnhancedUserGrowthChart({ period }: { period: string }) {
   );
 }
 
-function EnhancedDonationTrendsChart({ period }: { period: string }) {
-  const weeklyData = [
-    { period: 'Week 1', donations: 1200, campaigns: 2 },
-    { period: 'Week 2', donations: 2400, campaigns: 3 },
-    { period: 'Week 3', donations: 1800, campaigns: 2 },
-    { period: 'Week 4', donations: 3200, campaigns: 4 },
-  ];
-
-  const monthlyData = [
-    { period: 'Jan', donations: 2400, campaigns: 3 },
-    { period: 'Feb', donations: 1398, campaigns: 2 },
-    { period: 'Mar', donations: 9800, campaigns: 5 },
-    { period: 'Apr', donations: 3908, campaigns: 4 },
-    { period: 'May', donations: 4800, campaigns: 3 },
-    { period: 'Jun', donations: 3800, campaigns: 4 },
-  ];
-
-  const annualData = [
-    { period: '2022', donations: 45000, campaigns: 12 },
-    { period: '2023', donations: 67000, campaigns: 18 },
-    { period: '2024', donations: 89000, campaigns: 24 },
-  ];
-
-  const data = period === 'weekly' ? weeklyData : period === 'monthly' ? monthlyData : annualData;
-
+function EnhancedDonationTrendsChart({ chartData }: { chartData: ChartDataPoint[] }) {
   return (
     <div className="w-full overflow-hidden">
       <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
-        <BarChart data={data}>
+        <BarChart data={chartData}>
           <defs>
             <linearGradient id="donationGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#FFB74D" stopOpacity={0.6} />
@@ -284,36 +138,18 @@ function EnhancedDonationTrendsChart({ period }: { period: string }) {
   );
 }
 
-function EnhancedPetAnalytics({ period }: { period: string; pets: typeof mockPets }) {
-  const weeklyData = [
-    { period: 'Week 1', dogs: 2, cats: 1, total: 3 },
-    { period: 'Week 2', dogs: 1, cats: 2, total: 3 },
-    { period: 'Week 3', dogs: 3, cats: 1, total: 4 },
-    { period: 'Week 4', dogs: 2, cats: 2, total: 4 },
-  ];
-
-  const monthlyData = [
-    { period: 'Jan', dogs: 2, cats: 0, total: 2 },
-    { period: 'Feb', dogs: 2, cats: 1, total: 3 },
-    { period: 'Mar', dogs: 2, cats: 1, total: 3 },
-    { period: 'Apr', dogs: 0, cats: 0, total: 0 },
-    { period: 'May', dogs: 0, cats: 0, total: 0 },
-    { period: 'Jun', dogs: 0, cats: 0, total: 0 },
-  ];
-
-  const annualData = [
-    { period: '2022', dogs: 45, cats: 32, total: 77 },
-    { period: '2023', dogs: 67, cats: 43, total: 110 },
-    { period: '2024', dogs: 5, cats: 3, total: 8 },
-  ];
-
-  const data = period === 'weekly' ? weeklyData : period === 'monthly' ? monthlyData : annualData;
-
+function EnhancedPetAnalytics({
+  period,
+  chartData,
+}: {
+  period: string;
+  chartData: ChartDataPoint[];
+}) {
   return (
     <div className="space-y-4 sm:space-y-6 overflow-hidden">
       <div className="w-full overflow-hidden">
         <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
-          <AreaChart data={data}>
+          <AreaChart data={chartData}>
             <defs>
               <linearGradient id="dogGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#FFA726" stopOpacity={0.2} />
@@ -390,66 +226,27 @@ function EnhancedPetAnalytics({ period }: { period: string; pets: typeof mockPet
   );
 }
 
-function ActivityChart() {
-  const activityData = [
-    { day: 'Mon', total: 24 },
-    { day: 'Tue', total: 23 },
-    { day: 'Wed', total: 27 },
-    { day: 'Thu', total: 32 },
-    { day: 'Fri', total: 33 },
-    { day: 'Sat', total: 57 },
-    { day: 'Sun', total: 48 },
-  ];
-
-  return (
-    <div className="w-full overflow-hidden">
-      <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
-        <BarChart data={activityData}>
-          <defs>
-            <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#FFCC80" stopOpacity={0.6} />
-              <stop offset="95%" stopColor="#FFCC80" stopOpacity={0.2} />
-            </linearGradient>
-          </defs>
-          <XAxis
-            dataKey="day"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-          />
-          <YAxis hide />
-          <ChartTooltip
-            content={<ChartTooltipContent />}
-            cursor={{ fill: 'hsl(var(--muted)/10)' }}
-          />
-          <Bar dataKey="total" fill="url(#activityGradient)" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ChartContainer>
-    </div>
-  );
-}
-
-function StaffRoleAnalytics({ users }: { users: typeof mockUsers }) {
+function StaffRoleAnalytics({ users }: { users: User[] }) {
   const staffData = [
     {
       role: 'Admin',
-      count: users.filter((u) => u.role === 'admin').length,
+      count: users.filter((u) => u.role === 1).length,
       color: '#FFA726',
       icon: Shield,
       responsibilities: 'System management, user oversight',
     },
     {
       role: 'Staff',
-      count: users.filter((u) => u.role === 'staff').length,
+      count: users.filter((u) => u.role === 2).length,
       color: '#FFB74D',
       icon: UserCheck,
       responsibilities: 'Pet care, adoption coordination',
     },
     {
       role: 'Users',
-      count: users.filter((u) => u.role === 'user').length,
+      count: users.filter((u) => u.role === 3).length,
       color: '#FFCC80',
-      icon: User,
+      icon: UserIcon,
       responsibilities: 'Adoption applications, donations',
     },
   ];
@@ -484,41 +281,18 @@ function StaffRoleAnalytics({ users }: { users: typeof mockUsers }) {
   );
 }
 
-function RecentActivity() {
-  const items = [
-    {
-      id: '1',
-      type: 'adoption' as const,
-      title: 'Adoption completed',
-      subtitle: 'Buddy - Aspin',
-      time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '2',
-      type: 'donation' as const,
-      title: 'New donation received',
-      subtitle: '₱5,000 — For medical expenses',
-      time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '3',
-      type: 'user' as const,
-      title: 'New user registered',
-      subtitle: 'alex.martinez@email.com',
-      time: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '4',
-      type: 'adoption' as const,
-      title: 'Adoption application',
-      subtitle: 'Luna - Mixed Cat',
-      time: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-    },
-  ];
+interface ActivityItem {
+  id: string;
+  type: 'adoption' | 'donation' | 'user' | 'pet';
+  title: string;
+  subtitle: string;
+  time: string;
+}
 
+function RecentActivityComponent({ activities }: { activities: ActivityItem[] }) {
   return (
     <div className="space-y-3">
-      {items.map((it) => (
+      {activities.map((it) => (
         <div key={it.id} className="flex items-start space-x-3 sm:space-x-4 min-w-0">
           <div
             className={`p-2 rounded-full flex-shrink-0 ${
@@ -533,6 +307,8 @@ function RecentActivity() {
               <Users className="h-4 w-4 text-orange-500" />
             ) : it.type === 'adoption' ? (
               <Heart className="h-4 w-4 text-orange-500" />
+            ) : it.type === 'pet' ? (
+              <PawPrint className="h-4 w-4 text-orange-500" />
             ) : (
               <DollarSign className="h-4 w-4 text-orange-500" />
             )}
@@ -549,88 +325,84 @@ function RecentActivity() {
 }
 
 const Page = () => {
-  const pets = mockPets;
-  const campaigns = mockCampaigns;
-  const users = mockUsers;
-
-  type Adoption = {
-    id: number | string;
-    petName: string;
-    petType: string;
-    adopter: string;
-    timeAgo: string;
-    status: string;
-    image: string;
-  };
-
-  const [recentAdoptions] = useState<Adoption[]>([
-    {
-      id: 1,
-      petName: 'Buddy',
-      petType: 'Aspin',
-      adopter: 'Sarah Johnson',
-      timeAgo: '2 hours ago',
-      status: 'completed',
-      image: '/golden-retriever.png',
-    },
-    {
-      id: 2,
-      petName: 'Whiskers',
-      petType: 'Persian Cat',
-      adopter: 'Mike Chen',
-      timeAgo: '5 hours ago',
-      status: 'pending',
-      image: '/fluffy-persian-cat.png',
-    },
-    {
-      id: 3,
-      petName: 'Luna',
-      petType: 'Mixed Cat',
-      adopter: 'Emma Davis',
-      timeAgo: '1 day ago',
-      status: 'completed',
-      image: '/majestic-husky.png',
-    },
-  ]);
+  const {
+    users,
+    campaigns,
+    loading,
+    error,
+    stats,
+    generateChartData,
+    generateRecentActivity,
+    generateRecentAdoptions,
+    refetch,
+  } = useDashboardData();
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
 
-  const stats = [
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex-1 min-h-screen bg-gradient-to-br from-orange-25/50 to-orange-50/50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex-1 min-h-screen bg-gradient-to-br from-orange-25/50 to-orange-50/50 flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-red-500 text-xl">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-900">Failed to load dashboard</h2>
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={refetch} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const dashboardStats = [
     {
       title: 'Total Pets',
-      value: String(pets.length),
+      value: String(stats.totalPets),
       change: '+12%',
       changeType: 'positive' as const,
       icon: Dog,
-      description: 'Available for adoption',
+      description: `${stats.availablePets} available for adoption`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
       title: 'Adoptions',
-      value: String(pets.filter((p) => p.request_status === 'adopted').length),
+      value: String(stats.adoptedPets),
       change: '+23%',
       changeType: 'positive' as const,
       icon: Heart,
-      description: 'This month',
+      description: 'Successfully adopted',
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
       title: 'Total Donations',
-      value: `₱${campaigns.reduce((sum, c) => sum + c.raised_amount, 0).toLocaleString()}`,
+      value: `₱${stats.totalDonations.toLocaleString()}`,
       change: '+8%',
       changeType: 'positive' as const,
       icon: DollarSign,
-      description: 'Raised this month',
+      description: `${stats.activeCampaigns} active campaigns`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
       title: 'Active Users',
-      value: String(users.length),
+      value: String(stats.totalUsers),
       change: '+5%',
       changeType: 'positive' as const,
       icon: Users,
@@ -640,15 +412,28 @@ const Page = () => {
     },
   ];
 
-  const ongoingCampaigns = campaigns.map((c) => ({
-    id: c.id,
-    title: c.title,
-    description: c.description,
-    target: c.target_amount,
-    raised: c.raised_amount,
-    daysLeft: Math.floor(Math.random() * 30) + 1,
-    supporters: Math.floor(Math.random() * 100) + 10,
-  }));
+  const recentAdoptions = generateRecentAdoptions();
+  const recentActivity = generateRecentActivity();
+
+  const ongoingCampaigns = campaigns
+    .filter((c) => c.status === 'ONGOING' || c.status === 'PENDING')
+    .slice(0, 3)
+    .map((c) => ({
+      id: c.id,
+      title: c.title || 'Untitled Campaign',
+      description: c.description || 'No description available',
+      target: c.target_amount || 0,
+      raised: c.raised_amount || 0,
+      daysLeft: c.end_date
+        ? Math.max(
+            0,
+            Math.ceil(
+              (new Date(c.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+            ),
+          )
+        : Math.floor(Math.random() * 30) + 1,
+      supporters: Math.floor(Math.random() * 100) + 10, // Placeholder until we have donation counts
+    }));
 
   return (
     <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 pt-6 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
@@ -728,7 +513,7 @@ const Page = () => {
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
+        {dashboardStats.map((stat, index) => (
           <Card
             key={index}
             className={`bg-gradient-to-br ${stat.gradient} border-0 shadow-sm hover:shadow-md transition-shadow`}
@@ -807,7 +592,9 @@ const Page = () => {
             </CardHeader>
             <CardContent className="overflow-hidden">
               <div className="w-full min-h-0">
-                <EnhancedUserGrowthChart period={analyticsPeriod} />
+                <EnhancedUserGrowthChart
+                  chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
+                />
               </div>
             </CardContent>
           </Card>
@@ -841,7 +628,9 @@ const Page = () => {
             </CardHeader>
             <CardContent className="overflow-hidden">
               <div className="w-full min-h-0">
-                <EnhancedDonationTrendsChart period={analyticsPeriod} />
+                <EnhancedDonationTrendsChart
+                  chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
+                />
               </div>
             </CardContent>
           </Card>
@@ -858,25 +647,10 @@ const Page = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="overflow-hidden">
-              <EnhancedPetAnalytics period={analyticsPeriod} pets={pets} />
-            </CardContent>
-          </Card>
-
-          {/* Activity Heatmap */}
-          <Card className="lg:col-span-3 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
-                <Activity className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">Platform Activity Overview</span>
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Daily activity across different platform features
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-hidden">
-              <div className="w-full min-h-0">
-                <ActivityChart />
-              </div>
+              <EnhancedPetAnalytics
+                period={analyticsPeriod}
+                chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
+              />
             </CardContent>
           </Card>
         </div>
@@ -894,55 +668,79 @@ const Page = () => {
               Latest adoption requests and their current status
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 overflow-hidden">
-            {recentAdoptions.map((adoption) => (
-              <div
-                key={adoption.id}
-                className="flex items-center justify-between space-x-4 p-3 sm:p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100 min-w-0"
-              >
-                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
-                  <Avatar className="ring-2 ring-orange-100 flex-shrink-0">
-                    <AvatarImage
-                      src={adoption.image || '/placeholder.svg'}
-                      alt={adoption.petName}
-                    />
-                    <AvatarFallback className="bg-orange-50 text-orange-600">
-                      {adoption.petName?.[0] ?? 'P'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-none text-gray-900 truncate">
-                      {adoption.petName} • {adoption.petType}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      Adopter: {adoption.adopter}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 flex-shrink-0">
-                  <Badge
-                    variant={adoption.status === 'completed' ? 'default' : 'secondary'}
-                    className={
-                      adoption.status === 'completed'
-                        ? 'bg-orange-50 text-orange-600 border-orange-100'
-                        : 'bg-amber-50 text-amber-600 border-amber-100'
-                    }
+          <CardContent className="overflow-hidden">
+            {recentAdoptions.length > 0 ? (
+              <div className="space-y-4">
+                {recentAdoptions.map((adoption) => (
+                  <div
+                    key={adoption.id}
+                    className="flex items-center justify-between space-x-4 p-3 sm:p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100 min-w-0"
                   >
-                    {adoption.status === 'completed' ? 'Completed' : 'Pending'}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    {adoption.timeAgo}
-                  </span>
-                </div>
+                    <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                      <Avatar className="ring-2 ring-orange-100 flex-shrink-0">
+                        <AvatarImage
+                          src={adoption.image || '/placeholder.svg'}
+                          alt={adoption.petName}
+                        />
+                        <AvatarFallback className="bg-orange-50 text-orange-600">
+                          {adoption.petName?.[0] ?? 'P'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold leading-none text-gray-900 truncate">
+                          {adoption.petName} • {adoption.petType}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          Adopter: {adoption.adopter}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <Badge
+                        variant={adoption.status === 'completed' ? 'default' : 'secondary'}
+                        className={
+                          adoption.status === 'completed'
+                            ? 'bg-orange-50 text-orange-600 border-orange-100'
+                            : 'bg-amber-50 text-amber-600 border-amber-100'
+                        }
+                      >
+                        {adoption.status === 'completed' ? 'Completed' : 'Pending'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
+                        {adoption.timeAgo}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  className="w-full border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
+                >
+                  <ArrowUpRight className="mr-2 h-4 w-4 flex-shrink-0" />
+                  View All Applications
+                </Button>
               </div>
-            ))}
-            <Button
-              variant="outline"
-              className="w-full border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
-            >
-              <ArrowUpRight className="mr-2 h-4 w-4 flex-shrink-0" />
-              View All Applications
-            </Button>
+            ) : (
+              <div className="py-8 text-center">
+                <div className="mx-auto w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+                  <PawPrint className="h-6 w-6 text-orange-400" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">
+                  No adoption applications yet
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Applications will appear here once users start applying for pets
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
+                >
+                  <ArrowUpRight className="mr-2 h-3 w-3 flex-shrink-0" />
+                  View All Applications
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -958,7 +756,7 @@ const Page = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 overflow-hidden">
-            <RecentActivity />
+            <RecentActivityComponent activities={recentActivity} />
           </CardContent>
         </Card>
       </div>

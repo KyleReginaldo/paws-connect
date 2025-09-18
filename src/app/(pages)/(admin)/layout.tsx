@@ -12,9 +12,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Dog, HandCoins, LayoutDashboard, PanelLeftIcon, UsersRound } from 'lucide-react';
+import { Dog, HandCoins, Heart, LayoutDashboard, PanelLeftIcon, UsersRound } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Pending from './pending/page';
 
 export default function RootLayout({
   children,
@@ -24,20 +25,22 @@ export default function RootLayout({
   const pathname = usePathname();
   const isActive = (path: string) => pathname === path;
   const router = useRouter();
-  const { signOut, userRole } = useAuth();
+  const { signOut, userRole, user } = useAuth();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const handleNavigation = (path: string) => {
     router.push(path);
     setIsSheetOpen(false); // Close the sheet after navigation
   };
-
-  return (
+  console.log(user?.status);
+  return user?.status === 'PENDING' ? (
+    <Pending />
+  ) : (
     <RouteGuard>
       <div className="flex h-screen bg-[#FFFCFB]">
         <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-[#333446]">
           <div>
-           <div className="flex justify-center">
+            <div className="flex justify-center">
               <h1 className="p-[10px] font-semibold text-[#FE5D26] mb-[8px] text-[18px]">
                 {userRole === 1 ? 'Admin' : 'Staff'}
               </h1>
@@ -49,6 +52,14 @@ export default function RootLayout({
                 isActive={isActive('/dashboard')}
                 onButtonClick={() => {
                   router.push('/dashboard');
+                }}
+              />
+              <SideBarTile
+                title="Adoptions"
+                icon={Heart}
+                isActive={isActive('/adoptions')}
+                onButtonClick={() => {
+                  router.push('/adoptions');
                 }}
               />
               <SideBarTile
@@ -113,6 +124,15 @@ export default function RootLayout({
                           onClick={() => handleNavigation('/dashboard')}
                         >
                           Dashboard
+                        </Button>
+                      </li>
+                      <li>
+                        <Button
+                          variant="ghost"
+                          className="w-full text-left"
+                          onClick={() => handleNavigation('/adoptions')}
+                        >
+                          Adoptions
                         </Button>
                       </li>
                       <li>

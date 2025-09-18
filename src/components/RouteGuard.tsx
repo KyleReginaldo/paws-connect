@@ -9,12 +9,21 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
 
   useEffect(() => {
-    if (status === AuthStatus.loading) return;
+    console.log('RouteGuard - Status:', status, 'Pathname:', pathname);
+
+    if (status === AuthStatus.loading || status === AuthStatus.authenticating) return;
 
     const isAuthPage = pathname?.startsWith('/auth') || false;
+    const isAdminPage =
+      pathname?.startsWith('/dashboard') ||
+      pathname?.startsWith('/adoptions') ||
+      pathname?.startsWith('/manage-') ||
+      pathname?.startsWith('/fundraising') ||
+      false;
 
-    if (status === AuthStatus.unauthenticated) {
-      console.log('Redirecting to signin - user not authenticated');
+    // Only redirect if user is trying to access admin pages without authentication
+    if (status === AuthStatus.unauthenticated && isAdminPage) {
+      console.log('Redirecting to signin - user not authenticated for admin area');
       router.replace('/auth/signin');
     } else if (status === AuthStatus.authenticated && isAuthPage) {
       console.log('Redirecting to dashboard - user already authenticated');
@@ -22,7 +31,7 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
     }
   }, [status, pathname, router]);
 
-  if (status === AuthStatus.loading) {
+  if (status === AuthStatus.loading || status === AuthStatus.authenticating) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Loading...</div>

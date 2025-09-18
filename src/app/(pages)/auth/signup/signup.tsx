@@ -96,7 +96,14 @@ const Signup = () => {
     }
 
     try {
-      onSignup(formData.email, formData.password, formData.username, 2, formData.phone_number);
+      onSignup(
+        formData.email,
+        formData.password,
+        formData.username,
+        2,
+        formData.phone_number,
+        'PENDING',
+      );
     } catch (error) {
       console.error('Signup failed:', error);
     }
@@ -119,7 +126,12 @@ const Signup = () => {
                 <strong>Email:</strong> {user.email}
               </p>
             </div>
-            <Button onClick={() => window.location.reload()} className="w-full">
+            <Button
+              onClick={() => {
+                window.location.href = '/dashboard';
+              }}
+              className="w-full"
+            >
               Continue to Dashboard
             </Button>
           </CardContent>

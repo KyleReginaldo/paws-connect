@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
       phone_number: string;
       role: number;
       created_by?: string;
+      status?: string;
     };
     const { email, username, role } = parsed;
     const phone_number = parsed.phone_number;
@@ -341,6 +342,7 @@ export async function POST(request: NextRequest) {
       phone_number: `+${phone_number}`,
       role,
       created_by: parsed.created_by,
+      status: parsed.status || 'ACTIVE',
       paymongo_id: externalCustomerId, // Store the external ID
     };
     console.log('📝 User insert data:', insertData);

@@ -25,6 +25,7 @@ type AuthContextType = {
     username: string,
     role: number,
     phone_number: string,
+    status?: string,
   ) => void;
   user: User | null;
   signOut: () => Promise<void>;
@@ -41,55 +42,67 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   const onLogin = async (email: string, password: string) => {
-    setStatus(AuthStatus.authenticating);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      setStatus(AuthStatus.error);
-      setError(error.message);
-    } else {
-      // After successful authentication, check user's role
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session?.user) {
-          // Fetch user details to check role
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
+    try {
+      setStatus(AuthStatus.authenticating);
+      setError(undefined);
 
-          if (userError || !userData) {
-            // If we can't fetch user data, sign them out
-            await supabase.auth.signOut();
-            setStatus(AuthStatus.error);
-            setError('Unable to verify user permissions');
-            return;
-          }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-          // Check if user has admin (1) or staff (2) role
-          if (userData.role !== 1 && userData.role !== 2) {
-            // Sign out users with role 3 or other roles
-            await supabase.auth.signOut();
-            setStatus(AuthStatus.error);
-            setError('Access denied. Only admin and staff members can sign in.');
-            return;
-          }
-
-          // User has valid role, proceed with authentication
-          setUserRole(userData.role);
-          setStatus(AuthStatus.authenticated);
-        }
-      } catch {
-        // If role check fails, sign out the user
-        await supabase.auth.signOut();
+      if (error) {
+        console.error('Auth signin error:', error);
         setStatus(AuthStatus.error);
-        setError('Unable to verify user permissions');
+        setError(error.message);
+        return;
       }
+
+      // After successful authentication, check user's role
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        // Fetch user details to check role
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userError || !userData) {
+          console.error('Error fetching user data:', userError);
+          await supabase.auth.signOut();
+          setStatus(AuthStatus.error);
+          setError('Unable to verify user permissions');
+          return;
+        }
+
+        // Check if user has admin (1) or staff (2) role
+        if (userData.role !== 1 && userData.role !== 2) {
+          console.error('Invalid user role:', userData.role);
+          // Sign out users with role 3 or other roles
+          await supabase.auth.signOut();
+          setStatus(AuthStatus.error);
+          setError('Access denied. Only admin and staff members can sign in.');
+          return;
+        }
+
+        // User has valid role, proceed with authentication
+        setUserId(session.user.id);
+        setUserRole(userData.role);
+        setUser(userData as User);
+        setStatus(AuthStatus.authenticated);
+        setError(undefined); // Clear any previous errors
+        console.log('Login successful for user:', userData.username);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      // If role check fails, sign out the user
+      await supabase.auth.signOut();
+      setStatus(AuthStatus.error);
+      setError('Unable to verify user permissions');
     }
   };
 
@@ -99,6 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     username: string,
     role: number = 2,
     phone_number: string,
+    status?: string,
   ) => {
     try {
       const response = await axios.post('/api/v1/users', {
@@ -107,8 +121,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         username,
         role,
         phone_number,
+        status,
       });
-      console.log(response.data['data']);
+      console.log(`user response: ${response.data['data']}`);
       setUser(response.data.data);
     } catch (e) {
       const error = e as AxiosError;
@@ -135,7 +150,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             const { data: userData, error: userError } = await supabase
               .from('users')
-              .select('role')
+              .select('*')
               .eq('id', session.user.id)
               .single();
 
@@ -151,7 +166,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUserId(session.user.id);
             setUserRole(userData.role);
             setStatus(AuthStatus.authenticated);
-          } catch {
+            setUser(userData as User);
+            setError(undefined); // Clear any previous errors
+            console.log(`initial user: ${JSON.stringify(userData)}`);
+          } catch (error) {
+            console.error('Error checking user role on initial session:', error);
             // Error checking role - sign out
             await supabase.auth.signOut();
             setUserId(null);
@@ -165,30 +184,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Don't automatically redirect here - let RouteGuard handle it for protected routes only
         }
       } else if (event === 'SIGNED_IN') {
-        // Role check is already handled in onLogin function
-        setUserId(session?.user?.id || null);
-        setStatus(AuthStatus.authenticated);
-
-        // only redirect if user is on sign-in page
+        // Check user role when signing in
         try {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session?.user?.id ?? '')
+            .single();
+
+          if (userError || !userData || (userData.role !== 1 && userData.role !== 2)) {
+            // Invalid role - sign out
+            await supabase.auth.signOut();
+            setUserId(null);
+            setUserRole(null);
+            setStatus(AuthStatus.unauthenticated);
+            setError('Access denied. Only admin and staff members can access this area.');
+            return;
+          }
+
+          // Valid role - set authenticated state
+          setUserId(session?.user?.id || null);
+          setUserRole(userData.role);
+          setStatus(AuthStatus.authenticated);
+          setUser(userData as User);
+
+          // Only redirect if user is on sign-in page
           if (typeof window !== 'undefined' && window.location.pathname === '/auth/signin') {
             router.replace('/dashboard');
           }
-        } catch {
-          // ignore
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          await supabase.auth.signOut();
+          setUserId(null);
+          setUserRole(null);
+          setStatus(AuthStatus.unauthenticated);
+          setError('Unable to verify user permissions');
         }
       } else if (event === 'SIGNED_OUT') {
         setUserId(null);
         setUserRole(null);
+        setUser(null);
         setStatus(AuthStatus.unauthenticated);
-        // Only redirect to signin if user is currently on a protected page
+        setError(undefined);
+
+        // Only redirect to signin if user is currently on a protected admin page
         if (typeof window !== 'undefined') {
           const currentPath = window.location.pathname;
-          const isProtectedRoute =
+          const isAdminRoute =
             currentPath.startsWith('/dashboard') ||
+            currentPath.startsWith('/adoptions') ||
             currentPath.startsWith('/manage-') ||
             currentPath.startsWith('/fundraising');
-          if (isProtectedRoute) {
+          if (isAdminRoute) {
             router.replace('/auth/signin');
           }
         }

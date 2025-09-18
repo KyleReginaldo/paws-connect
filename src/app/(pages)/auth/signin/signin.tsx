@@ -119,7 +119,7 @@ const Signin = () => {
           <div className="mt-2 text-center text-sm text-gray-600">
             Don&apos;t have an account?{' '}
             <a
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline cursor-pointer"
               onClick={() => {
                 router.push('signup');
               }}

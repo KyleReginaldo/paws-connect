@@ -6,5 +6,6 @@ export interface User {
   status: 'ACTIVE' | 'INACTIVE' | 'BANNED' | string; // Extend as needed
   role: number; // You can replace with an enum if roles are defined
   phone_number: string;
-  house_images: string[] | null; // Assuming it's an array of image URLs or null
+  profile_image_link: string | null;
+  house_images: string[] | null; 
 }
