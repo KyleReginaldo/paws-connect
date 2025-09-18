@@ -35,6 +35,7 @@ interface Adoption {
   is_renting: boolean | null;
   number_of_household_members: number | null;
   type_of_residence: string | null;
+  status: string;
 }
 
 interface Pet {
@@ -178,11 +179,20 @@ const AdoptionsPage = () => {
     return date.toLocaleDateString();
   };
 
-  const getApplicationStatus = (createdAt: string) => {
-    const daysSince = Math.floor(
-      (new Date().getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24),
-    );
-    return daysSince <= 7 ? 'pending' : 'completed';
+  const approveAdoption = async (adoptionId: number) => {
+    try {
+      const response = await fetch(`/api/v1/adoption/${adoptionId}/approve`, {
+        method: 'PUT',
+      });
+      if (!response.ok) throw new Error('Failed to approve adoption');
+      console.log('response', response);
+
+      // Refresh the adoptions list after approval
+      fetchAdoptions();
+    } catch (err) {
+      console.error('Error approving adoption:', err);
+      alert(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
   };
 
   if (loading) {
@@ -289,7 +299,6 @@ const AdoptionsPage = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredAdoptions.map((adoption) => {
-                    const status = getApplicationStatus(adoption.created_at);
                     return (
                       <TableRow key={adoption.id}>
                         <TableCell>
@@ -337,14 +346,14 @@ const AdoptionsPage = () => {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={status === 'completed' ? 'default' : 'secondary'}
+                            variant={adoption.status === 'COMPLETED' ? 'default' : 'secondary'}
                             className={
-                              status === 'completed'
+                              adoption.status === 'COMPLETED'
                                 ? 'bg-green-50 text-green-700 border-green-200'
                                 : 'bg-yellow-50 text-yellow-700 border-yellow-200'
                             }
                           >
-                            {status === 'completed' ? 'Completed' : 'Pending'}
+                            {adoption.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -372,10 +381,11 @@ const AdoptionsPage = () => {
                             <Button size="sm" variant="outline" className="text-xs">
                               View Details
                             </Button>
-                            {status === 'pending' && (
+                            {adoption.status === 'PENDING' && (
                               <Button
                                 size="sm"
                                 className="bg-orange-500 hover:bg-orange-600 text-xs"
+                                onClick={() => approveAdoption(adoption.id)}
                               >
                                 Approve
                               </Button>

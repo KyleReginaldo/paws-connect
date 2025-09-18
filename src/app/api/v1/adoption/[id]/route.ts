@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -11,16 +10,16 @@ async function parseJson(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest, context: any) {
+export async function GET(_request: NextRequest, context: unknown) {
   try {
-    const params = await context.params;
-    const pathId = Number((params as { id: string }).id);
+    const params = await (context as { params?: { id: string } | Promise<{ id: string }> }).params;
+    const pathId = Number(params?.id ?? NaN);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
     const { data, error } = await supabase.from('adoption').select('*').eq('id', pathId).single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-
+    console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -35,10 +34,10 @@ export async function GET(_request: NextRequest, context: any) {
   }
 }
 
-export async function PUT(request: NextRequest, context: any) {
+export async function PUT(request: NextRequest, context: unknown) {
   try {
-    const params = await context.params;
-    const pathId = Number((params as { id: string }).id);
+    const params = await (context as { params?: { id: string } | Promise<{ id: string }> }).params;
+    const pathId = Number(params?.id ?? NaN);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
@@ -105,10 +104,10 @@ export async function PUT(request: NextRequest, context: any) {
   }
 }
 
-export async function DELETE(_request: NextRequest, context: any) {
+export async function DELETE(_request: NextRequest, context: unknown) {
   try {
-    const params = await context.params;
-    const pathId = Number((params as { id: string }).id);
+    const params = await (context as { params?: { id: string } | Promise<{ id: string }> }).params;
+    const pathId = Number(params?.id ?? NaN);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 

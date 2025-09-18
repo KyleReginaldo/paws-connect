@@ -141,109 +141,114 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, 'Session:', !!session?.user);
+    let unsubscribe: (() => void) | undefined;
 
-      if (event === 'INITIAL_SESSION') {
+    // Explicit initial session check to avoid race conditions with RouteGuard
+    (async () => {
+      try {
+        setStatus(AuthStatus.loading);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (session?.user) {
-          // Check user's role before setting authenticated status
-          try {
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+          // Validate role and load user
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-            if (userError || !userData || (userData.role !== 1 && userData.role !== 2)) {
-              // Invalid role or error fetching user data - sign out
-              await supabase.auth.signOut();
-              setUserId(null);
-              setStatus(AuthStatus.unauthenticated);
-              return;
-            }
-
-            // Valid role - proceed with authentication
-            setUserId(session.user.id);
-            setUserRole(userData.role);
-            setStatus(AuthStatus.authenticated);
-            setUser(userData as User);
-            setError(undefined); // Clear any previous errors
-            console.log(`initial user: ${JSON.stringify(userData)}`);
-          } catch (error) {
-            console.error('Error checking user role on initial session:', error);
-            // Error checking role - sign out
+          if (userError || !userData || (userData.role !== 1 && userData.role !== 2)) {
             await supabase.auth.signOut();
             setUserId(null);
             setUserRole(null);
+            setUser(null);
             setStatus(AuthStatus.unauthenticated);
+          } else {
+            setUserId(session.user.id);
+            setUserRole(userData.role);
+            setUser(userData as User);
+            setStatus(AuthStatus.authenticated);
+            setError(undefined);
           }
         } else {
           setUserId(null);
           setUserRole(null);
+          setUser(null);
           setStatus(AuthStatus.unauthenticated);
-          // Don't automatically redirect here - let RouteGuard handle it for protected routes only
         }
-      } else if (event === 'SIGNED_IN') {
-        // Check user role when signing in
-        try {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session?.user?.id ?? '')
-            .single();
-
-          if (userError || !userData || (userData.role !== 1 && userData.role !== 2)) {
-            // Invalid role - sign out
-            await supabase.auth.signOut();
-            setUserId(null);
-            setUserRole(null);
-            setStatus(AuthStatus.unauthenticated);
-            setError('Access denied. Only admin and staff members can access this area.');
-            return;
-          }
-
-          // Valid role - set authenticated state
-          setUserId(session?.user?.id || null);
-          setUserRole(userData.role);
-          setStatus(AuthStatus.authenticated);
-          setUser(userData as User);
-
-          // Only redirect if user is on sign-in page
-          if (typeof window !== 'undefined' && window.location.pathname === '/auth/signin') {
-            router.replace('/dashboard');
-          }
-        } catch (error) {
-          console.error('Error checking user role:', error);
-          await supabase.auth.signOut();
-          setUserId(null);
-          setUserRole(null);
-          setStatus(AuthStatus.unauthenticated);
-          setError('Unable to verify user permissions');
-        }
-      } else if (event === 'SIGNED_OUT') {
+      } catch (error) {
+        console.error('Initial session check error:', error);
         setUserId(null);
         setUserRole(null);
         setUser(null);
         setStatus(AuthStatus.unauthenticated);
-        setError(undefined);
+      }
 
-        // Only redirect to signin if user is currently on a protected admin page
-        if (typeof window !== 'undefined') {
-          const currentPath = window.location.pathname;
-          const isAdminRoute =
-            currentPath.startsWith('/dashboard') ||
-            currentPath.startsWith('/adoptions') ||
-            currentPath.startsWith('/manage-') ||
-            currentPath.startsWith('/fundraising');
-          if (isAdminRoute) {
-            router.replace('/auth/signin');
+      // Now set up the listener for further auth state changes
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state changed:', event, 'Session:', !!session?.user);
+
+        if (event === 'SIGNED_IN') {
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session?.user?.id ?? '')
+              .single();
+
+            if (userError || !userData || (userData.role !== 1 && userData.role !== 2)) {
+              await supabase.auth.signOut();
+              setUserId(null);
+              setUserRole(null);
+              setStatus(AuthStatus.unauthenticated);
+              setError('Access denied. Only admin and staff members can access this area.');
+              return;
+            }
+
+            setUserId(session?.user?.id || null);
+            setUserRole(userData.role);
+            setStatus(AuthStatus.authenticated);
+            setUser(userData as User);
+
+            if (typeof window !== 'undefined' && window.location.pathname === '/auth/signin') {
+              router.replace('/dashboard');
+            }
+          } catch (error) {
+            console.error('Error checking user role:', error);
+            await supabase.auth.signOut();
+            setUserId(null);
+            setUserRole(null);
+            setStatus(AuthStatus.unauthenticated);
+            setError('Unable to verify user permissions');
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUserId(null);
+          setUserRole(null);
+          setUser(null);
+          setStatus(AuthStatus.unauthenticated);
+          setError(undefined);
+
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname;
+            const isAdminRoute =
+              currentPath.startsWith('/dashboard') ||
+              currentPath.startsWith('/adoptions') ||
+              currentPath.startsWith('/manage-') ||
+              currentPath.startsWith('/fundraising');
+            if (isAdminRoute) {
+              router.replace('/auth/signin');
+            }
           }
         }
-      }
-    });
+      });
+
+      unsubscribe = () => authListener?.subscription?.unsubscribe?.();
+    })();
 
     return () => {
-      authListener?.subscription?.unsubscribe?.();
+      unsubscribe?.();
     };
   }, [router]);
 

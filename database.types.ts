@@ -581,7 +581,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      adoption_status: "PENDING" | "REJECTED" | "CANCELLED" | "COMPLETED"
+      adoption_status:
+        | "PENDING"
+        | "REJECTED"
+        | "CANCELLED"
+        | "COMPLETED"
+        | "APPROVED"
       fundraising_status:
         | "PENDING"
         | "ONGOING"
@@ -717,7 +722,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      adoption_status: ["PENDING", "REJECTED", "CANCELLED", "COMPLETED"],
+      adoption_status: [
+        "PENDING",
+        "REJECTED",
+        "CANCELLED",
+        "COMPLETED",
+        "APPROVED",
+      ],
       fundraising_status: [
         "PENDING",
         "ONGOING",

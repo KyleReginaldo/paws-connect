@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase.from('adoption').select('*');
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-
+    console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
