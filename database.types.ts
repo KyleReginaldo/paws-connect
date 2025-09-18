@@ -75,6 +75,7 @@ export type Database = {
           is_renting: boolean | null
           number_of_household_members: number | null
           pet: number | null
+          status: Database["public"]["Enums"]["adoption_status"] | null
           type_of_residence: string | null
           user: string | null
         }
@@ -88,6 +89,7 @@ export type Database = {
           is_renting?: boolean | null
           number_of_household_members?: number | null
           pet?: number | null
+          status?: Database["public"]["Enums"]["adoption_status"] | null
           type_of_residence?: string | null
           user?: string | null
         }
@@ -101,6 +103,7 @@ export type Database = {
           is_renting?: boolean | null
           number_of_household_members?: number | null
           pet?: number | null
+          status?: Database["public"]["Enums"]["adoption_status"] | null
           type_of_residence?: string | null
           user?: string | null
         }
@@ -543,6 +546,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      adoption_status: "PENDING" | "REJECTED" | "CANCELLED" | "COMPLETED"
       fundraising_status:
         | "PENDING"
         | "ONGOING"
@@ -678,6 +682,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      adoption_status: ["PENDING", "REJECTED", "CANCELLED", "COMPLETED"],
       fundraising_status: [
         "PENDING",
         "ONGOING",
