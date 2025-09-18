@@ -9,7 +9,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const { data, error } = await supabase
             .from('donations')
             .select('*, fundraising(title)')
-            .eq('donor', id);
+            .eq('donor', id).order('donated_at', { ascending: false });
 
         if (error) {
             return createErrorResponse(error.message, 400, (error as Error).message);
