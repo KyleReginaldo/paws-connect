@@ -70,6 +70,7 @@ export async function GET(request: NextRequest, context: any) {
         `
         id,
         message,
+        image_url,
         sent_at,
         sender,
         users!forum_chats_sender_fkey (
@@ -139,7 +140,8 @@ export async function POST(request: NextRequest, context: any) {
     const chatCreateSchema = z
       .object({
         message: z.string().min(1, 'Message cannot be empty').max(1000, 'Message too long'),
-        sender: z.string().uuid('Invalid sender ID'),
+        sender: z.uuid('Invalid sender ID'),
+        image_url: z.url('Invalid image').max(2048).optional().nullable(),
       })
       .strict();
 
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest, context: any) {
       );
     }
 
-    const { message, sender } = parsed.data;
+  const { message, sender, image_url } = parsed.data;
 
     // Get forum details and check privacy
     const { data: forum, error: forumError } = await supabase
@@ -199,18 +201,22 @@ export async function POST(request: NextRequest, context: any) {
     }
 
     // Insert the chat message with optimized return fields
+    const insertObj: Record<string, unknown> = {
+      forum: forumId,
+      message,
+      sender,
+      sent_at: new Date().toISOString(),
+    };
+    if (image_url) insertObj.image_url = image_url;
+
     const { data, error } = await supabase
       .from('forum_chats')
-      .insert({
-        forum: forumId,
-        message,
-        sender,
-        sent_at: new Date().toISOString(),
-      })
+      .insert(insertObj as any)
       .select(
         `
         id,
         message,
+        image_url,
         sent_at,
         sender,
         users!forum_chats_sender_fkey (
@@ -232,11 +238,39 @@ export async function POST(request: NextRequest, context: any) {
     if (forum_list_error || !forum_members) {
       return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
     }
-    for(const member of forum_members){
-      if(member.member.id !== sender && member.invitation_status === 'APPROVED' && !member.mute){
-        await pushNotification(member.member.id,user.username??forum.forum_name ??'PawsConnect',message,`/forum-chat/${forumId}`);
+    // Send notifications concurrently to reduce latency. We start all notification promises
+    // and attach a catch handler to each so rejections are logged but don't cause unhandled
+    // promise rejections or delay the HTTP response.
+    const notificationPromises: Promise<unknown>[] = [];
+    for (const member of forum_members) {
+      if (member.member.id !== sender && member.invitation_status === 'APPROVED' && !member.mute) {
+        const p = pushNotification(
+          member.member.id,
+          user.username ?? forum.forum_name ?? 'PawsConnect',
+          message,
+          `/forum-chat/${forumId}`,
+          image_url || undefined,
+        ).catch((err) => {
+          // Log the error server-side. In Next.js route handlers we don't have a logger here,
+          // so attach to console.error for now.
+          console.error('pushNotification failed for member', member.member.id, err);
+          // swallow error to avoid unhandled rejection
+          return null;
+        });
+        notificationPromises.push(p);
       }
     }
+
+    // Fire-and-forget: don't await Promise.all to avoid delaying response. Optionally we
+    // could await Promise.allSettled(notificationPromises) with a short timeout if reliability
+    // is desired, but for low latency return immediately while notifications continue.
+    void Promise.allSettled(notificationPromises).then((results) => {
+      // Optional: log aggregated results if needed
+      const failed = results.filter((r) => r.status === 'rejected');
+      if (failed.length) {
+        console.warn(`Some push notifications failed for forum ${forumId}:`, failed.length);
+      }
+    });
     return new Response(JSON.stringify({ data }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },

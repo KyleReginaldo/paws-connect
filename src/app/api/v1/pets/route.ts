@@ -24,10 +24,12 @@ export async function GET(request: Request) {
   const user = searchParams.get('user');
   const limit = searchParams.get('limit');
   const offset = searchParams.get('offset');
+  const DEFAULT_LIMIT = 50;
 
   try {
-    // Start building the query
-    let query = supabase.from('pets').select('*, photo', { count: 'exact' });
+  // Start building the query
+  // Use an estimated count by default to avoid the expensive exact count on large tables
+  let query = supabase.from('pets').select('*, photo', { count: 'estimated' });
 
     // Apply filters based on query parameters
     if (type) {
@@ -109,10 +111,15 @@ export async function GET(request: Request) {
 
     if (offset) {
       const offsetNum = parseInt(offset);
-      const limitNum = limit ? parseInt(limit) : 50;
+      const limitNum = limit ? parseInt(limit) : DEFAULT_LIMIT;
       if (!isNaN(offsetNum) && offsetNum >= 0) {
         query = query.range(offsetNum, offsetNum + limitNum - 1);
       }
+    }
+
+    // If neither limit nor offset are provided, apply a sensible default limit
+    if (!limit && !offset) {
+      query = query.limit(DEFAULT_LIMIT);
     }
 
     // Apply default ordering
@@ -135,15 +142,19 @@ export async function GET(request: Request) {
     if (user && Array.isArray(data) && data.length > 0) {
       try {
         const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
-        const { data: favs } = await supabase
-          .from('favorites')
-          .select('pet')
-          .in('pet', petIds)
-          .eq('user', user);
+        let favoriteSet = new Set<number>();
+        if (petIds.length > 0) {
+          const { data: favs } = await supabase
+            .from('favorites')
+            .select('pet')
+            .in('pet', petIds)
+            .eq('user', user);
 
-  type FavoriteRow = { pet: number | null };
-  const favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
-  responseData = (data as Array<Pet>).map((p) => ({ ...p, is_favorite: favoriteSet.has(p.id) }));
+          type FavoriteRow = { pet: number | null };
+          favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
+        }
+        // If no petIds or favorites lookup failed/empty, favoriteSet remains empty
+        responseData = (data as Array<Pet>).map((p) => ({ ...p, is_favorite: favoriteSet.has(p.id) }));
       } catch (e) {
         // If favorites lookup fails, fall back to original data and continue
         console.error('Failed to compute favorites:', e);

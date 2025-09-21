@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export async function pushNotification(userId: string,headings: string, message: string,route?: string) {
+export async function pushNotification(userId: string,headings: string, message: string,route?: string, image_url?: string) {
     try{
         const response = await axios.post('https://api.onesignal.com/notifications?c=push', {
     "app_id": "323cc2fb-7bab-418b-954e-a578788499bd",
@@ -17,6 +17,7 @@ export async function pushNotification(userId: string,headings: string, message:
     "ios_interruption_level": "active",
     "ios_badgeType": "None",
     "ttl": 259200,
+    "big_picture": image_url,
     "data": {
         "route": route
     },
@@ -24,7 +25,7 @@ export async function pushNotification(userId: string,headings: string, message:
         "external_id": [
             userId
         ]
-    }
+    },
 },{
     headers: {
         Authorization: "Bearer Key os_v2_app_gi6mf633vnayxfkouv4hrbezxxp72khzfmkewevrzvyolniubc2ovvmqsfpogf6apcvwiw4plk5kcoeiv7hvqxqxvfjjhoaauox5k6i"

@@ -276,6 +276,7 @@ export type Database = {
         Row: {
           forum: number
           id: number
+          image_url: string | null
           message: string | null
           sender: string | null
           sent_at: string
@@ -283,6 +284,7 @@ export type Database = {
         Insert: {
           forum: number
           id?: number
+          image_url?: string | null
           message?: string | null
           sender?: string | null
           sent_at?: string
@@ -290,6 +292,7 @@ export type Database = {
         Update: {
           forum?: number
           id?: number
+          image_url?: string | null
           message?: string | null
           sender?: string | null
           sent_at?: string
