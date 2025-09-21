@@ -1,4 +1,5 @@
 import { supabase } from '@/app/supabase/supabase';
+import { Pet } from '@/config/types/pet';
 import { NextRequest } from 'next/server';
 
 /**
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('request_status', requestStatus);
     }
 
-    const { data, error } = await query;
+  const { data, error } = await query;
 
     if (error) {
       return new Response(
@@ -57,10 +58,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // If a user id was provided, annotate each pet with isFavorite
+    const user = request.nextUrl.searchParams.get('user');
+    let responseData: (Pet & { isFavorite?: boolean })[] = (data || []) as (Pet & { isFavorite?: boolean })[];
+    if (user && Array.isArray(data) && data.length > 0) {
+      try {
+        const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
+        const { data: favs } = await supabase.from('favorites').select('pet').in('pet', petIds).eq('user', user);
+        type FavoriteRow = { pet: number | null };
+        const favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
+        responseData = (data as Array<Pet>).map((p) => ({ ...p, isFavorite: favoriteSet.has(p.id) }));
+      } catch (e) {
+        console.error('Failed to compute favorites for recent pets', e);
+      }
+    }
+
     // Calculate additional metadata
     const now = new Date();
     const oldestPetDate =
-      data && data.length > 0 ? new Date(data[data.length - 1].created_at) : null;
+      responseData && responseData.length > 0 ? new Date(responseData[responseData.length - 1].created_at) : null;
 
     const actualDaysBack = oldestPetDate
       ? Math.ceil((now.getTime() - oldestPetDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -69,7 +85,7 @@ export async function GET(request: NextRequest) {
     return new Response(
       JSON.stringify({
         message: 'Success',
-        data: data || [],
+        data: responseData || [],
         metadata: {
           total_returned: data?.length || 0,
           requested_limit: limit,

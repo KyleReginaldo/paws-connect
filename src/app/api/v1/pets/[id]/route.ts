@@ -143,6 +143,27 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       });
     }
 
+    // If caller provided ?user=<userId> we compute isFavorite for this pet
+    try {
+      const url = new URL(_req.url);
+      const user = url.searchParams.get('user');
+      if (user) {
+        const { data: favs } = await supabase
+          .from('favorites')
+          .select('id')
+          .eq('user', user)
+          .eq('pet', petId)
+          .limit(1);
+        const isFavorite = Array.isArray(favs) && favs.length > 0;
+        return new Response(JSON.stringify({ data: { ...pet, isFavorite } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (e) {
+      console.error('Failed to compute pet favorite status', e);
+    }
+
     return new Response(JSON.stringify({ data: pet }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

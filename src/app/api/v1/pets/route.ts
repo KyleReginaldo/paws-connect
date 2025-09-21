@@ -1,5 +1,6 @@
 import { supabase } from '@/app/supabase/supabase';
 import { createPetSchema } from '@/config/schema/petSchema';
+import { Pet } from '@/config/types/pet';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -19,6 +20,8 @@ export async function GET(request: Request) {
   const good_with = searchParams.get('good_with');
   const location = searchParams.get('location');
   const search = searchParams.get('search');
+  // Optional user id to compute whether each pet is favorited by this user
+  const user = searchParams.get('user');
   const limit = searchParams.get('limit');
   const offset = searchParams.get('offset');
 
@@ -115,7 +118,7 @@ export async function GET(request: Request) {
     // Apply default ordering
     query = query.order('created_at', { ascending: false });
 
-    const { data, error, count } = await query;
+  const { data, error, count } = await query;
 
     if (error) {
       return new Response(
@@ -127,10 +130,30 @@ export async function GET(request: Request) {
       );
     }
 
+    // If a user id was provided, compute isFavorite per pet without changing DB schema
+    let responseData: (Pet & { is_favorite?: boolean })[] | null = data as (Pet & { is_favorite?: boolean })[] | null;
+    if (user && Array.isArray(data) && data.length > 0) {
+      try {
+        const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
+        const { data: favs } = await supabase
+          .from('favorites')
+          .select('pet')
+          .in('pet', petIds)
+          .eq('user', user);
+
+  type FavoriteRow = { pet: number | null };
+  const favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
+  responseData = (data as Array<Pet>).map((p) => ({ ...p, is_favorite: favoriteSet.has(p.id) }));
+      } catch (e) {
+        // If favorites lookup fails, fall back to original data and continue
+        console.error('Failed to compute favorites:', e);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         message: 'Success',
-        data: data,
+        data: responseData,
         metadata: {
           total_count: count,
           returned_count: data?.length || 0,
