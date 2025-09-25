@@ -12,6 +12,7 @@ export async function pushNotification(userId: string,headings: string, message:
     },    
     "target_channel": "push",
     "huawei_category": "MARKETING",
+    "android_channel_id": "fa9e4583-4994-4f73-97d9-0e652bb0cca0",
     "huawei_msg_type": "message",
     "priority": 10,
     "ios_interruption_level": "active",
@@ -33,6 +34,6 @@ export async function pushNotification(userId: string,headings: string, message:
 });
     console.log(response.data);
     }catch(error){
-        console.error("Error sending notification:", error);
+        console.error("Error sending notification. Please try again later:", error);
     }
 }
