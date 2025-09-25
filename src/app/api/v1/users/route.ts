@@ -128,11 +128,12 @@ export async function POST(request: NextRequest) {
     // Additional validation after sanitization
 
     // If no password provided or too weak/short, generate a default strong password
-    if (!password || String(password).length < 8) {
+    if (!parsed.password) {
       // Default pattern: 1 upper, 1 lower, 1 digit, 1 symbol + random digits
       const rand = Math.random().toString(36).slice(2, 8);
-      password = `A@${rand}1`; // ensures complexity, e.g., A@abcd12
+      password = `A@${rand}1`;
     }
+    console.log('Creating user with data:', { email, username, phone_number, role, password });
 
     const { data, error } = await supabase.auth.admin.createUser({
       email,
