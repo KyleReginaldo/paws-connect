@@ -33,6 +33,6 @@ export async function pushNotification(userId: string,headings: string, message:
 });
     console.log(response.data);
     }catch(error){
-        console.error("Error sending notification:", error);
+        console.error("Error sending notification. Please try again later:", error);
     }
 }
