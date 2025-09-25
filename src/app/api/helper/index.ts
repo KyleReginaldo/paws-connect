@@ -1,4 +1,6 @@
+import { supabase } from "@/app/supabase/supabase";
 import axios from "axios";
+import type { TablesInsert } from "../../../../database.types";
 
 export async function pushNotification(userId: string,headings: string, message: string,route?: string, image_url?: string) {
     try{
@@ -35,5 +37,24 @@ export async function pushNotification(userId: string,headings: string, message:
     console.log(response.data);
     }catch(error){
         console.error("Error sending notification. Please try again later:", error);
+    }
+}
+
+// Persist an in-app notification to the notifications table so it shows in the notifications screen.
+// Columns are inferred as: user_id (UUID), title (string), message (string), route (string|null), image_url (string|null)
+// If your schema differs (e.g., additional required fields), adjust accordingly.
+export async function storeNotification(userId: string, title: string, content: string) {
+    try {
+        const insertObj: TablesInsert<'notifications'> = {
+            user: userId,
+            title,
+            content,
+        };
+        const { error } = await supabase.from('notifications').insert(insertObj);
+        if (error) {
+            console.error('Error storing notification:', error);
+        }
+    } catch (error) {
+        console.error('Unexpected error storing notification:', error);
     }
 }

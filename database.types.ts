@@ -412,6 +412,41 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: number
+          title: string
+          user: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          title: string
+          user: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          title?: string
+          user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_fkey"
+            columns: ["user"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pets: {
         Row: {
           added_by: string | null

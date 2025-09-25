@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pushNotification } from '@/app/api/helper';
+import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -231,21 +231,37 @@ export async function POST(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    const{data: forum_members, error: forum_list_error} = await supabase
-    .from('forum_members')
-    .select('member(id, username), invitation_status, mute')
-    .eq('forum', forumId);
-    if (forum_list_error || !forum_members) {
+    const { data: forum_members_raw, error: forum_list_error } = await supabase
+      .from('forum_members')
+      .select('member(id, username), invitation_status, mute')
+      .eq('forum', forumId);
+    if (forum_list_error || !forum_members_raw) {
       return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
     }
+    type MemberUser = { id: string; username: string | null };
+    type ForumMemberRow = {
+      member: MemberUser | null;
+      invitation_status: string;
+      mute: boolean | null;
+    };
+    // Normalize shape: some PostgREST responses may nest arrays; ensure single object or null
+    const members: ForumMemberRow[] = (forum_members_raw as any[]).map((row) => {
+      const m = Array.isArray(row.member) ? row.member[0] : row.member;
+      return {
+        member: m ? ({ id: m.id, username: m.username } as MemberUser) : null,
+        invitation_status: row.invitation_status,
+        mute: row.mute,
+      } as ForumMemberRow;
+    });
     // Send notifications concurrently to reduce latency. We start all notification promises
     // and attach a catch handler to each so rejections are logged but don't cause unhandled
     // promise rejections or delay the HTTP response.
     const notificationPromises: Promise<unknown>[] = [];
-    for (const member of forum_members) {
-      if (member.member.id !== sender && member.invitation_status === 'APPROVED' && !member.mute) {
+    for (const member of members) {
+      const recipientId = member.member?.id;
+      if (recipientId && recipientId !== sender && member.invitation_status === 'APPROVED' && !member.mute) {
         const p = pushNotification(
-          member.member.id,
+          recipientId,
           user.username ?? forum.forum_name ?? 'PawsConnect',
           message,
           `/forum-chat/${forumId}`,
@@ -253,11 +269,21 @@ export async function POST(request: NextRequest, context: any) {
         ).catch((err) => {
           // Log the error server-side. In Next.js route handlers we don't have a logger here,
           // so attach to console.error for now.
-          console.error('pushNotification failed for member', member.member.id, err);
+          console.error('pushNotification failed for member', recipientId, err);
           // swallow error to avoid unhandled rejection
           return null;
         });
-        notificationPromises.push(p);
+          notificationPromises.push(p);
+
+          const q = storeNotification(
+            recipientId,
+            user.username ?? forum.forum_name ?? 'PawsConnect',
+            message,
+          ).catch((err) => {
+          console.error('storeNotification failed for member', recipientId, err);
+            return null;
+          });
+          notificationPromises.push(q);
       }
     }
 

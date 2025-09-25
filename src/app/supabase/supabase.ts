@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '../../../database.types';
+import type { Database } from '../../../database.types';
 
 // Prefer server-only env vars for service role keys. Fall back to NEXT_PUBLIC names if present
 // but ensure a value exists at runtime. Adjust your environment vars if you see a runtime error here.
