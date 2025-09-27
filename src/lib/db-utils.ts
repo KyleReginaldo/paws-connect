@@ -354,6 +354,15 @@ export async function fetchForumsWithMembers(
   const forumIds = processedForums.map((f) => f.id);
   if (forumIds.length) {
     const latestChatsMap: Record<number, ProcessedForum['last_chat']> = {};
+    interface LatestChatRow {
+      id: number;
+      message: string;
+      image_url: string | null;
+      sent_at: string;
+      forum: number;
+      sender: string;
+      users?: { id: string; username: string } | null;
+    }
     await Promise.all(
       forumIds.map(async (fid) => {
         const { data: latestChatData, error: latestChatError } = await supabase
@@ -365,7 +374,7 @@ export async function fetchForumsWithMembers(
           .order('sent_at', { ascending: false })
           .limit(1);
         if (!latestChatError && latestChatData && latestChatData.length > 0) {
-          const row: any = latestChatData[0];
+          const row = latestChatData[0] as LatestChatRow;
             latestChatsMap[fid] = {
               id: row.id,
               message: row.message,
@@ -472,6 +481,15 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
   const forumIds = processedForums.map((f) => f.id);
   if (forumIds.length) {
     const latestChatsMap: Record<number, ProcessedForum['last_chat']> = {};
+    interface LatestChatRow {
+      id: number;
+      message: string;
+      image_url: string | null;
+      sent_at: string;
+      forum: number;
+      sender: string;
+      users?: { id: string; username: string } | null;
+    }
     await Promise.all(
       forumIds.map(async (fid) => {
         const { data: latestChatData, error: latestChatError } = await supabase
@@ -483,7 +501,7 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
           .order('sent_at', { ascending: false })
           .limit(1);
         if (!latestChatError && latestChatData && latestChatData.length > 0) {
-          const row: any = latestChatData[0];
+          const row = latestChatData[0] as LatestChatRow;
           latestChatsMap[fid] = {
             id: row.id,
             message: row.message,
