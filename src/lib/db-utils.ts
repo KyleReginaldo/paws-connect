@@ -187,6 +187,16 @@ export interface ProcessedForum {
     invitation_status: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
   }>;
   member_count: number;
+  last_chat?: {
+    id: number;
+    message: string;
+    image_url: string | null;
+    sent_at: string;
+    sender: {
+      id: string;
+      username: string;
+    } | null;
+  } | null;
 }
 
 // Process forum data to flatten members and add creator if not explicit member
@@ -338,9 +348,45 @@ export async function fetchForumsWithMembers(
     return { data: [], count: 0 };
   }
 
-  const processedForums = (data || []).map((forum) =>
-    processForumWithMembers(forum as ForumWithMembers),
-  );
+  let processedForums = (data || []).map((forum) => processForumWithMembers(forum as ForumWithMembers));
+
+  // Enrich with latest chat per forum (N additional queries - acceptable for current page size)
+  const forumIds = processedForums.map((f) => f.id);
+  if (forumIds.length) {
+    const latestChatsMap: Record<number, ProcessedForum['last_chat']> = {};
+    await Promise.all(
+      forumIds.map(async (fid) => {
+        const { data: latestChatData, error: latestChatError } = await supabase
+          .from('forum_chats')
+          .select(
+            `id, message, image_url, sent_at, forum, sender, users!forum_chats_sender_fkey ( id, username )`,
+          )
+          .eq('forum', fid)
+          .order('sent_at', { ascending: false })
+          .limit(1);
+        if (!latestChatError && latestChatData && latestChatData.length > 0) {
+          const row: any = latestChatData[0];
+            latestChatsMap[fid] = {
+              id: row.id,
+              message: row.message,
+              image_url: row.image_url || null,
+              sent_at: row.sent_at,
+              sender: row.users ? { id: row.users.id, username: row.users.username } : null,
+            };
+        } else {
+          latestChatsMap[fid] = null;
+        }
+      }),
+    );
+    processedForums = processedForums.map((f) => ({ ...f, last_chat: latestChatsMap[f.id] || null }));
+  }
+
+  // Order forums by latest chat sent_at desc, fallback to updated_at / created_at
+  processedForums.sort((a, b) => {
+    const aTime = a.last_chat?.sent_at || a.updated_at || a.created_at;
+    const bTime = b.last_chat?.sent_at || b.updated_at || b.created_at;
+    return new Date(bTime).getTime() - new Date(aTime).getTime();
+  });
 
   const result = { data: processedForums, count };
 
@@ -390,11 +436,11 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
     }
   });
 
-  // Sort by creation date
+  // Sort temporarily by creation date (will reorder after latest chat enrichment)
   allForums.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Process all forums with member filtering based on user role
-  const processedForums = allForums.map((forum) => {
+  let processedForums = allForums.map((forum) => {
     const isCreator = forum.created_by === userId;
 
     // Create a copy of the forum to modify
@@ -420,6 +466,44 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
       ...processed,
       user_role: isCreator ? 'creator' : 'member',
     };
+  });
+
+  // Enrich with latest chat per forum (N additional queries)
+  const forumIds = processedForums.map((f) => f.id);
+  if (forumIds.length) {
+    const latestChatsMap: Record<number, ProcessedForum['last_chat']> = {};
+    await Promise.all(
+      forumIds.map(async (fid) => {
+        const { data: latestChatData, error: latestChatError } = await supabase
+          .from('forum_chats')
+          .select(
+            `id, message, image_url, sent_at, forum, sender, users!forum_chats_sender_fkey ( id, username )`,
+          )
+          .eq('forum', fid)
+          .order('sent_at', { ascending: false })
+          .limit(1);
+        if (!latestChatError && latestChatData && latestChatData.length > 0) {
+          const row: any = latestChatData[0];
+          latestChatsMap[fid] = {
+            id: row.id,
+            message: row.message,
+            image_url: row.image_url || null,
+            sent_at: row.sent_at,
+            sender: row.users ? { id: row.users.id, username: row.users.username } : null,
+          };
+        } else {
+          latestChatsMap[fid] = null;
+        }
+      }),
+    );
+    processedForums = processedForums.map((f) => ({ ...f, last_chat: latestChatsMap[f.id] || null }));
+  }
+
+  // Final ordering by latest chat activity
+  processedForums.sort((a, b) => {
+    const aTime = a.last_chat?.sent_at || a.updated_at || a.created_at;
+    const bTime = b.last_chat?.sent_at || b.updated_at || b.created_at;
+    return new Date(bTime).getTime() - new Date(aTime).getTime();
   });
 
   if (useCache) {

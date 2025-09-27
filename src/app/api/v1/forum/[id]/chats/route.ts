@@ -231,6 +231,12 @@ export async function POST(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
+    // Update forum updated_at to reflect latest activity (fire & forget)
+    void supabase
+      .from('forum')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', forumId);
+
     const { data: forum_members_raw, error: forum_list_error } = await supabase
       .from('forum_members')
       .select('member(id, username), invitation_status, mute')

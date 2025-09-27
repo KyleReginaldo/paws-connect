@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 20));
 
-    // Use the new utility function without caching
+    // Use the utility function (now includes last_chat and orders by latest activity)
     const { data: forumsWithMemberInfo, count } = await fetchForumsWithMembers({
       page,
       limit,
