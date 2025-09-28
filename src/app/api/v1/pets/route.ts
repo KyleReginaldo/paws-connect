@@ -137,8 +137,11 @@ export async function GET(request: Request) {
       );
     }
 
-    // If a user id was provided, compute isFavorite per pet without changing DB schema
-    let responseData: (Pet & { is_favorite?: boolean })[] | null = data as (Pet & { is_favorite?: boolean })[] | null;
+    // If a user id was provided, compute favorite flags per pet.
+    // We now populate both isFavorite (preferred) and is_favorite (deprecated) for backward compatibility.
+    let responseData: (Pet & { is_favorite?: boolean })[] | null = data as (Pet & {
+      is_favorite?: boolean;
+    })[] | null;
     if (user && Array.isArray(data) && data.length > 0) {
       try {
         const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
@@ -154,7 +157,10 @@ export async function GET(request: Request) {
           favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
         }
         // If no petIds or favorites lookup failed/empty, favoriteSet remains empty
-        responseData = (data as Array<Pet>).map((p) => ({ ...p, is_favorite: favoriteSet.has(p.id) }));
+        responseData = (data as Array<Pet>).map((p) => {
+          const fav = favoriteSet.has(p.id);
+            return { ...p, isFavorite: fav, is_favorite: fav };
+        });
       } catch (e) {
         // If favorites lookup fails, fall back to original data and continue
         console.error('Failed to compute favorites:', e);

@@ -20,4 +20,10 @@ export interface Pet {
   added_by: string;
   request_status: string;
   photo: string;
+  /**
+   * Whether the requesting user (provided via ?user=<userId> query param) has favorited this pet.
+   * This is injected dynamically by the API layer and not stored on the pets table.
+   */
+  /** @deprecated Use isFavorite (camelCase). Left temporarily for backward compatibility. */
+  is_favorite?: boolean;
 }

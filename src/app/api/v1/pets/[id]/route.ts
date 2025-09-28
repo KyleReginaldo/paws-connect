@@ -155,7 +155,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           .eq('pet', petId)
           .limit(1);
         const isFavorite = Array.isArray(favs) && favs.length > 0;
-        return new Response(JSON.stringify({ data: { ...pet, isFavorite } }), {
+        return new Response(JSON.stringify({ data: { ...pet, isFavorite, is_favorite: isFavorite } }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });

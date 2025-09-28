@@ -60,14 +60,19 @@ export async function GET(request: NextRequest) {
 
     // If a user id was provided, annotate each pet with isFavorite
     const user = request.nextUrl.searchParams.get('user');
-    let responseData: (Pet & { isFavorite?: boolean })[] = (data || []) as (Pet & { isFavorite?: boolean })[];
+    let responseData: (Pet & {  is_favorite?: boolean })[] = (data || []) as (
+      Pet & {  is_favorite?: boolean }
+    )[];
     if (user && Array.isArray(data) && data.length > 0) {
       try {
         const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
         const { data: favs } = await supabase.from('favorites').select('pet').in('pet', petIds).eq('user', user);
         type FavoriteRow = { pet: number | null };
         const favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
-        responseData = (data as Array<Pet>).map((p) => ({ ...p, isFavorite: favoriteSet.has(p.id) }));
+        responseData = (data as Array<Pet>).map((p) => {
+          const fav = favoriteSet.has(p.id);
+          return { ...p,  is_favorite: fav };
+        });
       } catch (e) {
         console.error('Failed to compute favorites for recent pets', e);
       }
