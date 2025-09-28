@@ -196,6 +196,7 @@ export interface ProcessedForum {
       id: string;
       username: string;
     } | null;
+    is_viewed?: boolean; // True if current user has viewed this specific message
   } | null;
 }
 
@@ -274,7 +275,32 @@ export async function fetchForumWithMembers(
     }
   }
 
-  const processedForum = processForumWithMembers(forumCopy as ForumWithMembers);
+  let processedForum = processForumWithMembers(forumCopy as ForumWithMembers);
+
+  // Enrich with latest chat and viewed status
+  const { data: latestChatData } = await supabase
+    .from('forum_chats')
+    .select(
+      `id, message, image_url, sent_at, forum, sender, users!forum_chats_sender_fkey ( id, username )`,
+    )
+    .eq('forum', forumId)
+    .order('sent_at', { ascending: false })
+    .limit(1);
+
+  if (latestChatData && latestChatData.length > 0) {
+    const row = latestChatData[0];
+    const lastChat = {
+      id: row.id,
+      message: row.message || '',
+      image_url: row.image_url || null,
+      sent_at: row.sent_at,
+      sender: row.users ? { id: row.users.id, username: row.users.username || '' } : null,
+      is_viewed: row.sender === userId, // User has "viewed" if they sent it
+    };
+    processedForum = { ...processedForum, last_chat: lastChat };
+  } else {
+    processedForum = { ...processedForum, last_chat: null };
+  }
 
   if (useCache) {
     cache.set(cacheKey, processedForum, 5); // Cache for only 5 seconds if enabled
@@ -289,7 +315,7 @@ export async function fetchForumsWithMembers(
     page?: number;
     limit?: number;
     createdBy?: string;
-    userId?: string; // For privacy filtering
+    userId?: string; // For privacy filtering and determining viewed status
     useCache?: boolean;
   } = {},
 ): Promise<{ data: ProcessedForum[]; count: number | null }> {
@@ -377,17 +403,21 @@ export async function fetchForumsWithMembers(
           const row = latestChatData[0] as LatestChatRow;
             latestChatsMap[fid] = {
               id: row.id,
-              message: row.message,
+              message: row.message || '',
               image_url: row.image_url || null,
               sent_at: row.sent_at,
-              sender: row.users ? { id: row.users.id, username: row.users.username } : null,
+              sender: row.users ? { id: row.users.id, username: row.users.username || '' } : null,
+              is_viewed: options.userId ? row.sender === options.userId : false,
             };
         } else {
           latestChatsMap[fid] = null;
         }
       }),
     );
-    processedForums = processedForums.map((f) => ({ ...f, last_chat: latestChatsMap[f.id] || null }));
+    processedForums = processedForums.map((f) => {
+      const lastChat = latestChatsMap[f.id] || null;
+      return { ...f, last_chat: lastChat };
+    });
   }
 
   // Order forums by latest chat sent_at desc, fallback to updated_at / created_at
@@ -504,17 +534,21 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
           const row = latestChatData[0] as LatestChatRow;
           latestChatsMap[fid] = {
             id: row.id,
-            message: row.message,
+            message: row.message || '',
             image_url: row.image_url || null,
             sent_at: row.sent_at,
-            sender: row.users ? { id: row.users.id, username: row.users.username } : null,
+            sender: row.users ? { id: row.users.id, username: row.users.username || '' } : null,
+            is_viewed: row.sender === userId,
           };
         } else {
           latestChatsMap[fid] = null;
         }
       }),
     );
-    processedForums = processedForums.map((f) => ({ ...f, last_chat: latestChatsMap[f.id] || null }));
+    processedForums = processedForums.map((f) => {
+      const lastChat = latestChatsMap[f.id] || null;
+      return { ...f, last_chat: lastChat };
+    });
   }
 
   // Final ordering by latest chat activity
