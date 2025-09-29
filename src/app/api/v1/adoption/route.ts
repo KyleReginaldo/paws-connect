@@ -15,16 +15,15 @@ export async function GET(request: NextRequest) {
     const userParam = request.nextUrl.searchParams.get('user');
 
     if (userParam) {
-      const { data, error } = await supabase.from('adoption').select('*').eq('user', userParam);
+      const { data, error } = await supabase.from('adoption').select('*, pet(*), user(*)').eq('user', userParam);
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-
       return new Response(JSON.stringify({ data }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const { data, error } = await supabase.from('adoption').select('*');
+    const { data, error } = await supabase.from('adoption').select('*, pet(*), user(*)').order('created_at', { ascending: false });
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {

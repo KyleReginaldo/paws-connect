@@ -19,7 +19,7 @@ export const updateUserSchema = z.object({
   profile_image_link: z.url('Invalid URL format').or(z.literal('')).optional(),
   house_images: z.array(z.url('Invalid URL format')).max(10, 'Too many house images').optional(),
   payment_method: z.string().max(50, 'Payment method name too long').optional(),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING', 'BANNED']).optional(),
+  status: z.enum(['PENDING','SEMI_VERIFIED','FULLY_VERIFIED','INDEFINITE']).optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   role: z.number().optional(),
 }).refine((data) => Object.keys(data).length > 0, {

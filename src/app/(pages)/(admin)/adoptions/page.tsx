@@ -23,6 +23,7 @@ import {
 import { Loader2, PawPrint, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { useRouter } from 'next/navigation';
 interface Adoption {
   id: number;
   user: string | null;
@@ -68,6 +69,7 @@ const AdoptionsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [petTypeFilter, setPetTypeFilter] = useState('all');
 
+  const router = useRouter();
   const fetchAdoptions = useCallback(async () => {
     try {
       setLoading(true);
@@ -346,9 +348,9 @@ const AdoptionsPage = () => {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={adoption.status === 'COMPLETED' ? 'default' : 'secondary'}
+                            variant={adoption.status === 'APPROVED' ? 'default' : 'secondary'}
                             className={
-                              adoption.status === 'COMPLETED'
+                              adoption.status === 'APPROVED'
                                 ? 'bg-green-50 text-green-700 border-green-200'
                                 : 'bg-yellow-50 text-yellow-700 border-yellow-200'
                             }
@@ -378,7 +380,14 @@ const AdoptionsPage = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => {
+                                router.push(`/adoptions/${adoption.id}`);
+                              }}
+                            >
                               View Details
                             </Button>
                             {adoption.status === 'PENDING' && (

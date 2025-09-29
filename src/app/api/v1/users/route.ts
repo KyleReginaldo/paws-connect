@@ -1,4 +1,6 @@
 import { supabase } from '@/app/supabase/supabase';
+import { UserStatus } from '@/config/enum/user.enum';
+import { USER_QUERY_WITH_ID } from '@/config/query/query';
 import { createUserSchema } from '@/config/schema/userChema';
 import axios from 'axios';
 import { NextRequest } from 'next/server';
@@ -12,7 +14,7 @@ export async function GET(request: NextRequest) {
     return await searchUsers(username, role);
   } else {
     // Get all users or filter by role
-    let query = supabase.from('users').select();
+    let query = supabase.from('users').select(USER_QUERY_WITH_ID);
 
     // Add role filter if provided
     if (role) {
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
       phone_number: string;
       role: number;
       created_by?: string;
-      status?: string;
+      status?: UserStatus;
     };
     const { email, username, role } = parsed;
     const phone_number = parsed.phone_number;
@@ -343,7 +345,7 @@ export async function POST(request: NextRequest) {
       phone_number: `+${phone_number}`,
       role,
       created_by: parsed.created_by,
-      status: parsed.status || 'ACTIVE',
+      status: parsed.status || UserStatus.PENDING,
       paymongo_id: externalCustomerId, // Store the external ID
     };
     console.log('📝 User insert data:', insertData);

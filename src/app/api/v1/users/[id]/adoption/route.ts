@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }){
     try{
         const { id } = await params;
-        const {data, error} = await supabase.from('adoption').select('*, pets(*)').eq('user',id).order('created_at', { ascending: false });
+        const {data, error} = await supabase.from('adoption').select('*, pet(*)').eq('user',id).order('created_at', { ascending: false });
         if (error) {
             return createErrorResponse(error.message, 400, (error as Error).message);
         }

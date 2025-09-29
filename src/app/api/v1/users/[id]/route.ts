@@ -1,4 +1,5 @@
 import { supabase } from '@/app/supabase/supabase';
+import { USER_QUERY_WITH_ID } from '@/config/query/query';
 import { updateUserSchema } from '@/config/schema/userChema';
 import { createErrorResponse, createResponse } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
@@ -17,13 +18,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
 
-    // Optimized query - select only necessary fields
-    const { data, error } = await supabase.from('users').select().eq('id', id).single();
-
+    const { data, error } = await supabase.from('users').select(USER_QUERY_WITH_ID).eq('id', id).single();
     if (error) {
       return createErrorResponse('User not found', 404, error.message);
     }
-
     return createResponse({ message: 'Success', data }, 200, {
       cache: 'private, max-age=300',
     });

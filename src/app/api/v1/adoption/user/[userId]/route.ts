@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest, context: any) {
     if (!userId)
       return new Response(JSON.stringify({ error: 'Missing userId param' }), { status: 400 });
 
-    const { data, error } = await supabase.from('adoption').select('*').eq('user', userId);
+    const { data, error } = await supabase.from('adoption').select('*, pet(*)').eq('user', userId);
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
     return new Response(JSON.stringify({ data }), {

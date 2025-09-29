@@ -280,6 +280,7 @@ export type Database = {
           message: string | null
           sender: string | null
           sent_at: string
+          viewers: string[] | null
         }
         Insert: {
           forum: number
@@ -288,6 +289,7 @@ export type Database = {
           message?: string | null
           sender?: string | null
           sent_at?: string
+          viewers?: string[] | null
         }
         Update: {
           forum?: number
@@ -296,6 +298,7 @@ export type Database = {
           message?: string | null
           sender?: string | null
           sent_at?: string
+          viewers?: string[] | null
         }
         Relationships: [
           {
@@ -418,6 +421,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: number
+          is_viewed: boolean | null
           title: string
           user: string
         }
@@ -426,6 +430,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          is_viewed?: boolean | null
           title: string
           user: string
         }
@@ -434,6 +439,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          is_viewed?: boolean | null
           title?: string
           user?: string
         }
@@ -548,6 +554,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_identification: {
+        Row: {
+          created_at: string
+          id: number
+          id_attachment_url: string
+          id_expiration: string | null
+          id_name: string
+          id_number: string
+          id_type: Database["public"]["Enums"]["id_types"] | null
+          user: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          id_attachment_url: string
+          id_expiration?: string | null
+          id_name: string
+          id_number: string
+          id_type?: Database["public"]["Enums"]["id_types"] | null
+          user?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          id_attachment_url?: string
+          id_expiration?: string | null
+          id_name?: string
+          id_number?: string
+          id_type?: Database["public"]["Enums"]["id_types"] | null
+          user?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_identification_user_fkey"
+            columns: ["user"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string
@@ -561,7 +608,7 @@ export type Database = {
           phone_number: string
           profile_image_link: string | null
           role: number
-          status: string | null
+          status: Database["public"]["Enums"]["user_status"] | null
           username: string | null
         }
         Insert: {
@@ -576,7 +623,7 @@ export type Database = {
           phone_number: string
           profile_image_link?: string | null
           role: number
-          status?: string | null
+          status?: Database["public"]["Enums"]["user_status"] | null
           username?: string | null
         }
         Update: {
@@ -591,7 +638,7 @@ export type Database = {
           phone_number?: string
           profile_image_link?: string | null
           role?: number
-          status?: string | null
+          status?: Database["public"]["Enums"]["user_status"] | null
           username?: string | null
         }
         Relationships: [
@@ -631,8 +678,33 @@ export type Database = {
         | "COMPLETE"
         | "REJECTED"
         | "CANCELLED"
+      id_types:
+        | "PHILSYS_ID"
+        | "PASSPORT"
+        | "DRIVER_LICENSE"
+        | "SSS_ID"
+        | "UMID_CARD"
+        | "GSIS_ID"
+        | "PRC_ID"
+        | "TIN_ID"
+        | "POSTAL_ID"
+        | "VOTER_ID"
+        | "PHILHEALTH_ID"
+        | "PAGIBIG_ID"
+        | "SENIOR_CITIZEN_ID"
+        | "PWD_ID"
+        | "STUDENT_ID"
+        | "OFW_ID"
+        | "NBI_CLEARANCE"
+        | "POLICE_CLEARANCE"
+        | "BARANGAY_ID"
+        | "FIREARMS_LICENSE_ID"
+        | "IBP_ID"
+        | "SEAMAN_BOOK"
+        | "ACR_I_CARD"
       invitation_status: "PENDING" | "APPROVED" | "REJECTED"
       user_role: "CUSTOMER" | "ADMIN" | "STAFF"
+      user_status: "SEMI_VERIFIED" | "FULLY_VERIFIED" | "INDEFINITE" | "PENDING"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -774,8 +846,34 @@ export const Constants = {
         "REJECTED",
         "CANCELLED",
       ],
+      id_types: [
+        "PHILSYS_ID",
+        "PASSPORT",
+        "DRIVER_LICENSE",
+        "SSS_ID",
+        "UMID_CARD",
+        "GSIS_ID",
+        "PRC_ID",
+        "TIN_ID",
+        "POSTAL_ID",
+        "VOTER_ID",
+        "PHILHEALTH_ID",
+        "PAGIBIG_ID",
+        "SENIOR_CITIZEN_ID",
+        "PWD_ID",
+        "STUDENT_ID",
+        "OFW_ID",
+        "NBI_CLEARANCE",
+        "POLICE_CLEARANCE",
+        "BARANGAY_ID",
+        "FIREARMS_LICENSE_ID",
+        "IBP_ID",
+        "SEAMAN_BOOK",
+        "ACR_I_CARD",
+      ],
       invitation_status: ["PENDING", "APPROVED", "REJECTED"],
       user_role: ["CUSTOMER", "ADMIN", "STAFF"],
+      user_status: ["SEMI_VERIFIED", "FULLY_VERIFIED", "INDEFINITE", "PENDING"],
     },
   },
 } as const

@@ -91,11 +91,10 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
         }
         if (formData.status && formData.status.trim()) {
           updatePayload.status = formData.status as
-            | 'ACTIVE'
-            | 'INACTIVE'
-            | 'SUSPENDED'
             | 'PENDING'
-            | 'BANNED';
+            | 'SEMI_VERIFIED'
+            | 'FULLY_VERIFIED'
+            | 'INDEFINITE';
         }
         // Only include password if it's provided and has minimum length
         if (formData.password && formData.password.length >= 6) {
