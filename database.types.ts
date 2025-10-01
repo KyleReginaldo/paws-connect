@@ -278,6 +278,7 @@ export type Database = {
           id: number
           image_url: string | null
           message: string | null
+          replied_to: number | null
           sender: string | null
           sent_at: string
           viewers: string[] | null
@@ -287,6 +288,7 @@ export type Database = {
           id?: number
           image_url?: string | null
           message?: string | null
+          replied_to?: number | null
           sender?: string | null
           sent_at?: string
           viewers?: string[] | null
@@ -296,6 +298,7 @@ export type Database = {
           id?: number
           image_url?: string | null
           message?: string | null
+          replied_to?: number | null
           sender?: string | null
           sent_at?: string
           viewers?: string[] | null
@@ -306,6 +309,13 @@ export type Database = {
             columns: ["forum"]
             isOneToOne: false
             referencedRelation: "forum"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_chats_replied_to_fkey"
+            columns: ["replied_to"]
+            isOneToOne: false
+            referencedRelation: "forum_chats"
             referencedColumns: ["id"]
           },
           {
@@ -589,7 +599,7 @@ export type Database = {
           {
             foreignKeyName: "user_identification_user_fkey"
             columns: ["user"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },

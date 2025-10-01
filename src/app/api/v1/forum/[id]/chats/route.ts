@@ -73,6 +73,7 @@ export async function GET(request: NextRequest, context: any) {
         image_url,
         sent_at,
         sender,
+        replied_to(*),
         users!forum_chats_sender_fkey (
           id,
           username
@@ -142,6 +143,7 @@ export async function POST(request: NextRequest, context: any) {
         message: z.string().min(1, 'Message cannot be empty').max(1000, 'Message too long'),
         sender: z.uuid('Invalid sender ID'),
         image_url: z.url('Invalid image').max(2048).optional().nullable(),
+        replied_to: z.number().optional().nullable(),
       })
       .strict();
 
@@ -156,7 +158,7 @@ export async function POST(request: NextRequest, context: any) {
       );
     }
 
-  const { message, sender, image_url } = parsed.data;
+  const { message, sender, image_url, replied_to } = parsed.data;
 
     // Get forum details and check privacy
     const { data: forum, error: forumError } = await supabase
@@ -205,6 +207,7 @@ export async function POST(request: NextRequest, context: any) {
       forum: forumId,
       message,
       sender,
+      replied_to,
       sent_at: new Date().toISOString(),
     };
     if (image_url) insertObj.image_url = image_url;
@@ -219,6 +222,7 @@ export async function POST(request: NextRequest, context: any) {
         image_url,
         sent_at,
         sender,
+        replied_to(*),
         users!forum_chats_sender_fkey (
           id,
           username
