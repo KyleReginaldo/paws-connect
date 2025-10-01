@@ -74,6 +74,7 @@ export async function GET(request: NextRequest, context: any) {
         sent_at,
         sender,
         replied_to(*),
+        reactions,
         users!forum_chats_sender_fkey (
           id,
           username
