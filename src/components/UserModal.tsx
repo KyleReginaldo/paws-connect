@@ -41,6 +41,16 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { userId, userRole } = useAuth();
 
+  // Permission helper
+  const canManageUser = (targetUserRole: number) => {
+    // Admins (role 1) can manage everyone
+    if (userRole === 1) return true;
+    // Staff (role 2) cannot manage admins (role 1)
+    if (userRole === 2 && targetUserRole === 1) return false;
+    // Staff can manage other staff and regular users
+    return userRole === 2;
+  };
+
   useEffect(() => {
     if (editingUser) {
       setFormData({
@@ -178,7 +188,41 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
               />
             </div>
 
-            {editingUser ? null : (
+            {editingUser ? (
+              // Show role field for editing if user has permission to manage this user
+              canManageUser(editingUser.role) ? (
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={formData.role.toString()}
+                    onValueChange={(value) => handleInputChange('role', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Only show Admin option to actual admins */}
+                      {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
+                      <SelectItem value="2">Staff</SelectItem>
+                      <SelectItem value="3">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                // Show read-only role display for admins that staff cannot edit
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Input
+                    value={
+                      editingUser.role === 1 ? 'Admin' : editingUser.role === 2 ? 'Staff' : 'User'
+                    }
+                    disabled
+                    className="bg-gray-100"
+                  />
+                </div>
+              )
+            ) : (
+              // For new users, show role selection
               <div className="space-y-2">
                 <Label htmlFor="role">Role *</Label>
                 <Select
@@ -208,9 +252,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="BANNED">Banned</SelectItem>
+                  <SelectItem value="FULLY_VERIFIED">Fully Verified</SelectItem>
+                  <SelectItem value="SEMI_VERIFIED">Semi Verified</SelectItem>
+                  <SelectItem value="INDEFINITE">Indefinite</SelectItem>
                 </SelectContent>
               </Select>
             </div>

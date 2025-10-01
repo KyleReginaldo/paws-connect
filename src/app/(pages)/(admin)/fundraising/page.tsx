@@ -376,7 +376,7 @@ const Fundraising = () => {
       if (!res.ok) {
         const parsed = resultRaw as { errors?: unknown; message?: string } | null;
         error('Import Failed', parsed?.message || 'Import failed. Check console for details.');
-        const details = parsed ? parsed.errors ?? parsed : 'No details';
+        const details = parsed ? (parsed.errors ?? parsed) : 'No details';
         console.error('Import errors:', details);
       } else {
         const parsed = resultRaw as { errors?: unknown[]; created?: number } | null;
@@ -407,17 +407,8 @@ const Fundraising = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-xl font-bold mb-2">Fundraising Campaigns</h1>
-        <p className="text-md text-muted-foreground">
-          Manage and track all fundraising campaigns for animal welfare.
-        </p>
-      </div>
-
-      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
+        <Card className="border-l-4 border-l-green-500">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
@@ -431,7 +422,7 @@ const Fundraising = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -445,7 +436,7 @@ const Fundraising = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -459,7 +450,7 @@ const Fundraising = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-orange-500">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 rounded-lg">

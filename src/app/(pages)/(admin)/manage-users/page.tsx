@@ -125,19 +125,13 @@ const ManageStaff = () => {
 
   // Calculate stats
   const totalUsers = users?.length || 0;
-  const activeUsers = users?.filter((user) => user.status === 'ACTIVE').length || 0;
+  const activeUsers =
+    users?.filter((user) => user.status === 'ACTIVE' || user.status === 'FULLY_VERIFIED').length ||
+    0;
   const adminUsers = users?.filter((user) => user.role === 1).length || 0;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-xl font-bold mb-2">User Management</h1>
-        <p className="text-md text-muted-foreground">
-          Manage all system users, staff members, and administrators. Control access, roles, and
-          user status.
-        </p>
-      </div>
-
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -224,6 +218,7 @@ const ManageStaff = () => {
             onEdit={openEditModal}
             onDelete={handleDeleteUser}
             onStatusChange={handleStatusChange}
+            currentUserRole={userRole || undefined}
           />
 
           <div className="flex items-center justify-between mt-4">

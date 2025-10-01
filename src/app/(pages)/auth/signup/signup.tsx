@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Eye, EyeOff, Loader2, Quote } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 interface FormData {
   email: string;
   password: string;
@@ -29,6 +30,7 @@ const Signup = () => {
   const { onSignup, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -37,6 +39,36 @@ const Signup = () => {
     phone_number: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const testimonials = [
+    {
+      text: 'I found my best friend through PawsConnect! The app made it so easy to browse pets and connect with shelters.',
+      author: 'Sarah M.',
+      role: 'Happy Pet Owner',
+    },
+    {
+      text: 'The donation feature is amazing! I can support multiple shelters and see exactly how my contributions help animals.',
+      author: 'Mike J.',
+      role: 'Animal Lover',
+    },
+    {
+      text: "PawsConnect's community features helped me connect with other pet owners in my area. Love this app!",
+      author: 'Emily R.',
+      role: 'Dog Mom',
+    },
+    {
+      text: 'The pet profiles are so detailed and the search filters helped me find the perfect match for our family.',
+      author: 'James K.',
+      role: 'Cat Dad',
+    },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [testimonials.length]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -101,7 +133,7 @@ const Signup = () => {
         formData.password,
         formData.username,
         2,
-        formData.phone_number,
+        '+63' + formData.phone_number,
         'PENDING',
       );
     } catch (error) {
@@ -110,8 +142,8 @@ const Signup = () => {
   };
   if (user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <Card className="w-full max-w-md">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 bg-[url('/pet_bg.png')] bg-cover bg-repeat">
+        <Card className="w-full max-w-md bg-[#ffffff] shadow-lg border border-green-500">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center text-green-600">
               Welcome!
@@ -130,7 +162,7 @@ const Signup = () => {
               onClick={() => {
                 window.location.href = '/dashboard';
               }}
-              className="w-full"
+              className="w-full bg-green-500 hover:bg-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-white"
             >
               Continue to Dashboard
             </Button>
@@ -141,8 +173,53 @@ const Signup = () => {
   }
   const isLoading = status === AuthStatus.authenticating;
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8 bg-[url('/pet_bg.png')] bg-cover bg-repeat relative">
+      {/* Floating Testimonials - Desktop Only */}
+      <div className="hidden lg:block absolute top-20 left-10 max-w-xs">
+        <Card className="bg-white/90 backdrop-blur-sm shadow-lg border-l-4 border-orange-500">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-2">
+              <Quote className="w-5 h-5 text-orange-500 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-gray-700 italic mb-2">
+                  {testimonials[currentTestimonial].text}
+                </p>
+                <div className="text-xs">
+                  <p className="font-semibold text-gray-800">
+                    {testimonials[currentTestimonial].author}
+                  </p>
+                  <p className="text-gray-600">{testimonials[currentTestimonial].role}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="hidden lg:block absolute bottom-20 right-10 max-w-xs">
+        <Card className="bg-white/90 backdrop-blur-sm shadow-lg border-l-4 border-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-2">
+              <Quote className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-gray-700 italic mb-2">
+                  {testimonials[(currentTestimonial + 2) % testimonials.length].text}
+                </p>
+                <div className="text-xs">
+                  <p className="font-semibold text-gray-800">
+                    {testimonials[(currentTestimonial + 2) % testimonials.length].author}
+                  </p>
+                  <p className="text-gray-600">
+                    {testimonials[(currentTestimonial + 2) % testimonials.length].role}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="w-full max-w-md bg-[#ffffff] shadow-lg border border-orange-500 relative z-10">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
           <CardDescription className="text-center">
@@ -184,15 +261,28 @@ const Signup = () => {
             {/* Phone Number Field */}
             <div className="space-y-2">
               <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                type="tel"
-                placeholder="09930162099"
-                value={formData.phone_number}
-                onChange={(e) => handleInputChange('phone_number', e.target.value)}
-                className={errors.phone_number ? 'border-red-500' : ''}
-                disabled={isLoading}
-              />
+              <div
+                className={cn(
+                  'flex items-center rounded-md border border-input has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-ring',
+                  isLoading && 'opacity-50 cursor-not-allowed',
+                )}
+              >
+                <span className="bg-transparent pl-3 pr-1 select-none text-[14px] text-gray-500">
+                  +63
+                </span>
+                <Input
+                  id="phone_number"
+                  type="tel"
+                  prefix="+63"
+                  maxLength={10}
+                  placeholder="9930162099"
+                  value={formData.phone_number}
+                  onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                  className={errors.phone_number ? 'border-red-500' : ''}
+                  disabled={isLoading}
+                />
+              </div>
+
               {errors.phone_number && <p className="text-sm text-red-500">{errors.phone_number}</p>}
             </div>
 
@@ -264,7 +354,11 @@ const Signup = () => {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full bg-orange-500 hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-white"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

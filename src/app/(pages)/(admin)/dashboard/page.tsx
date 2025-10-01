@@ -436,17 +436,9 @@ const Page = () => {
     }));
 
   return (
-    <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 pt-6 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
+    <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-400 bg-clip-text text-transparent break-words">
-            Dashboard
-          </h2>
-          <p className="text-muted-foreground text-base lg:text-lg break-words">
-            Welcome back! Here&apos;s what&apos;s happening with your pet adoption platform today.
-          </p>
-        </div>
         <div className="flex items-center space-x-2 flex-shrink-0">
           <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
             <PopoverTrigger asChild>

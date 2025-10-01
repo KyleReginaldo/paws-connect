@@ -1,5 +1,4 @@
 'use client';
-
 import { useAuth } from '@/app/context/AuthContext';
 import RouteGuard from '@/components/RouteGuard';
 import SideBarTile from '@/components/SideBarTile';
@@ -13,8 +12,10 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Dog, HandCoins, Heart, LayoutDashboard, PanelLeftIcon, UsersRound } from 'lucide-react';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import logoHorizontal from '../../../../public/logo_horizontal.png';
 import Pending from './pending/page';
 
 export default function RootLayout({
@@ -33,6 +34,40 @@ export default function RootLayout({
     setIsSheetOpen(false); // Close the sheet after navigation
   };
   console.log(user?.status);
+
+  const getTitle = () => {
+    switch (pathname) {
+      case '/dashboard':
+        return 'Dashboard';
+      case '/adoptions':
+        return 'Adoptions';
+      case '/manage-users':
+        return 'Manage Users';
+      case '/manage-pet':
+        return 'Manage Pets';
+      case '/fundraising':
+        return 'Fundraising';
+      default:
+        return '';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (pathname) {
+      case '/dashboard':
+        return 'Overview of key metrics and activities';
+      case '/adoptions':
+        return 'Manage and track pet adoptions';
+      case '/manage-users':
+        return 'View and manage user accounts';
+      case '/manage-pet':
+        return 'Add, update, or remove pet profiles';
+      case '/fundraising':
+        return 'Oversee fundraising campaigns and donations';
+      default:
+        return '';
+    }
+  };
   return user?.status === 'PENDING' ? (
     <Pending />
   ) : (
@@ -40,10 +75,8 @@ export default function RootLayout({
       <div className="flex h-screen bg-[#FFFCFB]">
         <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-[#333446]">
           <div>
-            <div className="flex justify-center">
-              <h1 className="p-[10px] font-semibold text-[#FE5D26] mb-[8px] text-[18px]">
-                {userRole === 1 ? 'Admin' : 'Staff'}
-              </h1>
+            <div className="flex flex-col justify-center items-center my-[32px]">
+              <Image src={logoHorizontal} alt="" height={30} />
             </div>
             <ul className="flex flex-col gap-[16px] text-[#3D3C42] w-full">
               <SideBarTile
@@ -166,8 +199,7 @@ export default function RootLayout({
                   </div>
                   <SheetFooter>
                     <Button
-                      variant="ghost"
-                      className="w-full text-left"
+                      className="w-full text-white"
                       onClick={async () => {
                         await signOut();
                         setIsSheetOpen(false);
@@ -184,7 +216,21 @@ export default function RootLayout({
             </div>
           </div>
 
-          <div className="p-4">{children}</div>
+          <div className="flex flex-col h-full">
+            <div className="flex justify-between mx-[16px] my-[10px] items-start">
+              <div>
+                <p className="text-2xl font-semibold text-gray-900">{getTitle()}</p>
+                <p className="text-[14px] font-light text-gray-700">{getSubtitle()}</p>
+              </div>
+              <div
+                className={`${userRole === 1 ? 'bg-orange-500' : 'bg-red-500'} self-start flex gap-[4px] items-center py-[6px] px-[16px] rounded-2xl text-[10px] text-white`}
+              >
+                <div className="rounded-full h-[5px] w-[5px] bg-white"></div>{' '}
+                {userRole === 1 ? 'ADMIN' : 'STAFF'}
+              </div>
+            </div>
+            <div className="p-4">{children}</div>
+          </div>
         </div>
       </div>
     </RouteGuard>

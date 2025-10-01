@@ -24,9 +24,16 @@ interface UserTableProps {
   onEdit?: (user: User) => void;
   onDelete?: (userId: string) => void;
   onStatusChange?: (userId: string, status: string) => void;
+  currentUserRole?: number; // Add current user role for permission checks
 }
 
-export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTableProps) {
+export function UserTable({
+  users,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  currentUserRole,
+}: UserTableProps) {
   if (users.length === 0) {
     return (
       <div className="text-center py-12">
@@ -36,6 +43,16 @@ export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTable
       </div>
     );
   }
+
+  // Permission helper
+  const canManageUser = (targetUserRole: number) => {
+    // Admins (role 1) can manage everyone
+    if (currentUserRole === 1) return true;
+    // Staff (role 2) cannot manage admins (role 1)
+    if (currentUserRole === 2 && targetUserRole === 1) return false;
+    // Staff can manage other staff and regular users
+    return currentUserRole === 2;
+  };
 
   const getRoleText = (role: number) => {
     switch (role) {
@@ -53,11 +70,17 @@ export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTable
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
+      case 'fully_verified':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'semi_verified':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'inactive':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'banned':
+      case 'indefinite':
         return 'bg-red-100 text-red-800 border-red-200';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -125,40 +148,58 @@ export function UserTable({ users, onEdit, onDelete, onStatusChange }: UserTable
                 <div className="text-sm">{formatDate(user.created_at)}</div>
               </TableCell>
               <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {user.role !== 1 ? (
-                      <DropdownMenuItem onClick={() => onEdit?.(user)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                    ) : null}
-                    {user.status !== 'ACTIVE' && (
-                      <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'ACTIVE')}>
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        Activate
-                      </DropdownMenuItem>
-                    )}
-                    {user.status !== 'BANNED' && (
-                      <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'BANNED')}>
-                        <UserX className="h-4 w-4 mr-2" />
-                        Ban User
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem
-                      onClick={() => onDelete?.(user.id)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {user.role !== 1 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {canManageUser(user.role) && (
+                        <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {canManageUser(user.role) && user.status !== 'FULLY_VERIFIED' && (
+                        <DropdownMenuItem
+                          onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
+                        >
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Fully Verify
+                        </DropdownMenuItem>
+                      )}
+                      {canManageUser(user.role) &&
+                        user.role === 3 &&
+                        user.status !== 'SEMI_VERIFIED' &&
+                        user.status !== 'FULLY_VERIFIED' && (
+                          <DropdownMenuItem
+                            onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Semi Verified
+                          </DropdownMenuItem>
+                        )}
+                      {canManageUser(user.role) && user.status !== 'INDEFINITE' && (
+                        <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}>
+                          <UserX className="h-4 w-4 mr-2" />
+                          Indefinite
+                        </DropdownMenuItem>
+                      )}
+                      {canManageUser(user.role) &&
+                        (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
+                          <DropdownMenuItem
+                            onClick={() => onDelete?.(user.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
               </TableCell>
             </TableRow>
           ))}

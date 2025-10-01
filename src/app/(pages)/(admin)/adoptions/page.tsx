@@ -225,13 +225,6 @@ const AdoptionsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Adoption Applications</h1>
-        <p className="text-gray-600">Manage and track all pet adoption applications</p>
-      </div>
-
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

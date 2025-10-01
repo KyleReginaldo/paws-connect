@@ -191,14 +191,6 @@ export default function PetManagement() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-xl font-bold mb-2">Pet Management</h1>
-        <p className="text-md text-muted-foreground">
-          Manage all your pets in one place. Keep track of their information, medical records, and
-          important details.
-        </p>
-      </div>
-
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

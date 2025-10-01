@@ -87,6 +87,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [lastFailedFile, setLastFailedFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -94,13 +96,46 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const validateFile = (file: File): string | null => {
     const maxSize = 5 * 1024 * 1024; // 5MB
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
-    if (!allowedTypes.includes(file.type)) {
-      return 'Please upload a valid image file (JPEG, PNG, or WebP)';
+    if (!file) {
+      return 'No file selected';
+    }
+
+    if (file.size === 0) {
+      return 'File appears to be empty or corrupted';
     }
 
     if (file.size > maxSize) {
-      return 'Image size must be less than 5MB';
+      return `Image size (${(file.size / 1024 / 1024).toFixed(2)}MB) must be less than 5MB`;
+    }
+
+    // Check file type
+    const fileType = file.type.toLowerCase();
+    if (!allowedTypes.includes(fileType)) {
+      return `File type '${file.type}' is not supported. Please upload JPEG, JPG, PNG, or WebP images only.`;
+    }
+
+    // Check file extension as backup
+    const fileName = file.name.toLowerCase();
+    const fileExtension = fileName.split('.').pop() || '';
+    if (!allowedExtensions.includes(fileExtension)) {
+      return `File extension '.${fileExtension}' is not supported. Please use .jpg, .jpeg, .png, or .webp files.`;
+    }
+
+    // Check for valid file name
+    if (!file.name || file.name.length < 3 || file.name.length > 255) {
+      return 'Invalid file name. Please choose a file with a proper name.';
+    }
+
+    // Check for suspicious file patterns
+    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+      return 'Invalid characters in file name';
+    }
+
+    // Basic file corruption check - very small files are likely corrupted
+    if (file.size < 100) {
+      return 'File is too small and may be corrupted. Please choose a different image.';
     }
 
     return null;
@@ -127,32 +162,141 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return Object.keys(errors).length === 0;
   };
 
-  const handleFileUpload = async (file: File) => {
-    const error = validateFile(file);
-    if (error) {
-      setUploadError(error);
+  const handleFileUpload = async (file: File, retryCount = 0) => {
+    const validationError = validateFile(file);
+    if (validationError) {
+      setUploadError(validationError);
+      setLastFailedFile(null);
       return;
     }
+
     setUploadError('');
-    // Upload to Supabase storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${uuidv4()}.${fileExt}`;
-    const filePath = `pets/${fileName}`;
-    const { error: uploadError } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-    if (uploadError) {
-      setUploadError(`Failed to upload image: ${uploadError.message}`);
-      return;
+    setIsUploading(true);
+    setLastFailedFile(file);
+
+    try {
+      // Method 1: Try using the API route first (better for cross-browser compatibility)
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        const response = await fetch('/api/v1/pets/upload', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          throw new Error(`Upload failed: ${response.status} ${response.statusText}. ${errorText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.url) {
+          console.log('Photo uploaded successfully via API:', result.url);
+          setPhotoPreview(result.url);
+          handleInputChange('photo', result.url);
+          setValidationErrors((prev) => ({ ...prev, photo: '' }));
+          setLastFailedFile(null);
+          setIsUploading(false);
+
+          // Force a small delay to ensure state updates properly
+          setTimeout(() => {
+            console.log('Photo preview state after upload:', result.url);
+          }, 100);
+
+          return;
+        } else {
+          throw new Error('No URL returned from upload API');
+        }
+      } catch (apiError) {
+        console.warn('API upload failed, trying direct Supabase upload:', apiError);
+
+        // Check if it's a network error
+        const isNetworkError =
+          apiError instanceof Error &&
+          (apiError.name === 'AbortError' ||
+            apiError.message.includes('fetch') ||
+            apiError.message.includes('network') ||
+            apiError.message.includes('timeout'));
+
+        if (isNetworkError && retryCount < 2) {
+          // Retry for network errors
+          setUploadError(`Network error, retrying... (${retryCount + 1}/3)`);
+          setTimeout(() => {
+            handleFileUpload(file, retryCount + 1);
+          }, 2000);
+          return;
+        }
+
+        // Method 2: Fallback to direct Supabase upload
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileName = `${Date.now()}-${uuidv4()}.${fileExt}`;
+        const filePath = `pets/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(SUPABASE_BUCKET)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(`Supabase upload failed: ${uploadError.message}`);
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
+        const publicUrl = urlData?.publicUrl;
+
+        if (!publicUrl) {
+          throw new Error('Failed to get public URL from Supabase');
+        }
+
+        console.log('Photo uploaded successfully via Supabase:', publicUrl);
+        setPhotoPreview(publicUrl);
+        handleInputChange('photo', publicUrl);
+        setValidationErrors((prev) => ({ ...prev, photo: '' }));
+        setLastFailedFile(null);
+      }
+    } catch (error) {
+      console.error('Photo upload failed:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (
+        retryCount < 2 &&
+        (errorMessage.includes('network') ||
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('fetch'))
+      ) {
+        setUploadError(`Upload failed, retrying... (${retryCount + 1}/3)`);
+        setTimeout(() => {
+          handleFileUpload(file, retryCount + 1);
+        }, 2000);
+        return;
+      }
+
+      setUploadError(
+        `Upload failed: ${errorMessage}. Please check your internet connection and try again.`,
+      );
+    } finally {
+      if (retryCount === 0) {
+        setIsUploading(false);
+      }
     }
-    // Get public URL
-    const { data: urlData } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
-    const publicUrl = urlData?.publicUrl || '';
-    setPhotoPreview(publicUrl);
-    handleInputChange('photo', publicUrl);
+  };
+
+  const retryUpload = () => {
+    if (lastFailedFile) {
+      handleFileUpload(lastFailedFile);
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,15 +304,19 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     if (file) {
       await handleFileUpload(file);
     }
+    // Reset input value to allow selecting the same file again if needed
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
 
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleFileUpload(file);
+      await handleFileUpload(file);
     }
   };
 
@@ -183,14 +331,28 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   };
 
   const removePhoto = () => {
+    console.log('Removing photo, current preview:', photoPreview);
     setPhotoPreview('');
     setUploadError('');
+    setLastFailedFile(null);
     handleInputChange('photo', '');
+    // Clear any validation errors
+    setValidationErrors((prev) => ({ ...prev, photo: '' }));
+  };
+
+  const resetUploadStates = () => {
+    setUploadError('');
+    setIsUploading(false);
+    setLastFailedFile(null);
+    setValidationErrors({});
   };
 
   useEffect(() => {
     console.log(`user in modal: ${userId}`);
+    console.log('Modal opened, editingPet:', editingPet);
+
     if (editingPet) {
+      console.log('Setting up form for editing pet, photo:', editingPet.photo);
       setFormData({
         name: editingPet.name || '',
         type: editingPet.type || '',
@@ -213,8 +375,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         photo: editingPet.photo || '',
       });
       setBirthDate(editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined);
-      setPhotoPreview(editingPet.photo || '');
+      const photoUrl = editingPet.photo || '';
+      console.log('Setting photo preview to:', photoUrl);
+      setPhotoPreview(photoUrl);
     } else {
+      console.log('Setting up form for new pet');
       // Reset form for new pet
       setFormData({
         name: '',
@@ -241,8 +406,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setBirthDate(undefined);
       setPhotoPreview('');
     }
-    setUploadError('');
-    setValidationErrors((prev) => ({ ...prev, photo: '' })); // Clear photo error when image is uploaded
+    resetUploadStates();
     // Load draft from session storage if exists (only for new pet)
     try {
       if (!editingPet) {
@@ -268,6 +432,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission while uploading
+    if (isUploading) {
+      setUploadError('Please wait for the photo upload to complete before submitting.');
+      return;
+    }
 
     // Validate form before submission
     if (!validateForm()) {
@@ -307,6 +477,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   };
 
   const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
+    if (field === 'photo') {
+      console.log('Updating photo field:', value);
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear validation error for this field
     if (validationErrors[field]) {
@@ -611,15 +784,32 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
           {/* Photo Upload */}
           <div className="space-y-2">
             <Label>Pet Photo *</Label>
-            {photoPreview ? (
+            {isUploading ? (
+              <div className="border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-6 text-center">
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <p className="text-sm text-blue-700">Uploading photo...</p>
+                  <p className="text-xs text-blue-600">Please wait, this may take a moment</p>
+                </div>
+              </div>
+            ) : photoPreview ? (
               <div className="space-y-3">
                 <div className="relative inline-block">
                   <Image
-                    src={photoPreview || '/placeholder.svg'}
+                    key={photoPreview} // Force re-render when photo changes
+                    src={photoPreview}
                     alt="Pet preview"
                     width={128}
                     height={128}
                     className="w-32 h-32 object-cover rounded-lg border"
+                    onError={(e) => {
+                      console.error('Failed to load image:', photoPreview);
+                      // Fallback to placeholder if image fails to load
+                      e.currentTarget.src = '/empty_pet.png';
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully:', photoPreview);
+                    }}
                   />
                   <Button
                     type="button"
@@ -627,11 +817,18 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                     size="sm"
                     className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
                     onClick={removePhoto}
+                    disabled={isUploading}
                   >
                     ×
                   </Button>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={removePhoto}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={removePhoto}
+                  disabled={isUploading}
+                >
                   Change Photo
                 </Button>
               </div>
@@ -640,7 +837,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                   isDragOver
                     ? 'border-primary bg-primary/5'
-                    : validationErrors.photo
+                    : validationErrors.photo || uploadError
                       ? 'border-red-500 bg-red-50'
                       : 'border-muted-foreground/25 hover:border-muted-foreground/50'
                 }`}
@@ -653,7 +850,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   Drag and drop a photo here, or click to browse
                 </p>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Supports JPEG, PNG, WebP up to 5MB
+                  Supports JPEG, JPG, PNG, WebP up to 5MB
                 </p>
                 <div className="relative flex justify-center">
                   <Button
@@ -661,8 +858,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                     variant="outline"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
                   >
-                    Choose File
+                    {isUploading ? 'Uploading...' : 'Choose File'}
                   </Button>
                   <input
                     ref={fileInputRef}
@@ -670,13 +868,57 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleFileSelect}
                     style={{ display: 'none' }}
+                    disabled={isUploading}
                   />
                 </div>
               </div>
             )}
-            {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
+            {uploadError && (
+              <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800">Upload Error</p>
+                  <p className="text-sm text-red-700">{uploadError}</p>
+                  {lastFailedFile && !isUploading && (
+                    <div className="mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={retryUpload}
+                        className="bg-white hover:bg-gray-50"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {validationErrors.photo && (
-              <p className="text-sm text-red-500">{validationErrors.photo}</p>
+              <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800">Required Field</p>
+                  <p className="text-sm text-red-700">{validationErrors.photo}</p>
+                </div>
+              </div>
             )}
           </div>
 
@@ -693,10 +935,21 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
           </div>
 
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isUploading}
+            >
               Cancel
             </Button>
-            <Button type="submit">{editingPet ? 'Update Pet' : 'Add Pet'}</Button>
+            <Button
+              type="submit"
+              disabled={isUploading}
+              className={isUploading ? 'opacity-50 cursor-not-allowed' : ''}
+            >
+              {isUploading ? 'Uploading Photo...' : editingPet ? 'Update Pet' : 'Add Pet'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
