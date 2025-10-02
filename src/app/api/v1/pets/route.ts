@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   try {
   // Start building the query
   // Use an estimated count by default to avoid the expensive exact count on large tables
-  let query = supabase.from('pets').select('*, photo', { count: 'estimated' });
+  let query = supabase.from('pets').select('*, photo, adoption(*, users(*))', { count: 'estimated' });
 
     // Apply filters based on query parameters
     if (type) {
@@ -139,12 +139,22 @@ export async function GET(request: Request) {
 
     // If a user id was provided, compute favorite flags per pet.
     // We now populate both isFavorite (preferred) and is_favorite (deprecated) for backward compatibility.
-    let responseData: (Pet & { is_favorite?: boolean })[] | null = data as (Pet & {
+    let responseData: (Pet & { is_favorite?: boolean; adopted?: boolean })[] | null = data as (Pet & {
       is_favorite?: boolean;
+      adopted?: boolean;
     })[] | null;
-    if (user && Array.isArray(data) && data.length > 0) {
+    
+    // Add adopted field to all pets
+    if (Array.isArray(data)) {
+      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null }> }>).map((pet) => {
+        const adopted = Array.isArray(pet.adoption) ? pet.adoption.some((adoption) => adoption.status === 'APPROVED') : false;
+        return { ...pet, adopted };
+      });
+    }
+    
+    if (user && Array.isArray(responseData) && responseData.length > 0) {
       try {
-        const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
+        const petIds = responseData.map((p) => p.id).filter(Boolean);
         let favoriteSet = new Set<number>();
         if (petIds.length > 0) {
           const { data: favs } = await supabase
@@ -157,9 +167,9 @@ export async function GET(request: Request) {
           favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
         }
         // If no petIds or favorites lookup failed/empty, favoriteSet remains empty
-        responseData = (data as Array<Pet>).map((p) => {
+        responseData = responseData.map((p) => {
           const fav = favoriteSet.has(p.id);
-            return { ...p, isFavorite: fav, is_favorite: fav };
+          return { ...p, isFavorite: fav, is_favorite: fav };
         });
       } catch (e) {
         // If favorites lookup fails, fall back to original data and continue

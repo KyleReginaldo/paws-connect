@@ -278,6 +278,7 @@ export type Database = {
           id: number
           image_url: string | null
           message: string | null
+          reactions: Json[] | null
           replied_to: number | null
           sender: string | null
           sent_at: string
@@ -288,6 +289,7 @@ export type Database = {
           id?: number
           image_url?: string | null
           message?: string | null
+          reactions?: Json[] | null
           replied_to?: number | null
           sender?: string | null
           sent_at?: string
@@ -298,6 +300,7 @@ export type Database = {
           id?: number
           image_url?: string | null
           message?: string | null
+          reactions?: Json[] | null
           replied_to?: number | null
           sender?: string | null
           sent_at?: string
@@ -573,6 +576,7 @@ export type Database = {
           id_name: string
           id_number: string
           id_type: Database["public"]["Enums"]["id_types"] | null
+          status: Database["public"]["Enums"]["id_status"] | null
           user: string | null
         }
         Insert: {
@@ -583,6 +587,7 @@ export type Database = {
           id_name: string
           id_number: string
           id_type?: Database["public"]["Enums"]["id_types"] | null
+          status?: Database["public"]["Enums"]["id_status"] | null
           user?: string | null
         }
         Update: {
@@ -593,6 +598,7 @@ export type Database = {
           id_name?: string
           id_number?: string
           id_type?: Database["public"]["Enums"]["id_types"] | null
+          status?: Database["public"]["Enums"]["id_status"] | null
           user?: string | null
         }
         Relationships: [
@@ -688,6 +694,7 @@ export type Database = {
         | "COMPLETE"
         | "REJECTED"
         | "CANCELLED"
+      id_status: "PENDING" | "ACCEPTED" | "REJECTED"
       id_types:
         | "PHILSYS_ID"
         | "PASSPORT"
@@ -856,6 +863,7 @@ export const Constants = {
         "REJECTED",
         "CANCELLED",
       ],
+      id_status: ["PENDING", "ACCEPTED", "REJECTED"],
       id_types: [
         "PHILSYS_ID",
         "PASSPORT",

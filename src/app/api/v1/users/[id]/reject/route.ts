@@ -6,10 +6,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     await supabase.from('user_identification').update({
-      status: 'ACCEPTED',
+      status: 'REJECTED',
     }).eq('user',id);
     const {data, error} = await supabase.from('users').update({
-      status: 'FULLY_VERIFIED'
+      status: 'PENDING'
     }).eq('id',id).select().single();
    if(error){
      return createErrorResponse('Failed to update user status', 400, error.message);
