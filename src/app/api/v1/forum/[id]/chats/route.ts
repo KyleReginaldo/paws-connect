@@ -73,7 +73,16 @@ export async function GET(request: NextRequest, context: any) {
         image_url,
         sent_at,
         sender,
-        replied_to(*),
+        replied_to(
+          id,
+          forum,
+          sender,
+          message,
+          sent_at,
+          viewers,
+          image_url,
+          reactions
+        ),
         reactions,
         users!forum_chats_sender_fkey (
           id,
@@ -223,7 +232,16 @@ export async function POST(request: NextRequest, context: any) {
         image_url,
         sent_at,
         sender,
-        replied_to(*),
+        replied_to(
+          id,
+          forum,
+          sender,
+          message,
+          sent_at,
+          viewers,
+          image_url,
+          reactions
+        ),
         users!forum_chats_sender_fkey (
           id,
           username
