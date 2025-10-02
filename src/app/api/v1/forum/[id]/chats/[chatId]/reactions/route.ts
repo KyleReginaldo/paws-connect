@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Chat message not found' }), { status: 404 });
     }
 
-    // Get current reactions from the chat message
+    // Fast single query to get reactions
     const { data: chatData, error: chatDataError } = await supabase
       .from('forum_chats')
       .select('reactions')
@@ -86,28 +86,19 @@ export async function GET(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: chatDataError.message }), { status: 500 });
     }
 
-    // Parse reactions (stored as array of objects: [{ emoji: "😀", users: ["user1", "user2"] }])
     const reactions = (chatData as any)?.reactions || [];
 
-    // Group reactions by emoji and count them
+    // Fast processing - minimal operations
     const reactionSummary: Record<string, { count: number; users: string[] }> = {};
-    
-    if (Array.isArray(reactions)) {
-      reactions.forEach((reaction: any) => {
-        if (reaction.emoji && Array.isArray(reaction.users)) {
-          reactionSummary[reaction.emoji] = {
-            count: reaction.users.length,
-            users: reaction.users,
-          };
-        }
-      });
-    }
-
-    // Convert to object format for easier frontend consumption
     const reactionsObject: Record<string, string[]> = {};
+    
     reactions.forEach((reaction: any) => {
-      if (reaction.emoji && Array.isArray(reaction.users)) {
+      if (reaction.emoji && reaction.users) {
         reactionsObject[reaction.emoji] = reaction.users;
+        reactionSummary[reaction.emoji] = {
+          count: reaction.users.length,
+          users: reaction.users,
+        };
       }
     });
 
@@ -171,61 +162,57 @@ export async function POST(request: NextRequest, context: any) {
 
     const { user_id, reaction } = parsed.data;
 
-    // Check forum exists and get privacy setting
-    const { data: forum, error: forumError } = await supabase
-      .from('forum')
-      .select('id, private, created_by')
-      .eq('id', forumId)
-      .single();
+    // Fast permission and validation check - combine queries for speed
+    const [forumResult, userResult, chatResult] = await Promise.all([
+      supabase
+        .from('forum')
+        .select('id, private, created_by')
+        .eq('id', forumId)
+        .single(),
+      supabase
+        .from('users')
+        .select('id')
+        .eq('id', user_id)
+        .single(),
+      supabase
+        .from('forum_chats')
+        .select('id, forum')
+        .eq('id', chatId)
+        .eq('forum', forumId)
+        .single()
+    ]);
+
+    const { data: forum, error: forumError } = forumResult;
+    const { data: user, error: userError } = userResult;
+    const { data: chat, error: chatError } = chatResult;
 
     if (forumError || !forum) {
       return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
     }
-
-    // Check access for private forums
-    if (forum.private) {
-      const isCreator = forum.created_by === user_id;
-
-      if (!isCreator) {
-        const { data: membership } = await supabase
-          .from('forum_members')
-          .select('id')
-          .eq('forum', forumId)
-          .eq('member', user_id)
-          .single();
-
-        if (!membership) {
-          return new Response(JSON.stringify({ error: 'Access denied to private forum' }), {
-            status: 403,
-          });
-        }
-      }
-    }
-
-    // Verify user exists
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, username')
-      .eq('id', user_id)
-      .single();
-
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
-
-    // Verify chat message exists in this forum
-    const { data: chat, error: chatError } = await supabase
-      .from('forum_chats')
-      .select('id, forum')
-      .eq('id', chatId)
-      .eq('forum', forumId)
-      .single();
-
     if (chatError || !chat) {
       return new Response(JSON.stringify({ error: 'Chat message not found' }), { status: 404 });
     }
 
-    // Check if user already reacted with this emoji by getting current reactions
+    // Check private forum access only if needed
+    if (forum.private && forum.created_by !== user_id) {
+      const { data: membership } = await supabase
+        .from('forum_members')
+        .select('id')
+        .eq('forum', forumId)
+        .eq('member', user_id)
+        .single();
+
+      if (!membership) {
+        return new Response(JSON.stringify({ error: 'Access denied to private forum' }), {
+          status: 403,
+        });
+      }
+    }
+
+    // Get current reactions and update in one operation for speed
     const { data: currentChat, error: currentChatError } = await supabase
       .from('forum_chats')
       .select('reactions')
@@ -238,67 +225,76 @@ export async function POST(request: NextRequest, context: any) {
 
     const currentReactions = (currentChat as any)?.reactions || [];
     
-    // Check if user already reacted with this emoji
-    let existingReactionIndex = -1;
-    if (Array.isArray(currentReactions)) {
-      existingReactionIndex = currentReactions.findIndex((r: any) => 
-        r.emoji === reaction && Array.isArray(r.users) && r.users.includes(user_id)
-      );
-    }
+    // Check if user already has this exact emoji reaction
+    const existingReactionIndex = currentReactions.findIndex((r: any) => 
+      r.emoji === reaction && r.users.includes(user_id)
+    );
+
+    let updatedReactions = [...currentReactions];
+    let actionTaken = '';
 
     if (existingReactionIndex !== -1) {
-      return new Response(
-        JSON.stringify({ error: 'User has already reacted with this emoji' }), 
-        { status: 409 }
-      );
-    }
-
-    // Add the user's reaction
-    const updatedReactions = [...currentReactions];
-    const reactionIndex = updatedReactions.findIndex((r: any) => r.emoji === reaction);
-    
-    if (reactionIndex !== -1) {
-      // Add user to existing emoji reaction
-      updatedReactions[reactionIndex].users.push(user_id);
+      // User clicked same emoji - remove their reaction (toggle off)
+      const updatedUsers = updatedReactions[existingReactionIndex].users.filter((id: string) => id !== user_id);
+      
+      if (updatedUsers.length === 0) {
+        // Remove entire emoji if no users remain
+        updatedReactions.splice(existingReactionIndex, 1);
+      } else {
+        updatedReactions[existingReactionIndex].users = updatedUsers;
+      }
+      actionTaken = 'removed';
     } else {
-      // Create new emoji reaction
-      updatedReactions.push({
-        emoji: reaction,
-        users: [user_id]
-      });
+      // User clicked different emoji or no previous reaction - add new reaction
+      // First remove user from any existing reactions (one reaction per user rule)
+      updatedReactions = updatedReactions.map((r: any) => ({
+        ...r,
+        users: r.users.filter((userId: string) => userId !== user_id)
+      })).filter((r: any) => r.users.length > 0); // Remove empty emoji reactions
+
+      // Add the user's new reaction
+      const newReactionIndex = updatedReactions.findIndex((r: any) => r.emoji === reaction);
+      
+      if (newReactionIndex !== -1) {
+        // Add user to existing emoji reaction
+        updatedReactions[newReactionIndex].users.push(user_id);
+      } else {
+        // Create new emoji reaction
+        updatedReactions.push({
+          emoji: reaction,
+          users: [user_id]
+        });
+      }
+      actionTaken = 'added';
     }
 
-    // Update the forum_chats table with new reactions (cast for type safety)
+    // Single database update for maximum speed
     const { data, error } = await supabase
       .from('forum_chats')
       .update({ reactions: updatedReactions } as any)
       .eq('id', chatId)
-      .select(`
-        id,
-        reactions
-      `)
+      .select('reactions')
       .single();
 
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    // Convert array format to object format for response
-    const reactionsObject: Record<string, string[]> = {};
+    // Fast response - minimal data processing
     const responseReactions = (data as any)?.reactions || [];
-    if (Array.isArray(responseReactions)) {
-      responseReactions.forEach((r: any) => {
-        if (r.emoji && Array.isArray(r.users)) {
-          reactionsObject[r.emoji] = r.users;
-        }
-      });
-    }
+    const reactionsObject: Record<string, string[]> = {};
+    responseReactions.forEach((r: any) => {
+      if (r.emoji && r.users) {
+        reactionsObject[r.emoji] = r.users;
+      }
+    });
 
     return new Response(JSON.stringify({ 
       data: { 
         chat_id: chatId,
         user_id,
         reaction,
+        action: actionTaken, // 'added' or 'removed'
         reactions: reactionsObject
       } 
     }), {
@@ -331,13 +327,9 @@ export async function DELETE(request: NextRequest, context: any) {
 
     const url = new URL(request.url);
     const userId = url.searchParams.get('user_id');
-    const reactionEmoji = url.searchParams.get('reaction');
 
     if (!userId) {
       return new Response(JSON.stringify({ error: 'user_id is required' }), { status: 400 });
-    }
-    if (!reactionEmoji) {
-      return new Response(JSON.stringify({ error: 'reaction is required' }), { status: 400 });
     }
 
     // Check forum exists and get privacy setting
@@ -383,7 +375,7 @@ export async function DELETE(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Chat message not found' }), { status: 404 });
     }
 
-    // Get current reactions from the chat message
+    // Get current reactions and remove user from all emojis (fast operation)
     const { data: currentChat, error: currentChatError } = await supabase
       .from('forum_chats')
       .select('reactions')
@@ -396,33 +388,32 @@ export async function DELETE(request: NextRequest, context: any) {
 
     const currentReactions = (currentChat as any)?.reactions || [];
     
-    // Find the reaction to remove
-    let reactionIndex = -1;
-    let userFound = false;
+    // Find which emoji the user reacted with and remove them from all reactions
+    let userHadReaction = false;
+    let removedFromEmoji = '';
     
-    if (Array.isArray(currentReactions)) {
-      reactionIndex = currentReactions.findIndex((r: any) => r.emoji === reactionEmoji);
-      if (reactionIndex !== -1 && Array.isArray(currentReactions[reactionIndex].users)) {
-        userFound = currentReactions[reactionIndex].users.includes(userId);
-      }
-    }
+    const updatedReactions = currentReactions
+      .map((r: any) => {
+        const originalLength = r.users.length;
+        const filteredUsers = r.users.filter((id: string) => id !== userId);
+        
+        if (filteredUsers.length < originalLength) {
+          userHadReaction = true;
+          removedFromEmoji = r.emoji;
+        }
+        
+        return {
+          ...r,
+          users: filteredUsers
+        };
+      })
+      .filter((r: any) => r.users.length > 0); // Remove empty emoji reactions
     
-    if (reactionIndex === -1 || !userFound) {
-      return new Response(JSON.stringify({ error: 'Reaction not found' }), { status: 404 });
+    if (!userHadReaction) {
+      return new Response(JSON.stringify({ error: 'User has no reaction to remove' }), { status: 404 });
     }
 
-    // Remove the user from the reaction
-    const updatedReactions = [...currentReactions];
-    const updatedUserList = updatedReactions[reactionIndex].users.filter((id: string) => id !== userId);
-    
-    if (updatedUserList.length === 0) {
-      // Remove the entire emoji if no users remain
-      updatedReactions.splice(reactionIndex, 1);
-    } else {
-      updatedReactions[reactionIndex].users = updatedUserList;
-    }
-
-    // Update the forum_chats table with new reactions
+    // Fast single update
     const { data: deletedReaction, error } = await supabase
       .from('forum_chats')
       .update({ reactions: updatedReactions } as any)
@@ -434,23 +425,21 @@ export async function DELETE(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    // Convert array format to object format for response
-    const reactionsObject: Record<string, string[]> = {};
+    // Fast response processing
     const responseReactions = (deletedReaction as any)?.reactions || [];
-    if (Array.isArray(responseReactions)) {
-      responseReactions.forEach((r: any) => {
-        if (r.emoji && Array.isArray(r.users)) {
-          reactionsObject[r.emoji] = r.users;
-        }
-      });
-    }
+    const reactionsObject: Record<string, string[]> = {};
+    responseReactions.forEach((r: any) => {
+      if (r.emoji && r.users) {
+        reactionsObject[r.emoji] = r.users;
+      }
+    });
 
     return new Response(JSON.stringify({ 
       message: 'Reaction removed successfully', 
       data: { 
         chat_id: chatId,
         user_id: userId,
-        reaction: reactionEmoji,
+        reaction: removedFromEmoji,
         reactions: reactionsObject
       } 
     }), {

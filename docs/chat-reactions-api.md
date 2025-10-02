@@ -43,9 +43,9 @@ GET /api/v1/forum/[id]/chats/[chatId]/reactions?user_id={userId}
 }
 ```
 
-### POST - Add a reaction to a chat message
+### POST - Add/Remove a reaction to a chat message
 
-```
+```http
 POST /api/v1/forum/[id]/chats/[chatId]/reactions
 Content-Type: application/json
 ```
@@ -64,7 +64,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**Response (when adding):**
 
 ```json
 {
@@ -72,6 +72,7 @@ Content-Type: application/json
     "chat_id": 123,
     "user_id": "uuid-string",
     "reaction": "😀",
+    "action": "added",
     "reactions": {
       "😀": ["user-id-1", "user-id-2"],
       "👍": ["user-id-3"]
@@ -80,10 +81,26 @@ Content-Type: application/json
 }
 ```
 
-### DELETE - Remove a reaction from a chat message
+**Response (when removing - toggle):**
+
+```json
+{
+  "data": {
+    "chat_id": 123,
+    "user_id": "uuid-string",
+    "reaction": "😀",
+    "action": "removed",
+    "reactions": {
+      "👍": ["user-id-3"]
+    }
+  }
+}
+```
+
+### DELETE - Remove a user's reaction from a chat message
 
 ```
-DELETE /api/v1/forum/[id]/chats/[chatId]/reactions?user_id={userId}&reaction={emoji}
+DELETE /api/v1/forum/[id]/chats/[chatId]/reactions?user_id={userId}
 ```
 
 **Parameters:**
@@ -91,7 +108,6 @@ DELETE /api/v1/forum/[id]/chats/[chatId]/reactions?user_id={userId}&reaction={em
 - `id` (path): Forum ID
 - `chatId` (path): Chat message ID
 - `user_id` (query): User ID who wants to remove their reaction
-- `reaction` (query): The emoji reaction to remove
 
 **Response:**
 
@@ -176,7 +192,7 @@ The API returns reactions in a more convenient object format for frontend consum
 ### JavaScript/TypeScript
 
 ```javascript
-// Add a reaction
+// Add a reaction (or remove if clicking same emoji - toggle behavior)
 const response = await fetch('/api/v1/forum/1/chats/123/reactions', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -186,18 +202,25 @@ const response = await fetch('/api/v1/forum/1/chats/123/reactions', {
   }),
 });
 
+const result = await response.json();
+console.log(result.data.action); // 'added' or 'removed'
+
 // Get all reactions
 const reactions = await fetch('/api/v1/forum/1/chats/123/reactions?user_id=user-uuid');
 
-// Remove a reaction
-await fetch('/api/v1/forum/1/chats/123/reactions?user_id=user-uuid&reaction=😀', {
+// Remove user's reaction (removes any emoji the user reacted with)
+await fetch('/api/v1/forum/1/chats/123/reactions?user_id=user-uuid', {
   method: 'DELETE',
 });
 ```
 
 ## Notes
 
-- Users can only have one reaction per emoji per message
+- **Toggle behavior**: Clicking the same emoji twice will add then remove the reaction
+- **One reaction per user**: Users can only have one reaction per message. Sending a different emoji replaces the old one.
+- **Fast performance**: Optimized with minimal database queries and parallel operations for speed.
 - Reactions are automatically removed if it would be the last user for that emoji
 - Private forum access is checked for all operations
 - The API validates user existence and forum membership for private forums
+- DELETE removes the user's reaction regardless of which emoji they used
+- POST response includes an `action` field indicating whether the reaction was "added" or "removed"
