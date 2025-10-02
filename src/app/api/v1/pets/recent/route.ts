@@ -60,14 +60,15 @@ export async function GET(request: NextRequest) {
 
     // If a user id was provided, annotate each pet with isFavorite
     const user = request.nextUrl.searchParams.get('user');
-    let responseData: (Pet & { is_favorite?: boolean; adopted?: boolean })[] = (data || []) as (
-      Pet & { is_favorite?: boolean; adopted?: boolean }
+    let responseData: (Pet & { is_favorite?: boolean; adopted?: boolean | Record<string, unknown> })[] = (data || []) as (
+      Pet & { is_favorite?: boolean; adopted?: boolean | Record<string, unknown> }
     )[];
     
     // Add adopted field to all pets
     if (Array.isArray(data)) {
       responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null }> }>).map((pet) => {
-        const adopted = Array.isArray(pet.adoption) ? pet.adoption.some((adoption) => adoption.status === 'APPROVED') : false;
+        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption) => adoption.status === 'APPROVED') : null;
+        const adopted = approvedAdoption ? approvedAdoption : false;
         return { ...pet, adopted };
       });
     }

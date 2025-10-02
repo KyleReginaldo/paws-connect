@@ -121,7 +121,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   try {
-    const { data: pet, error } = await supabase.from('pets').select('*, adoption(*, user:users(*))').eq('id', petId).single();
+    const { data: pet, error } = await supabase.from('pets').select('*, adoption(*, users(*))').eq('id', petId).single();
     if (error) {
       // If Supabase returns a specific not found message use 404, otherwise 400
       if (error.code === 'PGRST116' || /not found/i.test(error.message || '')) {
@@ -155,7 +155,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           .eq('pet', petId)
           .limit(1);
         const isFavorite = Array.isArray(favs) && favs.length > 0;
-        const adopted = Array.isArray(pet.adoption) ? pet.adoption.some((adoption: { status: string | null }) => adoption.status === 'APPROVED') : false;
+        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: { status: string | null }) => adoption.status === 'APPROVED') : null;
+        const adopted = approvedAdoption ? approvedAdoption : false;
         return new Response(JSON.stringify({ data: { ...pet, adopted, isFavorite, is_favorite: isFavorite } }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -165,7 +166,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       console.error('Failed to compute pet favorite status', e);
     }
 
-    const adopted = Array.isArray(pet.adoption) ? pet.adoption.some((adoption: { status: string | null }) => adoption.status === 'APPROVED') : false;
+    const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: { status: string | null }) => adoption.status === 'APPROVED') : null;
+    const adopted = approvedAdoption ? approvedAdoption : false;
     return new Response(JSON.stringify({ data: { ...pet, adopted } }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

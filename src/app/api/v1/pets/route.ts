@@ -139,15 +139,16 @@ export async function GET(request: Request) {
 
     // If a user id was provided, compute favorite flags per pet.
     // We now populate both isFavorite (preferred) and is_favorite (deprecated) for backward compatibility.
-    let responseData: (Pet & { is_favorite?: boolean; adopted?: boolean })[] | null = data as (Pet & {
+    let responseData: (Pet & { is_favorite?: boolean; adopted?: boolean | Record<string, unknown> })[] | null = data as (Pet & {
       is_favorite?: boolean;
-      adopted?: boolean;
+      adopted?: boolean | Record<string, unknown>;
     })[] | null;
     
     // Add adopted field to all pets
     if (Array.isArray(data)) {
       responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null }> }>).map((pet) => {
-        const adopted = Array.isArray(pet.adoption) ? pet.adoption.some((adoption) => adoption.status === 'APPROVED') : false;
+        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption) => adoption.status === 'APPROVED') : null;
+        const adopted = approvedAdoption ? approvedAdoption : false;
         return { ...pet, adopted };
       });
     }
