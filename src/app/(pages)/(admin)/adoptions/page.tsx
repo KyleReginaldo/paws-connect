@@ -37,6 +37,9 @@ interface Adoption {
   number_of_household_members: number | null;
   type_of_residence: string | null;
   status: string;
+  // Supabase joins will add these directly
+  pets?: Pet;
+  users?: User;
 }
 
 interface Pet {
@@ -75,30 +78,19 @@ const AdoptionsPage = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch adoptions, pets, and users in parallel
-      const [adoptionsResponse, petsResponse, usersResponse] = await Promise.all([
-        fetch('/api/v1/adoption'),
-        fetch('/api/v1/pets'),
-        fetch('/api/v1/users'),
-      ]);
+      // Fetch adoptions with joined pets and users data
+      const adoptionsResponse = await fetch('/api/v1/adoption');
 
       if (!adoptionsResponse.ok) throw new Error('Failed to fetch adoptions');
-      if (!petsResponse.ok) throw new Error('Failed to fetch pets');
-      if (!usersResponse.ok) throw new Error('Failed to fetch users');
 
       const adoptionsData = await adoptionsResponse.json();
-      const petsData = await petsResponse.json();
-      const usersData = await usersResponse.json();
 
       const adoptionsWithDetails: AdoptionWithDetails[] = (adoptionsData.data || []).map(
         (adoption: Adoption) => {
-          const pet = (petsData.data || []).find((p: Pet) => p.id === adoption.pet);
-          const user = (usersData.data || []).find((u: User) => u.id === adoption.user);
-
           return {
             ...adoption,
-            pet_details: pet,
-            user_details: user,
+            pet_details: adoption.pets || undefined,
+            user_details: adoption.users || undefined,
           };
         },
       );
@@ -345,7 +337,9 @@ const AdoptionsPage = () => {
                             className={
                               adoption.status === 'APPROVED'
                                 ? 'bg-green-50 text-green-700 border-green-200'
-                                : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                : adoption.status === 'PENDING'
+                                  ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                  : 'bg-red-50 text-red-700 border-red-200'
                             }
                           >
                             {adoption.status}

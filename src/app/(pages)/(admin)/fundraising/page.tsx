@@ -407,58 +407,66 @@ const Fundraising = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-green-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">₱{(stats?.total_raised || 0).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Total Raised</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">
+                  ₱{(stats?.total_raised || 0).toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Raised</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Target className="h-5 w-5 text-blue-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.ongoing_campaigns || 0}</p>
-                <p className="text-sm text-muted-foreground">Ongoing</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-xl md:text-2xl font-bold">
+                  {stats?.ongoing_campaigns || 0}
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Ongoing</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.completed_campaigns || 0}</p>
-                <p className="text-sm text-muted-foreground">Completed</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-xl md:text-2xl font-bold">
+                  {stats?.completed_campaigns || 0}
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Users className="h-5 w-5 text-orange-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.pending_campaigns || 0}</p>
-                <p className="text-sm text-muted-foreground">Pending</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-xl md:text-2xl font-bold">
+                  {stats?.pending_campaigns || 0}
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
               </div>
             </div>
           </CardContent>
@@ -529,13 +537,13 @@ const Fundraising = () => {
       </Tabs>
 
       {/* Campaigns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
         {filteredCampaigns.map((campaign) => (
           <Card key={campaign.id} className="hover:shadow-lg transition-shadow overflow-hidden">
             <Link href={`/fundraising/${campaign.id}`} className="block">
               <div className="relative">
                 {campaign.images && campaign.images.length > 0 ? (
-                  <div className="w-full h-44 bg-gray-100 relative overflow-hidden">
+                  <div className="w-full h-32 sm:h-36 md:h-44 bg-gray-100 relative overflow-hidden">
                     <Image
                       src={String(campaign.images[0])}
                       alt={campaign.images[0] || 'campaign image'}
@@ -544,18 +552,20 @@ const Fundraising = () => {
                     />
                   </div>
                 ) : (
-                  <div className="w-full h-44 bg-muted-foreground/10 flex items-center justify-center">
-                    <div className="text-muted-foreground">No image</div>
+                  <div className="w-full h-32 sm:h-36 md:h-44 bg-muted-foreground/10 flex items-center justify-center">
+                    <div className="text-muted-foreground text-xs sm:text-sm">No image</div>
                   </div>
                 )}
-                <div className="absolute left-4 bottom-3 bg-gradient-to-r from-black/60 to-transparent text-white rounded-md px-3 py-2">
-                  <div className="text-sm font-semibold">{campaign.title}</div>
-                  <div className="text-xs opacity-90">
+                <div className="absolute left-2 sm:left-4 bottom-2 sm:bottom-3 bg-gradient-to-r from-black/60 to-transparent text-white rounded-md px-2 sm:px-3 py-1 sm:py-2">
+                  <div className="text-xs sm:text-sm font-semibold line-clamp-1">
+                    {campaign.title}
+                  </div>
+                  <div className="text-xs opacity-90 hidden sm:block">
                     ₱{(campaign.raised_amount || 0).toLocaleString()} · ₱
                     {(campaign.target_amount || 0).toLocaleString()}
                   </div>
                 </div>
-                <div className="absolute right-3 top-3">
+                <div className="absolute right-2 sm:right-3 top-2 sm:top-3">
                   <Badge className={getStatusColor(campaign.status)}>
                     {getStatusLabel(campaign.status)}
                   </Badge>
@@ -563,12 +573,12 @@ const Fundraising = () => {
               </div>
             </Link>
 
-            <CardContent className="space-y-3">
-              <CardDescription className="text-sm line-clamp-3">
+            <CardContent className="space-y-2 sm:space-y-3 p-3 sm:p-6">
+              <CardDescription className="text-xs sm:text-sm line-clamp-2 sm:line-clamp-3">
                 {campaign.description}
               </CardDescription>
               <div>
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-2 sm:gap-4">
                   <div className="flex-1">
                     <Progress
                       value={
@@ -576,22 +586,28 @@ const Fundraising = () => {
                           ? ((campaign.raised_amount || 0) / campaign.target_amount) * 100
                           : 0
                       }
+                      className="h-1.5 sm:h-2"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       {campaign.target_amount
                         ? Math.round(((campaign.raised_amount || 0) / campaign.target_amount) * 100)
                         : 0}
-                      % of goal reached
+                      % goal
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" disabled={isDeleting === campaign.id}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isDeleting === campaign.id}
+                          className="h-6 w-6 sm:h-8 sm:w-8 p-0"
+                        >
                           {isDeleting === campaign.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                           ) : (
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
                           )}
                         </Button>
                       </DropdownMenuTrigger>
@@ -627,7 +643,7 @@ const Fundraising = () => {
                 </div>
               </div>
 
-              <div className="pt-2 border-t">
+              <div className="pt-2 border-t hidden sm:block">
                 <p className="text-xs text-muted-foreground">
                   Created {new Date(campaign.created_at).toLocaleDateString()}
                 </p>

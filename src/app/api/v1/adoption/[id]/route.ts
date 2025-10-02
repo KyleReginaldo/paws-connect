@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, context: unknown) {
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
-    const { data, error } = await supabase.from('adoption').select('*, pet(*)').eq('id', pathId).single();
+    const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*)').eq('id', pathId).single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {

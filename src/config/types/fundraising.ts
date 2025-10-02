@@ -19,6 +19,24 @@ export interface FundraisingWithUser extends Fundraising {
   };
 }
 
+export interface FundraisingWithDonations extends Fundraising {
+  created_by_user?: {
+    username: string;
+    email: string;
+  };
+  donations?: {
+    id: number;
+    amount: number;
+    message: string | null;
+    donated_at: string;
+    donor: {
+      id: string;
+      username: string | null;
+      email: string | null;
+    } | null;
+  }[];
+}
+
 export interface FundraisingStats {
   total_campaigns: number;
   pending_campaigns: number;

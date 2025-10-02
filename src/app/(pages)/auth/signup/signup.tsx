@@ -142,7 +142,7 @@ const Signup = () => {
   };
   if (user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 bg-[url('/pet_bg.png')] bg-cover bg-repeat">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 bg-[url('/pet_bg.webp')] bg-cover bg-repeat">
         <Card className="w-full max-w-md bg-[#ffffff] shadow-lg border border-green-500">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center text-green-600">
@@ -173,7 +173,7 @@ const Signup = () => {
   }
   const isLoading = status === AuthStatus.authenticating;
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8 bg-[url('/pet_bg.png')] bg-cover bg-repeat relative">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8 bg-[url('/pet_bg.webp')] bg-cover bg-repeat relative">
       {/* Floating Testimonials - Desktop Only */}
       <div className="hidden lg:block absolute top-20 left-10 max-w-xs">
         <Card className="bg-white/90 backdrop-blur-sm shadow-lg border-l-4 border-orange-500">

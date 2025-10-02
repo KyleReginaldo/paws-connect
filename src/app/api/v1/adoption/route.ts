@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const userParam = request.nextUrl.searchParams.get('user');
 
     if (userParam) {
-      const { data, error } = await supabase.from('adoption').select('*, pet(*), user(*)').eq('user', userParam);
+      const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*)').eq('user', userParam);
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
       return new Response(JSON.stringify({ data }), {
         status: 200,
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data, error } = await supabase.from('adoption').select('*, pet(*), user(*)').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*)').order('created_at', { ascending: false });
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {

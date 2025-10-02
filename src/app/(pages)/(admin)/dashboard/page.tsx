@@ -4,16 +4,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNotifications } from '@/components/ui/notification';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useDashboardData, { type ChartDataPoint, type User } from '@/hooks/useDashboardData';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Activity,
   ArrowUpRight,
   CalendarIcon,
   Dog,
   DollarSign,
+  FileText,
   Heart,
   Loader2,
   PawPrint,
@@ -337,9 +341,503 @@ const Page = () => {
     refetch,
   } = useDashboardData();
 
+  const { success, error: showError, info } = useNotifications();
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
+
+  const handleGenerateReport = async () => {
+    try {
+      info('Generating Report', 'Preparing comprehensive dashboard report PDF...');
+
+      // Fetch all necessary data for comprehensive report
+      const [
+        fundraisingResponse,
+        donationsResponse,
+        petsResponse,
+        adoptionsResponse,
+        usersResponse,
+      ] = await Promise.all([
+        fetch('/api/v1/fundraising'),
+        fetch('/api/v1/donations'),
+        fetch('/api/v1/pets'),
+        fetch('/api/v1/adoption'),
+        fetch('/api/v1/users'),
+      ]);
+
+      const fundraisingData = fundraisingResponse.ok
+        ? await fundraisingResponse.json()
+        : { data: [] };
+      const donationsData = donationsResponse.ok ? await donationsResponse.json() : { data: [] };
+      const petsData = petsResponse.ok ? await petsResponse.json() : { data: [] };
+      const adoptionsData = adoptionsResponse.ok ? await adoptionsResponse.json() : { data: [] };
+      const usersData = usersResponse.ok ? await usersResponse.json() : { data: [] };
+
+      const fundraisingCampaigns = fundraisingData.data || [];
+      const donations = donationsData.data || [];
+      const pets = petsData.data || [];
+      const adoptions = adoptionsData.data || [];
+      const allUsers = usersData.data || [];
+
+      // Create comprehensive dashboard report
+      const reportData = {
+        generated_at: new Date().toISOString(),
+        report_period: `As of ${new Date().toLocaleDateString()}`,
+
+        // Executive Summary
+        executive_summary: {
+          total_pets: pets.length,
+          available_pets: pets.filter(
+            (p: { request_status?: string }) => p.request_status === 'approved',
+          ).length,
+          total_adoptions: adoptions.length,
+          successful_adoptions: adoptions.filter(
+            (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
+          ).length,
+          pending_adoptions: adoptions.filter((a: { status?: string }) => a.status === 'PENDING')
+            .length,
+          total_users: allUsers.length,
+          total_campaigns: fundraisingCampaigns.length,
+          active_campaigns: fundraisingCampaigns.filter(
+            (c: { status?: string }) => c.status === 'ONGOING',
+          ).length,
+          total_raised: donations.reduce(
+            (sum: number, d: { amount?: number }) => sum + (d.amount || 0),
+            0,
+          ),
+          total_donations: donations.length,
+          adoption_success_rate:
+            adoptions.length > 0
+              ? (
+                  (adoptions.filter(
+                    (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
+                  ).length /
+                    adoptions.length) *
+                  100
+                ).toFixed(2) + '%'
+              : '0%',
+        },
+
+        // Pet Management Analytics
+        pet_analytics: {
+          by_type: {
+            dogs: pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'dog').length,
+            cats: pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'cat').length,
+            others: pets.filter(
+              (p: { type?: string }) => p.type && !['dog', 'cat'].includes(p.type.toLowerCase()),
+            ).length,
+          },
+          by_status: {
+            available: pets.filter(
+              (p: { request_status?: string }) => p.request_status === 'approved',
+            ).length,
+            pending: pets.filter((p: { request_status?: string }) => p.request_status === 'pending')
+              .length,
+            adopted: pets.filter((p: { request_status?: string }) => p.request_status === 'adopted')
+              .length,
+          },
+          by_size: {
+            small: pets.filter((p: { size?: string }) => p.size === 'small').length,
+            medium: pets.filter((p: { size?: string }) => p.size === 'medium').length,
+            large: pets.filter((p: { size?: string }) => p.size === 'large').length,
+          },
+          health_status: pets.map(
+            (p: {
+              id?: number;
+              name?: string;
+              health_status?: string;
+              is_vaccinated?: boolean;
+              is_spayed_or_neutured?: boolean;
+            }) => ({
+              id: p.id,
+              name: p.name,
+              health_status: p.health_status || 'Not specified',
+              is_vaccinated: p.is_vaccinated || false,
+              is_spayed_neutered: p.is_spayed_or_neutured || false,
+            }),
+          ),
+        },
+
+        // Adoption Analytics
+        adoption_analytics: adoptions.map(
+          (adoption: {
+            id?: number;
+            created_at?: string;
+            status?: string;
+            pets?: { name?: string; type?: string };
+            users?: { username?: string; email?: string };
+            type_of_residence?: string;
+          }) => ({
+            id: adoption.id,
+            date: new Date(adoption.created_at || '').toLocaleDateString(),
+            status: adoption.status,
+            pet_name: adoption.pets?.name || 'Unknown Pet',
+            pet_type: adoption.pets?.type || 'Unknown Type',
+            adopter_name: adoption.users?.username || 'Unknown User',
+            adopter_email: adoption.users?.email || 'No email',
+            residence_type: adoption.type_of_residence || 'Not specified',
+            days_since_application: Math.floor(
+              (new Date().getTime() - new Date(adoption.created_at || '').getTime()) /
+                (1000 * 60 * 60 * 24),
+            ),
+          }),
+        ),
+
+        // Fundraising Analytics
+        fundraising_analytics: {
+          campaign_performance: fundraisingCampaigns.map(
+            (campaign: {
+              id?: number;
+              title?: string;
+              status?: string;
+              target_amount?: number;
+              raised_amount?: number;
+              created_at?: string;
+            }) => {
+              const campaignDonations = donations.filter(
+                (d: { fundraising?: number }) => d.fundraising === campaign.id,
+              );
+              const progress = campaign.target_amount
+                ? (((campaign.raised_amount || 0) / campaign.target_amount) * 100).toFixed(2)
+                : '0';
+
+              return {
+                id: campaign.id,
+                title: campaign.title,
+                status: campaign.status,
+                target_amount: campaign.target_amount || 0,
+                raised_amount: campaign.raised_amount || 0,
+                progress_percentage: progress + '%',
+                donations_count: campaignDonations.length,
+                created_date: new Date(campaign.created_at || '').toLocaleDateString(),
+                days_active: Math.floor(
+                  (new Date().getTime() - new Date(campaign.created_at || '').getTime()) /
+                    (1000 * 60 * 60 * 24),
+                ),
+              };
+            },
+          ),
+          donation_trends: donations.map(
+            (d: { amount?: number; donated_at?: string; fundraising?: number }) => ({
+              amount: d.amount || 0,
+              date: new Date(d.donated_at || '').toLocaleDateString(),
+              campaign_title:
+                fundraisingCampaigns.find((c: { id?: number }) => c.id === d.fundraising)?.title ||
+                'Unknown Campaign',
+            }),
+          ),
+        },
+
+        // User Analytics
+        user_analytics: {
+          by_role: {
+            admins: allUsers.filter((u: { role?: number }) => u.role === 1).length,
+            staff: allUsers.filter((u: { role?: number }) => u.role === 2).length,
+            customers: allUsers.filter((u: { role?: number }) => u.role === 3).length,
+          },
+          by_status: {
+            fully_verified: allUsers.filter(
+              (u: { status?: string }) => u.status === 'FULLY_VERIFIED',
+            ).length,
+            semi_verified: allUsers.filter((u: { status?: string }) => u.status === 'SEMI_VERIFIED')
+              .length,
+            pending: allUsers.filter((u: { status?: string }) => u.status === 'PENDING').length,
+          },
+          recent_registrations: allUsers
+            .filter((u: { created_at?: string }) => {
+              const userDate = new Date(u.created_at || '');
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              return userDate >= thirtyDaysAgo;
+            })
+            .map(
+              (u: { username?: string; email?: string; created_at?: string; status?: string }) => ({
+                username: u.username,
+                email: u.email,
+                registration_date: new Date(u.created_at || '').toLocaleDateString(),
+                status: u.status,
+              }),
+            ),
+        },
+      };
+
+      // Create PDF document
+      const doc = new jsPDF();
+
+      // Set orange theme colors
+      const primaryColor: [number, number, number] = [255, 167, 38]; // Orange color
+      const textColor: [number, number, number] = [51, 51, 51]; // Dark gray
+
+      // Page 1: Cover Page
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 50, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
+      doc.text('PAWS CONNECT', 105, 25, { align: 'center' });
+      doc.setFontSize(16);
+      doc.text('Comprehensive Dashboard Report', 105, 35, { align: 'center' });
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(14);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 70, { align: 'center' });
+      doc.text(`Report Period: ${reportData.report_period}`, 105, 85, { align: 'center' });
+
+      // Executive Summary Section
+      doc.setFontSize(18);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('Executive Summary', 20, 110);
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(12);
+      const yPos = 130;
+
+      const summaryData = [
+        ['Metric', 'Value'],
+        ['Total Pets', reportData.executive_summary.total_pets.toString()],
+        ['Available Pets', reportData.executive_summary.available_pets.toString()],
+        ['Total Adoptions', reportData.executive_summary.total_adoptions.toString()],
+        ['Successful Adoptions', reportData.executive_summary.successful_adoptions.toString()],
+        ['Pending Adoptions', reportData.executive_summary.pending_adoptions.toString()],
+        ['Adoption Success Rate', reportData.executive_summary.adoption_success_rate],
+        ['Total Users', reportData.executive_summary.total_users.toString()],
+        ['Total Campaigns', reportData.executive_summary.total_campaigns.toString()],
+        ['Active Campaigns', reportData.executive_summary.active_campaigns.toString()],
+        ['Total Raised', `₱${reportData.executive_summary.total_raised.toLocaleString()}`],
+        ['Total Donations', reportData.executive_summary.total_donations.toString()],
+      ];
+
+      autoTable(doc, {
+        head: [summaryData[0]],
+        body: summaryData.slice(1),
+        startY: yPos,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+        styles: { fontSize: 10 },
+        margin: { left: 20, right: 20 },
+      });
+
+      // Page 2: Pet Analytics
+      doc.addPage();
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.text('Pet Management Analytics', 105, 20, { align: 'center' });
+
+      // Pet Statistics by Type
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(14);
+      doc.text('Pets by Type', 20, 50);
+
+      const petTypeData = [
+        ['Type', 'Count'],
+        ['Dogs', reportData.pet_analytics.by_type.dogs.toString()],
+        ['Cats', reportData.pet_analytics.by_type.cats.toString()],
+        ['Others', reportData.pet_analytics.by_type.others.toString()],
+      ];
+
+      autoTable(doc, {
+        head: [petTypeData[0]],
+        body: petTypeData.slice(1),
+        startY: 60,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+        styles: { fontSize: 10 },
+        margin: { left: 20, right: 90 },
+      });
+
+      // Pet Statistics by Status
+      doc.text('Pets by Status', 20, 110);
+
+      const petStatusData = [
+        ['Status', 'Count'],
+        ['Available', reportData.pet_analytics.by_status.available.toString()],
+        ['Pending', reportData.pet_analytics.by_status.pending.toString()],
+        ['Adopted', reportData.pet_analytics.by_status.adopted.toString()],
+      ];
+
+      autoTable(doc, {
+        head: [petStatusData[0]],
+        body: petStatusData.slice(1),
+        startY: 120,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+        styles: { fontSize: 10 },
+        margin: { left: 20, right: 90 },
+      });
+
+      // Pet Statistics by Size
+      doc.text('Pets by Size', 20, 170);
+
+      const petSizeData = [
+        ['Size', 'Count'],
+        ['Small', reportData.pet_analytics.by_size.small.toString()],
+        ['Medium', reportData.pet_analytics.by_size.medium.toString()],
+        ['Large', reportData.pet_analytics.by_size.large.toString()],
+      ];
+
+      autoTable(doc, {
+        head: [petSizeData[0]],
+        body: petSizeData.slice(1),
+        startY: 180,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+        styles: { fontSize: 10 },
+        margin: { left: 20, right: 90 },
+      });
+
+      // Page 3: Adoption Analytics
+      if (reportData.adoption_analytics.length > 0) {
+        doc.addPage();
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.text('Adoption Analytics', 105, 20, { align: 'center' });
+
+        const adoptionTableData = reportData.adoption_analytics
+          .slice(0, 20)
+          .map(
+            (adoption: {
+              id?: number;
+              date?: string;
+              status?: string;
+              pet_name?: string;
+              pet_type?: string;
+              adopter_name?: string;
+            }) => [
+              adoption.id?.toString() || 'N/A',
+              adoption.date || 'N/A',
+              adoption.status || 'N/A',
+              adoption.pet_name || 'N/A',
+              adoption.pet_type || 'N/A',
+              adoption.adopter_name || 'N/A',
+            ],
+          );
+
+        autoTable(doc, {
+          head: [['ID', 'Date', 'Status', 'Pet Name', 'Pet Type', 'Adopter']],
+          body: adoptionTableData,
+          startY: 40,
+          theme: 'grid',
+          headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+          styles: { fontSize: 8 },
+          margin: { left: 10, right: 10 },
+        });
+      }
+
+      // Page 4: Fundraising Analytics
+      if (reportData.fundraising_analytics.campaign_performance.length > 0) {
+        doc.addPage();
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.text('Fundraising Analytics', 105, 20, { align: 'center' });
+
+        const campaignTableData = reportData.fundraising_analytics.campaign_performance
+          .slice(0, 15)
+          .map(
+            (campaign: {
+              id?: number;
+              title?: string;
+              status?: string;
+              target_amount?: number;
+              raised_amount?: number;
+              progress_percentage?: string;
+            }) => [
+              campaign.id?.toString() || 'N/A',
+              (campaign.title || 'N/A').substring(0, 20) +
+                ((campaign.title?.length || 0) > 20 ? '...' : ''),
+              campaign.status || 'N/A',
+              `₱${(campaign.target_amount || 0).toLocaleString()}`,
+              `₱${(campaign.raised_amount || 0).toLocaleString()}`,
+              campaign.progress_percentage || '0%',
+            ],
+          );
+
+        autoTable(doc, {
+          head: [['ID', 'Title', 'Status', 'Target', 'Raised', 'Progress']],
+          body: campaignTableData,
+          startY: 40,
+          theme: 'grid',
+          headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+          styles: { fontSize: 8 },
+          margin: { left: 10, right: 10 },
+        });
+      }
+
+      // Page 5: User Analytics
+      doc.addPage();
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.text('User Analytics', 105, 20, { align: 'center' });
+
+      // Users by Role
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(14);
+      doc.text('Users by Role', 20, 50);
+
+      const userRoleData = [
+        ['Role', 'Count'],
+        ['Admins', reportData.user_analytics.by_role.admins.toString()],
+        ['Staff', reportData.user_analytics.by_role.staff.toString()],
+        ['Customers', reportData.user_analytics.by_role.customers.toString()],
+      ];
+
+      autoTable(doc, {
+        head: [userRoleData[0]],
+        body: userRoleData.slice(1),
+        startY: 60,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+        styles: { fontSize: 10 },
+        margin: { left: 20, right: 90 },
+      });
+
+      // Users by Status
+      doc.text('Users by Verification Status', 20, 120);
+
+      const userStatusData = [
+        ['Status', 'Count'],
+        ['Fully Verified', reportData.user_analytics.by_status.fully_verified.toString()],
+        ['Semi Verified', reportData.user_analytics.by_status.semi_verified.toString()],
+        ['Pending', reportData.user_analytics.by_status.pending.toString()],
+      ];
+
+      autoTable(doc, {
+        head: [userStatusData[0]],
+        body: userStatusData.slice(1),
+        startY: 130,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+        styles: { fontSize: 10 },
+        margin: { left: 20, right: 90 },
+      });
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+      const filename = `paws-connect-dashboard-report-${timestamp}.pdf`;
+
+      // Save the PDF file
+      doc.save(filename);
+
+      success(
+        'Report Generated Successfully',
+        `Comprehensive dashboard report has been downloaded as ${filename}`,
+        8000,
+      );
+    } catch (err) {
+      console.error('Report generation failed:', err);
+      showError(
+        'Report Generation Failed',
+        'Failed to generate the comprehensive report. Please try again.',
+      );
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -440,6 +938,15 @@ const Page = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
         <div className="flex items-center space-x-2 flex-shrink-0">
+          <Button
+            onClick={handleGenerateReport}
+            variant="outline"
+            size="sm"
+            className="gap-2 border-orange-200 hover:bg-orange-25 bg-transparent"
+          >
+            <FileText className="h-4 w-4 text-orange-500" />
+            Generate Report
+          </Button>
           <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
             <PopoverTrigger asChild>
               <Button

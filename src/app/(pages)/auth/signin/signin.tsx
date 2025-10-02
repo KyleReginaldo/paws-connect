@@ -85,7 +85,7 @@ const Signin = () => {
 
   // Show success message if user is logged in
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 bg-[url('/pet_bg.png')] bg-cover bg-repeat relative">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 bg-[url('/pet_bg.webp')] bg-cover bg-repeat relative">
       {/* Floating Testimonials - Desktop Only */}
       <div className="hidden lg:block absolute top-20 left-10 max-w-xs">
         <Card className="bg-white/90 backdrop-blur-sm shadow-lg border-l-4 border-orange-500">
