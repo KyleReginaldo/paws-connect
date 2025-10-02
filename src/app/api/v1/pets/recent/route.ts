@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Build the query
     let query = supabase
       .from('pets')
-      .select('*, photo')
+      .select('*, photo, adoption(*, user:users(*))')
       .gte('created_at', cutoffISOString) // Only pets created after cutoff date
       .order('created_at', { ascending: false }) // Most recent first
       .limit(limit);
@@ -60,18 +60,27 @@ export async function GET(request: NextRequest) {
 
     // If a user id was provided, annotate each pet with isFavorite
     const user = request.nextUrl.searchParams.get('user');
-    let responseData: (Pet & {  is_favorite?: boolean })[] = (data || []) as (
-      Pet & {  is_favorite?: boolean }
+    let responseData: (Pet & { is_favorite?: boolean; adopted?: boolean })[] = (data || []) as (
+      Pet & { is_favorite?: boolean; adopted?: boolean }
     )[];
-    if (user && Array.isArray(data) && data.length > 0) {
+    
+    // Add adopted field to all pets
+    if (Array.isArray(data)) {
+      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null }> }>).map((pet) => {
+        const adopted = Array.isArray(pet.adoption) ? pet.adoption.some((adoption) => adoption.status === 'APPROVED') : false;
+        return { ...pet, adopted };
+      });
+    }
+    
+    if (user && Array.isArray(responseData) && responseData.length > 0) {
       try {
-        const petIds = (data as Array<Pet>).map((p) => p.id).filter(Boolean);
+        const petIds = responseData.map((p) => p.id).filter(Boolean);
         const { data: favs } = await supabase.from('favorites').select('pet').in('pet', petIds).eq('user', user);
         type FavoriteRow = { pet: number | null };
         const favoriteSet = new Set<number>((favs || []).map((f: FavoriteRow) => f.pet || 0).filter(Boolean));
-        responseData = (data as Array<Pet>).map((p) => {
+        responseData = responseData.map((p) => {
           const fav = favoriteSet.has(p.id);
-          return { ...p,  is_favorite: fav };
+          return { ...p, isFavorite: fav, is_favorite: fav };
         });
       } catch (e) {
         console.error('Failed to compute favorites for recent pets', e);

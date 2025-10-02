@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   try {
   // Start building the query
   // Use an estimated count by default to avoid the expensive exact count on large tables
-  let query = supabase.from('pets').select('*, photo, adoption(*, users(*))', { count: 'estimated' });
+  let query = supabase.from('pets').select('*, photo, adoption(*, user:users(*))', { count: 'estimated' });
 
     // Apply filters based on query parameters
     if (type) {
