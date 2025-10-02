@@ -242,6 +242,9 @@ export async function POST(request: NextRequest, context: any) {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', forumId);
 
+    // Send notifications to all forum members
+    // For replies: original message owner gets special reply notification, others get regular notification
+    // For regular messages: everyone gets regular notification
     const { data: forum_members_raw, error: forum_list_error } = await supabase
       .from('forum_members')
       .select('member(id, username), invitation_status, mute')
@@ -249,6 +252,22 @@ export async function POST(request: NextRequest, context: any) {
     if (forum_list_error || !forum_members_raw) {
       return new Response(JSON.stringify({ error: 'Forum not found' }), { status: 404 });
     }
+
+    // Get original message owner ID if this is a reply (for special notification handling)
+    let originalMessageOwnerId: string | null = null;
+    if (replied_to) {
+      try {
+        const { data: originalMessage } = await supabase
+          .from('forum_chats')
+          .select('sender')
+          .eq('id', replied_to)
+          .single();
+        originalMessageOwnerId = originalMessage?.sender || null;
+      } catch (error) {
+        console.error('Failed to get original message owner for notification customization:', error);
+      }
+    }
+
     type MemberUser = { id: string; username: string | null };
     type ForumMemberRow = {
       member: MemberUser | null;
@@ -271,10 +290,26 @@ export async function POST(request: NextRequest, context: any) {
     for (const member of members) {
       const recipientId = member.member?.id;
       if (recipientId && recipientId !== sender && member.invitation_status === 'APPROVED' && !member.mute) {
+        // Customize notification for original message owner if this is a reply
+        const isOriginalMessageOwner = replied_to && recipientId === originalMessageOwnerId;
+        
+        let notificationTitle: string;
+        let notificationContent: string;
+        
+        if (isOriginalMessageOwner) {
+          // Special reply notification for original message owner
+          notificationTitle = `${user.username} replied to your message`;
+          notificationContent = `${user.username} replied to your message in ${forum.forum_name}: ${message}`;
+        } else {
+          // Regular forum notification for other members
+          notificationTitle = user.username ?? forum.forum_name ?? 'PawsConnect';
+          notificationContent = message;
+        }
+
         const p = pushNotification(
           recipientId,
-          user.username ?? forum.forum_name ?? 'PawsConnect',
-          message,
+          notificationTitle,
+          notificationContent,
           `/forum-chat/${forumId}`,
           image_url || undefined,
         ).catch((err) => {
@@ -288,8 +323,8 @@ export async function POST(request: NextRequest, context: any) {
 
           const q = storeNotification(
             recipientId,
-            user.username ?? forum.forum_name ?? 'PawsConnect',
-            message,
+            notificationTitle,
+            notificationContent,
           ).catch((err) => {
           console.error('storeNotification failed for member', recipientId, err);
             return null;

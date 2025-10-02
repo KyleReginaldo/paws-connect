@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -273,11 +274,48 @@ export async function POST(request: NextRequest, context: any) {
       .from('forum_chats')
       .update({ reactions: updatedReactions } as any)
       .eq('id', chatId)
-      .select('reactions')
+      .select('reactions, sender, users!forum_chats_sender_fkey(id, username)')
       .single();
 
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    }
+
+    // Send notification to message owner if reaction was added and it's not their own message
+    if (actionTaken === 'added') {
+      const messageOwnerId = (data as any)?.sender;
+      const messageOwner = (data as any)?.users;
+      
+      if (messageOwnerId && messageOwnerId !== user_id && messageOwner) {
+        try {
+          // Get the reactor's username for the notification
+          const { data: reactorData } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', user_id)
+            .single();
+          
+          const reactorUsername = reactorData?.username || 'Someone';
+          
+          const title = `${reactorUsername} reacted to your message`;
+          const content = `${reactorUsername} reacted with ${reaction} to your message in the forum`;
+          
+          // Send push notification and store in-app notification
+          await Promise.all([
+            pushNotification(
+              messageOwnerId,
+              title,
+              content,
+              `/forum-chat/${forumId}`,
+              undefined
+            ),
+            storeNotification(messageOwnerId, title, content)
+          ]);
+        } catch (notifError) {
+          // Don't fail the reaction if notification fails
+          console.error('Failed to send reaction notification:', notifError);
+        }
+      }
     }
 
     // Fast response - minimal data processing
