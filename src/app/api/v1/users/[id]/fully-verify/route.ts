@@ -5,9 +5,12 @@ import { NextRequest } from "next/server";
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await supabase.from('user_identification').update({
+    const{error:verError} =await supabase.from('user_identification').update({
       status: 'ACCEPTED',
     }).eq('user',id);
+    if(verError){
+      return createErrorResponse('Failed to update user status', 400, verError.message);
+    }
     const {data, error} = await supabase.from('users').update({
       status: 'FULLY_VERIFIED'
     }).eq('id',id).select().single();

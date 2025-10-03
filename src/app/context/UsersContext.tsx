@@ -136,13 +136,40 @@ export function UsersProvider({ children }: UsersProviderProps) {
 
   const updateUserStatus = async (userId: string, newStatus: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/v1/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      let response: Response;
+
+      // Use dedicated verification API endpoints
+      if (newStatus === 'FULLY_VERIFIED') {
+        response = await fetch(`/api/v1/users/${userId}/fully-verify`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } else if (newStatus === 'SEMI_VERIFIED') {
+        response = await fetch(`/api/v1/users/${userId}/semi-verify`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } else if (newStatus === 'PENDING') {
+        response = await fetch(`/api/v1/users/${userId}/reject`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } else {
+        // Fallback to generic user update for other statuses
+        response = await fetch(`/api/v1/users/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+      }
 
       if (!response.ok) {
         throw new Error('Failed to update user status');
