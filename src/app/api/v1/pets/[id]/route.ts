@@ -59,7 +59,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
     description,
     special_needs,
     request_status,
-    photo,
+    photos,
   } = result.data;
   const { data: updatedPet, error } = await supabase
     .from('pets')
@@ -81,7 +81,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
       description,
       special_needs,
       request_status,
-      photo,
+      photos,
     })
     .eq('id', id)
     .select()
@@ -121,7 +121,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   try {
-    const { data: pet, error } = await supabase.from('pets').select('*, adoption(*, user:users(*))').eq('id', petId).single();
+    const { data: pet, error } = await supabase.from('pets').select('*, adoption(*, happiness_image, user:users(*))').eq('id', petId).single();
     if (error) {
       // If Supabase returns a specific not found message use 404, otherwise 400
       if (error.code === 'PGRST116' || /not found/i.test(error.message || '')) {
@@ -155,8 +155,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           .eq('pet', petId)
           .limit(1);
         const isFavorite = Array.isArray(favs) && favs.length > 0;
-        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: { status: string | null }) => adoption.status === 'APPROVED') : null;
-        const adopted = approvedAdoption || null;
+        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: { status: string | null; happiness_image: string | null; id: number }) => adoption.status === 'APPROVED') : null;
+        const adopted = approvedAdoption ? {
+          id: approvedAdoption.id,
+          status: approvedAdoption.status || 'APPROVED',
+          happiness_image: approvedAdoption.happiness_image
+        } : null;
         return new Response(JSON.stringify({ data: { ...pet, adopted, isFavorite, is_favorite: isFavorite } }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -166,8 +170,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       console.error('Failed to compute pet favorite status', e);
     }
 
-    const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: { status: string | null }) => adoption.status === 'APPROVED') : null;
-    const adopted = approvedAdoption || null;
+    const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: { status: string | null; happiness_image: string | null; id: number }) => adoption.status === 'APPROVED') : null;
+    const adopted = approvedAdoption ? {
+      id: approvedAdoption.id,
+      status: approvedAdoption.status || 'APPROVED',
+      happiness_image: approvedAdoption.happiness_image
+    } : null;
     return new Response(JSON.stringify({ data: { ...pet, adopted } }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

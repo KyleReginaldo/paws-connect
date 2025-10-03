@@ -98,7 +98,7 @@ export default function PetManagement() {
         description: String(r.description ?? '').trim() || '',
         special_needs: String(r.special_needs ?? '').trim() || '',
         added_by: userId, // Always use current user
-        photo: String(r.photo ?? '').trim() || '/empty_pet.png', // Default photo if none provided
+        photos: String(r.photo ?? '').trim() ? [String(r.photo).trim()] : ['/empty_pet.png'], // Default photo if none provided
       };
 
       console.log('Normalized row:', normalized);

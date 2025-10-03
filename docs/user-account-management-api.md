@@ -134,3 +134,58 @@ Both endpoints include comprehensive error handling:
 - Password strength requirements
 - Proper error responses (no sensitive data leakage)
 - Integration with Supabase Auth for secure password updates
+
+---
+
+### 3. Submit User ID Verification
+
+**POST** `/api/v1/users/{userId}/id-verification`
+
+Creates or updates the user's verification record and sets their status to `PENDING` for review.
+
+#### Parameters:
+
+- `userId` (path parameter): UUID of the user whose identification is being submitted
+
+#### Request Body:
+
+```json
+{
+  "id_attachment_url": "https://files.example.com/uploads/philippine-id.png",
+  "id_name": "Philippine National ID",
+  "address": "123 Maharlika Street, Manila",
+  "date_of_birth": "1995-08-14"
+}
+```
+
+- `id_attachment_url` and `id_name` are required
+- `address` and `date_of_birth` are optional, but recommended for faster review
+- `status` is managed by the backend and defaults to `PENDING`
+
+#### Response:
+
+```json
+{
+  "message": "ID verification data saved",
+  "data": {
+    "id": 42,
+    "user": "user-uuid",
+    "id_name": "Philippine National ID",
+    "id_attachment_url": "https://files.example.com/uploads/philippine-id.png",
+    "address": "123 Maharlika Street, Manila",
+    "date_of_birth": "1995-08-14",
+    "status": "PENDING",
+    "created_at": "2025-01-02T10:15:00.000+00:00"
+  }
+}
+```
+
+#### Use Cases:
+
+- Collect identification data during onboarding
+- Allow users to resubmit updated documents without creating duplicate records
+- Provide admins with richer context when validating an account
+
+```
+
+```

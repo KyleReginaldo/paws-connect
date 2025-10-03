@@ -20,7 +20,7 @@ export const createPetSchema = z.object({
   special_needs: z.string(),
   added_by: z.uuid(),
   request_status: z.string().default('pending'),
-  photo: z.string().min(1, 'Photo is required'),
+  photos: z.array(z.string()).min(1, 'At least one photo is required'),
 });
 
 // Schema for bulk imports - allows photo to be optional with default
@@ -43,7 +43,7 @@ export const bulkCreatePetSchema = z.object({
   special_needs: z.string(),
   added_by: z.uuid(),
   request_status: z.string().default('pending'),
-  photo: z.string().default('/empty_pet.png'), // Default photo for imports
+  photos: z.array(z.string()).default(['/empty_pet.png']), // Default photo for imports
 });
 
 export type CreatePetDto = z.infer<typeof createPetSchema>;
@@ -66,7 +66,7 @@ export const updatePetSchema = z.object({
   description: z.string().optional(),
   special_needs: z.string().optional(),
   request_status: z.string().optional(),
-  photo: z.string().optional(),
+  photos: z.array(z.string()).optional(),
 });
 
 export type UpdatePetDto = z.infer<typeof updatePetSchema>;

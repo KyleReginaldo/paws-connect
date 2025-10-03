@@ -5,7 +5,7 @@ import { Pet } from '@/config/types/pet';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
-  // Extract query parameters for filtering
+  // Extract query parame      request_status: request_status || 'pending',\n      photos,rs for filtering
   const type = searchParams.get('type');
   const breed = searchParams.get('breed');
   const gender = searchParams.get('gender');
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   try {
   // Start building the query
   // Use an estimated count by default to avoid the expensive exact count on large tables
-  let query = supabase.from('pets').select('*, photo, adoption(*, user:users(*))', { count: 'estimated' });
+  let query = supabase.from('pets').select('*, photos, adoption(*, happiness_image, user:users(*))', { count: 'estimated' });
 
     // Apply filters based on query parameters
     if (type) {
@@ -146,9 +146,13 @@ export async function GET(request: Request) {
     
     // Add adopted field to all pets
     if (Array.isArray(data)) {
-      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null }> }>).map((pet) => {
+      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null; happiness_image: string | null; id: number }> }>).map((pet) => {
         const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption) => adoption.status === 'APPROVED') : null;
-        const adopted = approvedAdoption || null;
+        const adopted = approvedAdoption ? {
+          id: approvedAdoption.id,
+          status: approvedAdoption.status || 'APPROVED',
+          happiness_image: approvedAdoption.happiness_image
+        } : null;
         return { ...pet, adopted };
       });
     }
@@ -249,7 +253,7 @@ export async function POST(request: Request) {
     type,
     weight,
     request_status,
-    photo,
+    photos,
   } = result.data;
   const { data, error } = await supabase
     .from('pets')
@@ -272,7 +276,7 @@ export async function POST(request: Request) {
       type,
       weight,
       request_status: request_status || 'pending',
-      photo,
+      photos,
     })
     .select()
     .single();

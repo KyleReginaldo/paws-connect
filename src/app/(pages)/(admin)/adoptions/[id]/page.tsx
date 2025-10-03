@@ -1,4 +1,6 @@
 'use client';
+import { useAuth } from '@/app/context/AuthContext';
+import { HappinessImageUpload } from '@/components/HappinessImageUpload';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +30,7 @@ interface PetData {
   name: string;
   type: string;
   breed: string | null;
-  photo: string | null;
+  photos: string[] | null;
   age: number | null;
   gender: string | null;
   size: string | null;
@@ -61,6 +63,7 @@ interface AdoptionData {
   pet: PetData | null;
   pets: ExtendedPetData | null;
   created_at: string;
+  happiness_image: string | null;
   has_children_in_home: boolean | null;
   has_other_pets_in_home: boolean | null;
   have_outdoor_space: boolean | null;
@@ -75,6 +78,7 @@ const AdoptionPage = () => {
   const params = useParams();
   const router = useRouter();
   const { success, error: showError } = useNotifications();
+  const { userId } = useAuth();
   const id = params.id as string;
   const [adoption, setAdoption] = useState<AdoptionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -315,7 +319,11 @@ const AdoptionPage = () => {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12">
                             <AvatarImage
-                              src={petData.photo || '/empty_pet.png'}
+                              src={
+                                (petData.photos && petData.photos.length > 0
+                                  ? petData.photos[0]
+                                  : null) || '/empty_pet.png'
+                              }
                               alt={petData.name || 'Pet'}
                               className="object-cover"
                             />
@@ -685,6 +693,20 @@ const AdoptionPage = () => {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Happiness Image Upload - Only show for approved adoptions */}
+            {adoption.status === 'APPROVED' && (
+              <HappinessImageUpload
+                adoptionId={adoption.id}
+                currentImage={adoption.happiness_image}
+                isAdopter={adoption.user === userId}
+                adoptionStatus={adoption.status}
+                petName={adoption.pets?.name || adoption.pet?.name || 'the pet'}
+                onImageUploaded={(imageUrl) => {
+                  setAdoption((prev) => (prev ? { ...prev, happiness_image: imageUrl } : null));
+                }}
+              />
             )}
           </div>
         </div>

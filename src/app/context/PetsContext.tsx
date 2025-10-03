@@ -58,7 +58,7 @@ export const PetsProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('UpdatePet called with:', {
         id,
-        petData: { ...petData, photo: petData.photo ? 'Photo data present' : 'No photo' },
+        petData: { ...petData, photos: petData.photos ? 'Photos data present' : 'No photos' },
       });
       const response = await axios.put(`/api/v1/pets/${id}`, petData);
       console.log('API response:', response.data);
@@ -76,8 +76,8 @@ export const PetsProvider = ({ children }: { children: React.ReactNode }) => {
           ? prev.map((pet) => {
               if (pet.id === id) {
                 console.log(
-                  'Pet updated successfully with photo:',
-                  updatedPet.photo ? 'Yes' : 'No',
+                  'Pet updated successfully with photos:',
+                  updatedPet.photos ? 'Yes' : 'No',
                 );
                 return updatedPet;
               }

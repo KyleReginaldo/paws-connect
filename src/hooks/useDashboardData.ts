@@ -18,7 +18,7 @@ export interface Pet {
   is_trained: boolean | null;
   good_with: string[] | null;
   description: string | null;
-  photo: string | null;
+  photos: string[] | null;
   rescue_address: string | null;
   added_by: string | null;
   created_at: string;
@@ -358,7 +358,7 @@ const useDashboardData = () => {
           adopter: user?.username || user?.email || 'Unknown User',
           timeAgo: formatTimeAgo(adoption.created_at),
           status: Math.random() > 0.5 ? 'completed' : 'pending', // Placeholder logic
-          image: pet?.photo || '/empty_pet.png',
+          image: (pet?.photos && pet.photos.length > 0 ? pet.photos[0] : null) || '/empty_pet.png',
         };
       });
   };

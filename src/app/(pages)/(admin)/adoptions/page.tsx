@@ -1,5 +1,6 @@
 'use client';
 
+import { HappinessImageDisplay } from '@/components/HappinessImageDisplay';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ interface Adoption {
   user: string | null;
   pet: number | null;
   created_at: string;
+  happiness_image: string | null;
   has_children_in_home: boolean | null;
   has_other_pets_in_home: boolean | null;
   have_outdoor_space: boolean | null;
@@ -47,7 +49,7 @@ interface Pet {
   name: string;
   type: string;
   breed: string | null;
-  photo: string | null;
+  photos: string[] | null;
   request_status: string | null;
 }
 
@@ -290,15 +292,33 @@ const AdoptionsPage = () => {
                       <TableRow key={adoption.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage
-                                src={adoption.pet_details?.photo || ''}
-                                alt={adoption.pet_details?.name || 'Pet'}
-                              />
-                              <AvatarFallback className="bg-orange-50 text-orange-600">
-                                <PawPrint className="h-5 w-5" />
-                              </AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage
+                                  src={
+                                    (adoption.pet_details?.photos &&
+                                    adoption.pet_details.photos.length > 0
+                                      ? adoption.pet_details.photos[0]
+                                      : null) || ''
+                                  }
+                                  alt={adoption.pet_details?.name || 'Pet'}
+                                />
+                                <AvatarFallback className="bg-orange-50 text-orange-600">
+                                  <PawPrint className="h-5 w-5" />
+                                </AvatarFallback>
+                              </Avatar>
+                              {/* Show happiness image if adoption is approved and has one */}
+                              {adoption.status === 'APPROVED' && adoption.happiness_image && (
+                                <div className="absolute -top-2 -right-2">
+                                  <HappinessImageDisplay
+                                    happinessImage={adoption.happiness_image}
+                                    petName={adoption.pet_details?.name || 'Pet'}
+                                    size="sm"
+                                    showLabel={false}
+                                  />
+                                </div>
+                              )}
+                            </div>
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">
                                 {adoption.pet_details?.name || 'Unknown Pet'}
@@ -308,6 +328,11 @@ const AdoptionsPage = () => {
                                   adoption.pet_details?.type ||
                                   'Unknown Type'}
                               </p>
+                              {adoption.status === 'APPROVED' && adoption.happiness_image && (
+                                <p className="text-xs text-green-600 font-medium">
+                                  ✨ Happy & Loved
+                                </p>
+                              )}
                             </div>
                           </div>
                         </TableCell>

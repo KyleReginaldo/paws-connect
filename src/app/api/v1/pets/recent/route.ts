@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Build the query
     let query = supabase
       .from('pets')
-      .select('*, photo, adoption(*, user:users(*))')
+      .select('*, photos, adoption(*, happiness_image, user:users(*))')
       .gte('created_at', cutoffISOString) // Only pets created after cutoff date
       .order('created_at', { ascending: false }) // Most recent first
       .limit(limit);
@@ -66,9 +66,13 @@ export async function GET(request: NextRequest) {
     
     // Add adopted field to all pets
     if (Array.isArray(data)) {
-      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null }> }>).map((pet) => {
+      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null; happiness_image: string | null; id: number }> }>).map((pet) => {
         const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption) => adoption.status === 'APPROVED') : null;
-        const adopted = approvedAdoption || null;
+        const adopted = approvedAdoption ? {
+          id: approvedAdoption.id,
+          status: approvedAdoption.status || 'APPROVED',
+          happiness_image: approvedAdoption.happiness_image
+        } : null;
         return { ...pet, adopted };
       });
     }

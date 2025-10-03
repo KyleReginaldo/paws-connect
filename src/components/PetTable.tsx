@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import type { Pet } from '../config/types/pet';
+import { HappinessImageDisplay } from './HappinessImageDisplay';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -81,13 +82,35 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
             <TableRow key={pet.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={pet.photo} alt={pet.name} className="object-cover" />
-                    <AvatarFallback className="bg-muted">
-                      {pet.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="font-medium">{pet.name}</div>
+                  <div className="relative">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={(pet.photos && pet.photos.length > 0 ? pet.photos[0] : null) || ''}
+                        alt={pet.name}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-muted">
+                        {pet.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Show happiness image if pet is adopted and has one */}
+                    {pet.adopted && pet.adopted.happiness_image && (
+                      <div className="absolute -top-2 -right-2">
+                        <HappinessImageDisplay
+                          happinessImage={pet.adopted.happiness_image}
+                          petName={pet.name}
+                          size="sm"
+                          showLabel={false}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium">{pet.name}</div>
+                    {pet.adopted && (
+                      <div className="text-xs text-green-600 font-medium">✨ Adopted & Happy</div>
+                    )}
+                  </div>
                 </div>
               </TableCell>
               <TableCell>{pet.type}</TableCell>

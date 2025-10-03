@@ -67,6 +67,7 @@ export type Database = {
       adoption: {
         Row: {
           created_at: string
+          happiness_image: string | null
           has_children_in_home: boolean | null
           has_other_pets_in_home: boolean | null
           have_outdoor_space: boolean | null
@@ -81,6 +82,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          happiness_image?: string | null
           has_children_in_home?: boolean | null
           has_other_pets_in_home?: boolean | null
           have_outdoor_space?: boolean | null
@@ -95,6 +97,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          happiness_image?: string | null
           has_children_in_home?: boolean | null
           has_other_pets_in_home?: boolean | null
           have_outdoor_space?: boolean | null
@@ -172,7 +175,8 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: number
-          images: string[]
+          images: string[] | null
+          suggestions: string[] | null
           title: string
         }
         Insert: {
@@ -180,7 +184,8 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: number
-          images: string[]
+          images?: string[] | null
+          suggestions?: string[] | null
           title: string
         }
         Update: {
@@ -188,7 +193,8 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: number
-          images?: string[]
+          images?: string[] | null
+          suggestions?: string[] | null
           title?: string
         }
         Relationships: [
@@ -483,7 +489,7 @@ export type Database = {
           is_trained: boolean | null
           is_vaccinated: boolean | null
           name: string
-          photo: string | null
+          photos: string[] | null
           request_status: string | null
           rescue_address: string | null
           size: string | null
@@ -507,7 +513,7 @@ export type Database = {
           is_trained?: boolean | null
           is_vaccinated?: boolean | null
           name: string
-          photo?: string | null
+          photos?: string[] | null
           request_status?: string | null
           rescue_address?: string | null
           size?: string | null
@@ -531,7 +537,7 @@ export type Database = {
           is_trained?: boolean | null
           is_vaccinated?: boolean | null
           name?: string
-          photo?: string | null
+          photos?: string[] | null
           request_status?: string | null
           rescue_address?: string | null
           size?: string | null
@@ -569,35 +575,32 @@ export type Database = {
       }
       user_identification: {
         Row: {
+          address: string | null
           created_at: string
+          date_of_birth: string | null
           id: number
           id_attachment_url: string
-          id_expiration: string | null
           id_name: string
-          id_number: string
-          id_type: Database["public"]["Enums"]["id_types"] | null
           status: Database["public"]["Enums"]["id_status"] | null
           user: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string
+          date_of_birth?: string | null
           id?: number
           id_attachment_url: string
-          id_expiration?: string | null
           id_name: string
-          id_number: string
-          id_type?: Database["public"]["Enums"]["id_types"] | null
           status?: Database["public"]["Enums"]["id_status"] | null
           user?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string
+          date_of_birth?: string | null
           id?: number
           id_attachment_url?: string
-          id_expiration?: string | null
           id_name?: string
-          id_number?: string
-          id_type?: Database["public"]["Enums"]["id_types"] | null
           status?: Database["public"]["Enums"]["id_status"] | null
           user?: string | null
         }
