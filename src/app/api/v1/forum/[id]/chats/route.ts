@@ -245,6 +245,7 @@ export async function POST(request: NextRequest, context: any) {
       sender,
       replied_to,
       sent_at: new Date().toISOString(),
+      viewers: [sender],
     };
     if (image_url) insertObj.image_url = image_url;
 
