@@ -87,6 +87,16 @@ export async function GET(request: NextRequest, context: any) {
         users!forum_chats_sender_fkey (
           id,
           username
+        ),
+        mentions(
+          id,
+          user,
+          created_at,
+          users!mentions_user_fkey(
+            id,
+            username,
+            profile_image_link
+          )
         )
       `,
         { count: 'exact' },
@@ -106,7 +116,7 @@ export async function GET(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    // Process the data to include viewer details
+    // Process the data to include viewer details and mentions
     const processedData = await Promise.all((data || []).map(async (chat) => {
       let viewerDetails: Array<{id: string, name: string, profile_image: string | null}> = [];
       
@@ -125,10 +135,19 @@ export async function GET(request: NextRequest, context: any) {
           }));
         }
       }
+
+      // Process mentions data
+      const mentionedUsers = (chat.mentions || []).map((mention: any) => ({
+        id: mention.user,
+        name: mention.users?.username || 'Unknown User',
+        profile_image: mention.users?.profile_image_link || null,
+        mentioned_at: mention.created_at
+      }));
       
       return {
         ...chat,
-        viewers: viewerDetails
+        viewers: viewerDetails,
+        mentions: mentionedUsers
       };
     }));
 
@@ -180,6 +199,7 @@ export async function POST(request: NextRequest, context: any) {
         sender: z.uuid('Invalid sender ID'),
         image_url: z.url('Invalid image').max(2048).optional().nullable(),
         replied_to: z.number().optional().nullable(),
+        mentions: z.array(z.uuid()).optional().nullable(),
       })
       .strict();
 
@@ -194,7 +214,7 @@ export async function POST(request: NextRequest, context: any) {
       );
     }
 
-  const { message, sender, image_url, replied_to } = parsed.data;
+  const { message, sender, image_url, replied_to, mentions } = parsed.data;
 
     // Get forum details and check privacy
     const { data: forum, error: forumError } = await supabase
@@ -281,6 +301,24 @@ export async function POST(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
+    // Store mentions in the mentions table if any
+    if (mentions && mentions.length > 0) {
+      const mentionInserts = mentions.map(userId => ({
+        forum_chat: data.id,
+        user: userId,
+        created_at: new Date().toISOString()
+      }));
+
+      const { error: mentionsError } = await supabase
+        .from('mentions')
+        .insert(mentionInserts);
+
+      if (mentionsError) {
+        console.error('Failed to store mentions:', mentionsError);
+        // Don't fail the entire request if mentions storage fails
+      }
+    }
+
     // Update forum updated_at to reflect latest activity (fire & forget)
     void supabase
       .from('forum')
@@ -332,9 +370,52 @@ export async function POST(request: NextRequest, context: any) {
     // and attach a catch handler to each so rejections are logged but don't cause unhandled
     // promise rejections or delay the HTTP response.
     const notificationPromises: Promise<unknown>[] = [];
+    
+    // Send mention notifications first (higher priority)
+    if (mentions && mentions.length > 0) {
+      for (const mentionedUserId of mentions) {
+        if (mentionedUserId !== sender) {
+          // Get mentioned user details
+          await supabase
+            .from('users')
+            .select('username')
+            .eq('id', mentionedUserId)
+            .single();
+
+          const mentionTitle = `You were mentioned by ${user.username}`;
+          const mentionContent = `${user.username} mentioned you in ${forum.forum_name}: ${message}`;
+
+          const mentionPush = pushNotification(
+            mentionedUserId,
+            mentionTitle,
+            mentionContent,
+            `/forum-chat/${forumId}`,
+            image_url || undefined,
+          ).catch((err) => {
+            console.error('pushNotification failed for mention', mentionedUserId, err);
+            return null;
+          });
+          notificationPromises.push(mentionPush);
+
+          const mentionStore = storeNotification(
+            mentionedUserId,
+            mentionTitle,
+            mentionContent,
+          ).catch((err) => {
+            console.error('storeNotification failed for mention', mentionedUserId, err);
+            return null;
+          });
+          notificationPromises.push(mentionStore);
+        }
+      }
+    }
+
+    // Send regular forum notifications to non-mentioned members
     for (const member of members) {
       const recipientId = member.member?.id;
-      if (recipientId && recipientId !== sender && member.invitation_status === 'APPROVED' && !member.mute) {
+      const isMentioned = recipientId && mentions && mentions.includes(recipientId);
+      
+      if (recipientId && recipientId !== sender && member.invitation_status === 'APPROVED' && !member.mute && !isMentioned) {
         // Customize notification for original message owner if this is a reply
         const isOriginalMessageOwner = replied_to && recipientId === originalMessageOwnerId;
         

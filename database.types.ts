@@ -127,6 +127,39 @@ export type Database = {
           },
         ]
       }
+      ai_responses: {
+        Row: {
+          about: string | null
+          cache_key: string | null
+          content: string | null
+          created_at: string
+          id: number
+          last_used_at: string | null
+          response: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          about?: string | null
+          cache_key?: string | null
+          content?: string | null
+          created_at?: string
+          id?: number
+          last_used_at?: string | null
+          response?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          about?: string | null
+          cache_key?: string | null
+          content?: string | null
+          created_at?: string
+          id?: number
+          last_used_at?: string | null
+          response?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number | null
@@ -428,6 +461,42 @@ export type Database = {
           {
             foreignKeyName: "fundraising_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentions: {
+        Row: {
+          created_at: string
+          forum_chat: number | null
+          id: number
+          user: string | null
+        }
+        Insert: {
+          created_at?: string
+          forum_chat?: number | null
+          id?: number
+          user?: string | null
+        }
+        Update: {
+          created_at?: string
+          forum_chat?: number | null
+          id?: number
+          user?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentions_forum_chat_fkey"
+            columns: ["forum_chat"]
+            isOneToOne: false
+            referencedRelation: "forum_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentions_user_fkey"
+            columns: ["user"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
