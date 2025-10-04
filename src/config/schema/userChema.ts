@@ -2,7 +2,11 @@
 import { z } from 'zod';
 
 export const createUserSchema = z.object({
-  username: z.string().min(1),
+  username: z.string()
+    .min(1, 'Username is required')
+    .refine((username) => !/\s/.test(username), {
+      message: 'Username cannot contain spaces. Use format like "KyleReginaldo" instead of "Kyle Reginaldo"'
+    }),
   email: z.email(),
   status: z.string().optional(),
   role: z.number(),
@@ -13,7 +17,12 @@ export const createUserSchema = z.object({
 
 export type CreateUserDto = z.infer<typeof createUserSchema>;
 export const updateUserSchema = z.object({
-  username: z.string().min(1).optional(),
+  username: z.string()
+    .min(1, 'Username is required')
+    .refine((username) => !/\s/.test(username), {
+      message: 'Username cannot contain spaces. Use format like "KyleReginaldo" instead of "Kyle Reginaldo"'
+    })
+    .optional(),
   email: z.email().optional(),
   phone_number: z.string().optional(),
   profile_image_link: z.url('Invalid URL format').or(z.literal('')).optional(),

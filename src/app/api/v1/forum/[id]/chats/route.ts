@@ -86,7 +86,8 @@ export async function GET(request: NextRequest, context: any) {
         reactions,
         users!forum_chats_sender_fkey (
           id,
-          username
+          username,
+          profile_image_link
         ),
         mentions(
           id,
