@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Validate request body
     const quitSchema = z.object({
-      user_id: z.string().uuid('Invalid user ID'),
+      user_id: z.uuid('Invalid user ID'),
     }).strict();
 
     const parsed = quitSchema.safeParse(body);

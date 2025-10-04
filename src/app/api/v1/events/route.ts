@@ -1,3 +1,4 @@
+import { notifyAllUsersNewEvent } from "@/app/api/helper";
 import { supabase } from "@/app/supabase/supabase";
 import { createErrorResponse, createResponse } from "@/lib/db-utils";
 import { generateEventSuggestions } from "@/lib/openai-utils";
@@ -31,6 +32,22 @@ export async function POST(request: NextRequest) {
         if (error) {
             return createErrorResponse('Failed to create event', 400, error.message);
         }
+
+        // Get creator's username for notification
+        let creatorName = null;
+        if (created_by) {
+            const { data: creator } = await supabase
+                .from('users')
+                .select('username')
+                .eq('id', created_by)
+                .single();
+            creatorName = creator?.username;
+        }
+
+        // Notify all users about the new event (run in background)
+        notifyAllUsersNewEvent(title, data.id.toString(), creatorName || undefined).catch(error => {
+            console.error('Failed to send event notifications:', error);
+        });
 
         return createResponse({ 
             message: 'Event created successfully with AI-generated suggestions', 

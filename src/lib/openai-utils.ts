@@ -93,7 +93,7 @@ Create short questions that would encourage community members to engage, offer h
 
     const data: OpenAIResponse = await response.json();
     const generatedContent = data.choices[0]?.message?.content;
-
+    console.log('generated content:', generatedContent);
     if (!generatedContent) {
       return null;
     }
