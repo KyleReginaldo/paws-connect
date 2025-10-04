@@ -73,6 +73,7 @@ export async function GET(request: NextRequest, context: any) {
         image_url,
         sent_at,
         sender,
+        viewers,
         replied_to(
           id,
           forum,
@@ -106,8 +107,34 @@ export async function GET(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
+    // Process the data to include viewer details
+    const processedData = await Promise.all((data || []).map(async (chat) => {
+      let viewerDetails: Array<{id: string, name: string, profile_image: string | null}> = [];
+      
+      if (chat.viewers && chat.viewers.length > 0) {
+        // Fetch viewer details
+        const { data: viewers, error: viewersError } = await supabase
+          .from('users')
+          .select('id, username, profile_image_link')
+          .in('id', chat.viewers);
+        
+        if (!viewersError && viewers) {
+          viewerDetails = viewers.map(viewer => ({
+            id: viewer.id,
+            name: viewer.username || 'Unknown User',
+            profile_image: viewer.profile_image_link
+          }));
+        }
+      }
+      
+      return {
+        ...chat,
+        viewers: viewerDetails
+      };
+    }));
+
     // Reverse to show oldest first in chat
-    const reversedData = data?.reverse() || [];
+    const reversedData = processedData?.reverse() || [];
 
     return new Response(
       JSON.stringify({
