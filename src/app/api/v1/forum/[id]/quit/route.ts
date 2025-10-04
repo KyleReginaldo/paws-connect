@@ -1,3 +1,4 @@
+import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
 import { createErrorResponse, createResponse, invalidateForumCache } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
@@ -49,9 +50,64 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return createErrorResponse('Forum not found', 404);
     }
 
-    // Prevent forum creator from quitting their own forum
-    if (forum.created_by === user_id) {
-      return createErrorResponse('Forum creators cannot quit their own forum. Consider transferring ownership or deleting the forum instead.', 403);
+    // Check if the user is the forum creator
+    const isCreator = forum.created_by === user_id;
+    
+    if (isCreator) {
+      // Find the longest member (oldest by join date) to promote as new admin
+      const { data: longestMember, error: longestMemberError } = await supabase
+        .from('forum_members')
+        .select(`
+          id, 
+          member,
+          created_at,
+          users!forum_members_member_fkey(id, username, email)
+        `)
+        .eq('forum', forumId)
+        .neq('member', user_id) // Exclude the current creator
+        .eq('invitation_status', 'APPROVED')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (longestMemberError || !longestMember) {
+        // No other members exist, prevent creator from leaving
+        return createErrorResponse('Cannot quit forum as creator when no other members exist. Consider deleting the forum instead.', 403);
+      }
+
+      // Transfer ownership to the longest member
+      const { error: transferError } = await supabase
+        .from('forum')
+        .update({ created_by: longestMember.member })
+        .eq('id', forumId);
+
+      if (transferError) {
+        return createErrorResponse('Failed to transfer forum ownership', 500, transferError.message);
+      }
+
+      // Send notification to the new admin
+      try {
+        const notificationTitle = '👑 You are now a Forum Admin!';
+        const notificationMessage = `You have been promoted to admin of the forum. The previous admin has left and you are now in charge. Welcome to your new role!`;
+
+        // Send push notification
+        await pushNotification(
+          longestMember.member,
+          notificationTitle,
+          notificationMessage,
+          `/forum/${forumId}`
+        );
+
+        // Store in-app notification
+        await storeNotification(
+          longestMember.member,
+          notificationTitle,
+          notificationMessage
+        );
+      } catch (notificationError) {
+        console.error('Failed to notify new forum admin:', notificationError);
+        // Don't fail the entire request if notification fails
+      }
     }
 
     // Check if user is actually a member of this forum
@@ -82,13 +138,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Invalidate forum cache to ensure fresh data
     invalidateForumCache(forumId);
 
+    // Prepare response message based on whether user was creator
+    const message = isCreator 
+      ? 'Successfully quit the forum and transferred ownership to the longest member'
+      : 'Successfully quit the forum';
+
     return createResponse({
-      message: 'Successfully quit the forum',
+      message,
       data: {
         forum_id: forumId,
         user_id: user_id,
         quit_at: new Date().toISOString(),
-        removed_membership: removedMember
+        removed_membership: removedMember,
+        ...(isCreator && { ownership_transferred: true })
       }
     }, 200);
 
