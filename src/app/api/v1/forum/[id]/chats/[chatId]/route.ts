@@ -198,7 +198,7 @@ export async function DELETE(request: NextRequest, context: any) {
     }
 
     // Delete the chat message
-    const { data, error } = await supabase
+    const {  error } = await supabase
       .from('forum_chats')
       .delete()
       .eq('id', chatId)
