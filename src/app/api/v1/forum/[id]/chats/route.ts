@@ -80,7 +80,6 @@ export async function GET(request: NextRequest, context: any) {
           sender,
           message,
           sent_at,
-          viewers,
           image_url,
           reactions
         ),
