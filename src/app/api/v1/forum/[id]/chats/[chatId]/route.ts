@@ -210,7 +210,7 @@ export async function DELETE(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ data }), {
+    return new Response(JSON.stringify({ message: 'Chat message deleted successfully' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
