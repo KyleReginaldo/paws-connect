@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   try {
   // Start building the query
   // Use an estimated count by default to avoid the expensive exact count on large tables
-  let query = supabase.from('pets').select('*, photos, adoption(*, happiness_image, user:users(*))', { count: 'estimated' });
+  let query = supabase.from('pets').select('*, photos, adoption(id, status, happiness_image, created_at, user:users(*))', { count: 'estimated' });
 
     // Apply filters based on query parameters
     if (type) {
@@ -146,12 +146,22 @@ export async function GET(request: Request) {
     
     // Add adopted field to all pets
     if (Array.isArray(data)) {
-      responseData = (data as Array<Pet & { adoption?: Array<{ status: string | null; happiness_image: string | null; id: number }> }>).map((pet) => {
-        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption) => adoption.status === 'APPROVED') : null;
+      type AdoptionData = {
+        id: number;
+        status: string | null;
+        happiness_image: string | null;
+        created_at: string;
+        user: unknown;
+      };
+      type PetWithAdoption = Pet & { adoption?: AdoptionData[] };
+      
+      responseData = (data as PetWithAdoption[]).map((pet: PetWithAdoption) => {
+        const approvedAdoption = Array.isArray(pet.adoption) ? pet.adoption.find((adoption: AdoptionData) => adoption.status === 'APPROVED') : null;
         const adopted = approvedAdoption ? {
           id: approvedAdoption.id,
           status: approvedAdoption.status || 'APPROVED',
-          happiness_image: approvedAdoption.happiness_image
+          created_at: approvedAdoption.created_at,
+          user: approvedAdoption.user
         } : null;
         return { ...pet, adopted };
       });
