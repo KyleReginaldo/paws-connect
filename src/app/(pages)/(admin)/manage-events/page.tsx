@@ -14,8 +14,8 @@ import { useState } from 'react';
 import * as XLSX from 'xlsx';
 
 const ManageEvents = () => {
-  const { userRole } = useAuth();
-  const { events, status, addEvent, updateEvent, deleteEvent } = useEvents();
+  const { userRole, userId } = useAuth();
+  const { events, status, addEvent, updateEvent, deleteEvent, endEvent, reopenEvent } = useEvents();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -85,6 +85,54 @@ const ManageEvents = () => {
         success('Event deleted successfully!');
       } else {
         error('Failed to delete event');
+      }
+    }
+  };
+
+  const handleEndEvent = async (eventId: number) => {
+    if (!canManageEvents() || !userId) {
+      warning('You do not have permission to end events.');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: 'End Event',
+      message: 'Are you sure you want to end this event? This will mark it as completed.',
+      confirmText: 'End Event',
+      cancelText: 'Cancel',
+    });
+
+    if (confirmed) {
+      try {
+        await endEvent(eventId, userId);
+        success('Event ended successfully!');
+      } catch (err) {
+        console.error('Error ending event:', err);
+        error(err instanceof Error ? err.message : 'Failed to end event');
+      }
+    }
+  };
+
+  const handleReopenEvent = async (eventId: number) => {
+    if (!canManageEvents() || !userId) {
+      warning('You do not have permission to reopen events.');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: 'Reopen Event',
+      message: 'Are you sure you want to reopen this event? This will make it active again.',
+      confirmText: 'Reopen Event',
+      cancelText: 'Cancel',
+    });
+
+    if (confirmed) {
+      try {
+        await reopenEvent(eventId, userId);
+        success('Event reopened successfully!');
+      } catch (err) {
+        console.error('Error reopening event:', err);
+        error(err instanceof Error ? err.message : 'Failed to reopen event');
       }
     }
   };
@@ -232,7 +280,8 @@ const ManageEvents = () => {
             events={filteredEvents}
             onEdit={openEditModal}
             onDelete={handleDelete}
-            currentUserRole={userRole || undefined}
+            onEndEvent={handleEndEvent}
+            onReopenEvent={handleReopenEvent}
           />
         ) : (
           <div className="text-center py-12">

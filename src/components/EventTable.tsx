@@ -24,19 +24,17 @@ interface EventTableProps {
   events: Event[];
   onEdit: (event: Event) => void;
   onDelete: (eventId: number) => void;
-  currentUserRole?: number;
+  onEndEvent: (eventId: number) => void;
+  onReopenEvent: (eventId: number) => void;
 }
 
-export function EventTable({ events, onEdit, onDelete, currentUserRole }: EventTableProps) {
-  const canManageEvent = () => {
-    // Admins (role 1) can manage all events
-    if (currentUserRole === 1) return true;
-    // Staff (role 2) can manage all events
-    if (currentUserRole === 2) return true;
-    // Regular users can only manage their own events
-    return false;
-  };
-
+export function EventTable({
+  events,
+  onEdit,
+  onDelete,
+  onEndEvent,
+  onReopenEvent,
+}: EventTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -110,25 +108,37 @@ export function EventTable({ events, onEdit, onDelete, currentUserRole }: EventT
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-44">
-                  {canManageEvent() ? (
-                    <>
-                      <DropdownMenuItem onClick={() => onEdit(event)} className="cursor-pointer">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Event
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive cursor-pointer focus:text-destructive"
-                        onClick={() => onDelete(event.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Event
-                      </DropdownMenuItem>
-                    </>
+                  <DropdownMenuItem onClick={() => onEdit(event)} className="cursor-pointer">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Event
+                  </DropdownMenuItem>
+
+                  {/* End/Reopen Event Actions */}
+                  {event.ended_at ? (
+                    <DropdownMenuItem
+                      onClick={() => onReopenEvent(event.id)}
+                      className="cursor-pointer text-green-600 focus:text-green-600"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Reopen Event
+                    </DropdownMenuItem>
                   ) : (
-                    <DropdownMenuItem disabled>
-                      <span className="text-sm text-gray-500">No actions available</span>
+                    <DropdownMenuItem
+                      onClick={() => onEndEvent(event.id)}
+                      className="cursor-pointer text-orange-600 focus:text-orange-600"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      End Event
                     </DropdownMenuItem>
                   )}
+
+                  <DropdownMenuItem
+                    className="text-destructive cursor-pointer focus:text-destructive"
+                    onClick={() => onDelete(event.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Event
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -136,10 +146,17 @@ export function EventTable({ events, onEdit, onDelete, currentUserRole }: EventT
 
           {/* Content Section */}
           <div className="p-5">
-            {/* Title */}
-            <h3 className="font-semibold text-lg text-gray-900 mb-3 line-clamp-2 leading-tight">
-              {event.title}
-            </h3>
+            {/* Title with Status */}
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 leading-tight flex-1">
+                {event.title}
+              </h3>
+              {event.ended_at && (
+                <Badge variant="secondary" className="ml-2 shrink-0 bg-gray-100 text-gray-600">
+                  Ended
+                </Badge>
+              )}
+            </div>
 
             {/* Description */}
             <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">
