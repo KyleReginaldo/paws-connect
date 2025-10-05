@@ -202,6 +202,48 @@ export type Database = {
           },
         ]
       }
+      event_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          event: number
+          id: number
+          like: number | null
+          user: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          event: number
+          id?: number
+          like?: number | null
+          user: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          event?: number
+          id?: number
+          like?: number | null
+          user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_comments_event_fkey"
+            columns: ["event"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_comments_user_fkey"
+            columns: ["user"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string

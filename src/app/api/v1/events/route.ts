@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
                     id,
                     username,
                     profile_image_link
-                )
+                ),
+                comments:event_comments(content, like, created_at, user:users(id, username, profile_image_link))
             `)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
