@@ -1,5 +1,8 @@
 import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from "@/app/supabase/supabase";
+import { AdoptionMailerDto } from '@/common/common.dto';
+import { adoptionMailerBody } from '@/common/string';
+import axios from 'axios';
 import { NextRequest } from "next/server";
 
 export async function PUT(_request: NextRequest, context: unknown) {
@@ -29,7 +32,11 @@ export async function PUT(_request: NextRequest, context: unknown) {
                     id,
                     name,
                     type,
-                    breed
+                    breed,
+                    age,
+                    size,
+                    gender,
+                    photos
                 )
             `)
             .eq('id', pathId)
@@ -61,6 +68,11 @@ export async function PUT(_request: NextRequest, context: unknown) {
 
             try {
                 // Send push notification
+                const emailResponse = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/send-email`, {
+                to: adoptionDetails.users.email,
+                subject: 'Your Adoption request has been Approved! 🎉',
+                text: adoptionMailerBody(new AdoptionMailerDto(adoptionDetails.users.username??'No name', adoptionDetails.pets?.name??'No name', adoptionDetails.pets?.breed??'Unkown breed', adoptionDetails.pets?.age?.toString()??'', adoptionDetails.pets?.size??'Unknown size', adoptionDetails.pets?.gender??"Unkown gender", adoptionDetails.pets?.photos![0] ??"")),
+                });
                 await pushNotification(
                     adoptionDetails.users.id,
                     notificationTitle,

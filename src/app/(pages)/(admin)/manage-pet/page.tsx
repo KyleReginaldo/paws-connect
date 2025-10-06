@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/components/ui/notification';
 import { Pet } from '@/config/types/pet';
 import { Download, Plus, Search, Upload, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 export default function PetManagement() {
@@ -21,7 +21,6 @@ export default function PetManagement() {
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
-
   const openEditModal = (pet: Pet) => {
     setEditingPet(pet);
     setModalOpen(true);
@@ -189,6 +188,9 @@ export default function PetManagement() {
       );
     }) || [];
 
+  useEffect(() => {
+    console.log(`user id: ${userId}`);
+  }, [userId]);
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
