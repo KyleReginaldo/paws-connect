@@ -25,6 +25,7 @@ interface EventModalProps {
   onSubmit: (eventData: {
     title: string;
     description?: string | null;
+    starting_date?: string | null;
     images?: string[];
     created_by?: string | null;
   }) => void;
@@ -36,10 +37,12 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
+    starting_date: string;
     images: string[];
   }>({
     title: '',
     description: '',
+    starting_date: '',
     images: [],
   });
 
@@ -56,6 +59,9 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
         setFormData({
           title: editingEvent.title || '',
           description: editingEvent.description || '',
+          starting_date: editingEvent.starting_date
+            ? new Date(editingEvent.starting_date).toISOString().slice(0, 16)
+            : '',
           images: editingEvent.images || [],
         });
       } else {
@@ -63,6 +69,7 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
         setFormData({
           title: '',
           description: '',
+          starting_date: '',
           images: [],
         });
       }
@@ -246,6 +253,7 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
     const eventData = {
       title: formData.title.trim(),
       description: formData.description.trim() || null,
+      starting_date: formData.starting_date || null,
       images: formData.images,
       created_by: userId || null,
     };
@@ -307,6 +315,21 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
               placeholder="Describe the event purpose, activities, target audience, location, and timing. Include any special requirements or goals to help generate better AI suggestions."
               rows={4}
             />
+          </div>
+
+          {/* Starting Date */}
+          <div className="space-y-2">
+            <Label htmlFor="starting_date">Event Starting Date</Label>
+            <Input
+              id="starting_date"
+              type="datetime-local"
+              value={formData.starting_date}
+              onChange={(e) => handleInputChange('starting_date', e.target.value)}
+              className="text-sm"
+            />
+            <p className="text-xs text-gray-500">
+              Optional: Set when the event will start. Leave empty if not applicable.
+            </p>
           </div>
 
           {/* AI Suggestion Reminder */}

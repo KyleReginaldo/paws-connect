@@ -208,7 +208,7 @@ export type Database = {
           created_at: string | null
           event: number
           id: number
-          like: number | null
+          likes: string[] | null
           user: string
         }
         Insert: {
@@ -216,7 +216,7 @@ export type Database = {
           created_at?: string | null
           event: number
           id?: number
-          like?: number | null
+          likes?: string[] | null
           user: string
         }
         Update: {
@@ -224,7 +224,7 @@ export type Database = {
           created_at?: string | null
           event?: number
           id?: number
-          like?: number | null
+          likes?: string[] | null
           user?: string
         }
         Relationships: [
@@ -244,13 +244,51 @@ export type Database = {
           },
         ]
       }
+      event_members: {
+        Row: {
+          event: number
+          id: number
+          joined_at: string
+          user: string
+        }
+        Insert: {
+          event: number
+          id?: number
+          joined_at?: string
+          user: string
+        }
+        Update: {
+          event?: number
+          id?: number
+          joined_at?: string
+          user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_members_event_fkey"
+            columns: ["event"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_members_user_fkey"
+            columns: ["user"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
           created_by: string | null
           description: string | null
+          ended_at: string | null
           id: number
           images: string[] | null
+          starting_date: string | null
           suggestions: string[] | null
           title: string
         }
@@ -258,8 +296,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          ended_at?: string | null
           id?: number
           images?: string[] | null
+          starting_date?: string | null
           suggestions?: string[] | null
           title: string
         }
@@ -267,8 +307,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          ended_at?: string | null
           id?: number
           images?: string[] | null
+          starting_date?: string | null
           suggestions?: string[] | null
           title?: string
         }
@@ -793,7 +835,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      toggle_comment_like: {
+        Args: { comment_id: number; user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       adoption_status:

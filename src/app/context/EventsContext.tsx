@@ -7,6 +7,8 @@ export interface Event {
   description: string | null;
   images: string[] | null;
   suggestions: string[] | null;
+  starting_date: string | null;
+  ended_at: string | null;
   created_at: string;
   created_by: string | null;
   users?: {
@@ -19,6 +21,7 @@ export interface Event {
 export interface CreateEventDto {
   title: string;
   description?: string | null;
+  starting_date?: string | null;
   images?: string[];
   created_by?: string | null;
 }
@@ -26,6 +29,7 @@ export interface CreateEventDto {
 export interface UpdateEventDto {
   title?: string;
   description?: string | null;
+  starting_date?: string | null;
   images?: string[];
 }
 
@@ -35,6 +39,8 @@ interface EventsContextType {
   addEvent: (eventData: CreateEventDto) => Promise<Event | null>;
   updateEvent: (eventId: number, eventData: UpdateEventDto) => Promise<Event | null>;
   deleteEvent: (eventId: number) => Promise<boolean>;
+  endEvent: (eventId: number, endedBy: string) => Promise<Event | null>;
+  reopenEvent: (eventId: number, reopenedBy: string) => Promise<Event | null>;
   refreshEvents: () => Promise<void>;
 }
 
@@ -162,6 +168,66 @@ export function EventsProvider({ children }: EventsProviderProps) {
     await fetchEvents();
   };
 
+  const endEvent = async (eventId: number, endedBy: string): Promise<Event | null> => {
+    try {
+      const response = await fetch(`/api/v1/events/${eventId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ended_by: endedBy }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to end event');
+      }
+
+      const result = await response.json();
+      const updatedEvent = result.data;
+
+      setEvents((prevEvents) => {
+        if (!prevEvents) return null;
+        return prevEvents.map((event) => (event.id === eventId ? updatedEvent : event));
+      });
+
+      return updatedEvent;
+    } catch (error) {
+      console.error('Error ending event:', error);
+      throw error;
+    }
+  };
+
+  const reopenEvent = async (eventId: number, reopenedBy: string): Promise<Event | null> => {
+    try {
+      const response = await fetch(`/api/v1/events/${eventId}/end`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reopened_by: reopenedBy }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to reopen event');
+      }
+
+      const result = await response.json();
+      const updatedEvent = result.data;
+
+      setEvents((prevEvents) => {
+        if (!prevEvents) return null;
+        return prevEvents.map((event) => (event.id === eventId ? updatedEvent : event));
+      });
+
+      return updatedEvent;
+    } catch (error) {
+      console.error('Error reopening event:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -172,6 +238,8 @@ export function EventsProvider({ children }: EventsProviderProps) {
     addEvent,
     updateEvent,
     deleteEvent,
+    endEvent,
+    reopenEvent,
     refreshEvents,
   };
 

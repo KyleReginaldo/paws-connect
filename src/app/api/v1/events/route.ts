@@ -8,10 +8,20 @@ import { NextRequest } from "next/server";
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { images, title, description, created_by } = body;
+        const { images, title, description, created_by, starting_date } = body;
 
         if (!title) {
             return createErrorResponse('Title is required', 400);
+        }
+
+        // Validate starting_date if provided
+        let parsedStartingDate = null;
+        if (starting_date) {
+            const dateObj = new Date(starting_date);
+            if (isNaN(dateObj.getTime())) {
+                return createErrorResponse('Invalid starting_date format. Please provide a valid date.', 400);
+            }
+            parsedStartingDate = dateObj.toISOString();
         }
 
         // Generate AI suggestions based on event title and description
@@ -24,6 +34,7 @@ export async function POST(request: NextRequest) {
                 title,
                 description: description || null,
                 created_by: created_by || null,
+                starting_date: parsedStartingDate,
                 suggestions: aiSuggestions,
             })
             .select()
@@ -77,6 +88,8 @@ export async function GET(request: NextRequest) {
                 description,
                 images,
                 suggestions,
+                starting_date,
+                ended_at,
                 created_at,
                 created_by,
                 users!events_created_by_fkey(
@@ -84,7 +97,8 @@ export async function GET(request: NextRequest) {
                     username,
                     profile_image_link
                 ),
-                comments:event_comments(id, content, likes, created_at, user:users(id, username, profile_image_link))
+                comments:event_comments(id, content, likes, created_at, user:users(id, username, profile_image_link)),
+                members:event_members(id, user:users(id, username, profile_image_link), joined_at)
             `)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
