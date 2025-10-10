@@ -68,7 +68,7 @@ export async function PUT(_request: NextRequest, context: unknown) {
 
             try {
                 // Send push notification
-                const emailResponse = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/send-email`, {
+                await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/send-email`, {
                 to: adoptionDetails.users.email,
                 subject: 'Your Adoption request has been Approved! 🎉',
                 text: adoptionMailerBody(new AdoptionMailerDto(adoptionDetails.users.username??'No name', adoptionDetails.pets?.name??'No name', adoptionDetails.pets?.breed??'Unkown breed', adoptionDetails.pets?.age?.toString()??'', adoptionDetails.pets?.size??'Unknown size', adoptionDetails.pets?.gender??"Unkown gender", adoptionDetails.pets?.photos![0] ??"")),
