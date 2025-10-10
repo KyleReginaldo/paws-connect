@@ -1,7 +1,6 @@
 import { notifyAllUsersNewEvent } from "@/app/api/helper";
 import { supabase } from "@/app/supabase/supabase";
 import { createErrorResponse, createResponse } from "@/lib/db-utils";
-import { generateEventSuggestions } from "@/lib/openai-utils";
 import { NextRequest } from "next/server";
 
 
@@ -24,9 +23,6 @@ export async function POST(request: NextRequest) {
             parsedStartingDate = dateObj.toISOString();
         }
 
-        // Generate AI suggestions based on event title and description
-        const aiSuggestions = await generateEventSuggestions(title, description);
-
         const { data, error } = await supabase
             .from('events')
             .insert({
@@ -35,7 +31,7 @@ export async function POST(request: NextRequest) {
                 description: description || null,
                 created_by: created_by || null,
                 starting_date: parsedStartingDate,
-                suggestions: aiSuggestions,
+                
             })
             .select()
             .single();
@@ -61,9 +57,8 @@ export async function POST(request: NextRequest) {
         });
 
         return createResponse({ 
-            message: 'Event created successfully with AI-generated suggestions', 
-            data,
-            ai_suggestions_generated: aiSuggestions ? true : false
+            message: 'Event created successfully', 
+            data
         }, 201);
     } catch (err) {
         return new Response(
