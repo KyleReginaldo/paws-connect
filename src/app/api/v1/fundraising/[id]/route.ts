@@ -23,6 +23,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           amount,
           message,
           donated_at,
+          reference_number,
+          screenshot,
           donor:users(id, username, email)
         )
       `,

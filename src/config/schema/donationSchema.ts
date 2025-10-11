@@ -8,6 +8,8 @@ export const createDonationSchema = z.object({
   fundraising: z.number().positive('Fundraising ID must be a positive number'),
   donor: z.uuid('Donor must be a valid user ID').optional(),
   message: z.string().max(500, 'Message must be less than 500 characters').optional(),
+  reference_number: z.string().max(100, 'Reference number must be less than 100 characters').optional(),
+  screenshot: z.url('Screenshot must be a valid URL').optional(),
 });
 
 export const getDonationsQuerySchema = z.object({

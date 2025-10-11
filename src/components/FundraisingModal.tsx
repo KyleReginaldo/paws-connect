@@ -21,7 +21,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { Fundraising } from '@/config/types/fundraising';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, QrCode } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface FundraisingModalProps {
@@ -51,10 +51,13 @@ export function FundraisingModal({
     status: 'PENDING',
     end_date: '',
     facebook_link: '',
+    qr_code: '',
+    gcash_number: '',
   });
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isQrCodeUploading, setIsQrCodeUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -74,6 +77,8 @@ export function FundraisingModal({
             | 'CANCELLED') || 'PENDING',
         end_date: editingCampaign.end_date || '',
         facebook_link: editingCampaign.facebook_link || '',
+        qr_code: editingCampaign?.qr_code || '',
+        gcash_number: editingCampaign?.gcash_number || '',
       });
       setImagePreviews((editingCampaign?.images as string[]) || []);
     } else {
@@ -86,6 +91,8 @@ export function FundraisingModal({
         status: 'PENDING',
         end_date: '',
         facebook_link: '',
+        qr_code: '',
+        gcash_number: '',
       });
       setImagePreviews([]);
     }
@@ -103,9 +110,9 @@ export function FundraisingModal({
     setIsSubmitting(true);
     setError(null);
 
-    if (isUploading) {
+    if (isUploading || isQrCodeUploading) {
       console.log('❌ Upload in progress, blocking submission');
-      setError('Please wait for image uploads to finish before submitting.');
+      setError('Please wait for all uploads to finish before submitting.');
       setIsSubmitting(false);
       return;
     }
@@ -131,6 +138,13 @@ export function FundraisingModal({
       if (!formData.created_by) {
         console.log('❌ User ID validation failed');
         setError('User ID is required');
+        return;
+      }
+
+      // Validate GCash number format if provided
+      if (formData.gcash_number && !/^(09|\+639)\d{9}$/.test(formData.gcash_number)) {
+        console.log('❌ GCash number validation failed');
+        setError('Invalid GCash number format. Use: 09XXXXXXXXX or +639XXXXXXXXX');
         return;
       }
 
@@ -308,6 +322,75 @@ export function FundraisingModal({
     }
   };
 
+  const handleQrCodeUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      console.log('❌ No QR code file selected');
+      return;
+    }
+
+    const file = files[0]; // Only take the first file for QR code
+    console.log('=== QR CODE UPLOAD START ===');
+    console.log('📱 QR Code file:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
+
+    // Validate file size (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      setError(`QR code file too large: ${fileSizeMB}MB. Maximum size is 10MB.`);
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Invalid QR code file type. Only images (JPG, PNG, GIF, WebP) are allowed.');
+      return;
+    }
+
+    setError(null);
+    setIsQrCodeUploading(true);
+
+    try {
+      console.log('⬆️ Uploading QR code file:', file.name);
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/api/v1/fundraising/upload', {
+        method: 'POST',
+        body: fd,
+      });
+
+      const json = await res.json();
+      console.log('📨 QR code upload response:', json);
+
+      if (!res.ok) {
+        const details = json?.details || json?.error || 'Unknown error';
+        console.error('❌ QR code upload failed:', res.status, details);
+        setError(`Failed to upload QR code: ${details}`);
+        return;
+      }
+
+      if (json?.url) {
+        console.log('✅ QR code uploaded successfully:', json.url);
+        // Update form data with the uploaded QR code URL
+        handleInputChange('qr_code', json.url);
+      } else {
+        console.error('❌ QR code upload did not return a URL:', json);
+        setError('QR code upload did not return a URL');
+      }
+    } catch (err) {
+      console.error('❌ Error uploading QR code:', err);
+      setError('Error uploading QR code. Please try again.');
+    } finally {
+      setIsQrCodeUploading(false);
+      console.log('=== QR CODE UPLOAD END ===');
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -438,6 +521,135 @@ export function FundraisingModal({
               </p>
             </div>
 
+            {/* Payment Information Section */}
+            <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  ₱
+                </div>
+                <h3 className="font-semibold text-blue-900">Payment Information</h3>
+                <p className="text-xs text-blue-600">(Optional - for donations)</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gcash_number">GCash Number</Label>
+                  <Input
+                    id="gcash_number"
+                    type="tel"
+                    value={formData.gcash_number || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleInputChange('gcash_number', value || '');
+
+                      // Real-time validation
+                      if (value && !/^(09|\+639)\d{9}$/.test(value)) {
+                        // Show validation hint
+                        e.target.style.borderColor = '#f59e0b';
+                      } else {
+                        e.target.style.borderColor = '';
+                      }
+                    }}
+                    placeholder="09123456789 or +639123456789"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    📱 Donors can transfer directly to this GCash number
+                  </p>
+                  {formData.gcash_number && !/^(09|\+639)\d{9}$/.test(formData.gcash_number) && (
+                    <p className="text-xs text-amber-600">
+                      ⚠️ Use format: 09XXXXXXXXX or +639XXXXXXXXX
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="qr_code_upload">
+                      <QrCode />
+                      GCash QR Code Image
+                    </Label>
+                    {isQrCodeUploading && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Uploading QR code...
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      id="qr_code_upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleQrCodeUpload(e.target.files)}
+                      disabled={isQrCodeUploading}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      📷 Upload your GCash QR code image for easy scanning by donors (Max 10MB)
+                    </p>
+
+                    {/* Current QR Code Display */}
+                    {formData.qr_code && (
+                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                          <p className="text-sm font-medium text-green-800">QR Code Uploaded</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-white rounded border border-green-300 flex items-center justify-center overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={formData.qr_code}
+                              alt="QR Code"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.setAttribute(
+                                  'style',
+                                  'display: flex',
+                                );
+                              }}
+                            />
+                            <div
+                              className="w-full h-full flex items-center justify-center text-xs text-gray-400"
+                              style={{ display: 'none' }}
+                            >
+                              QR
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-green-700">Ready for donors to scan</p>
+                            <button
+                              type="button"
+                              onClick={() => handleInputChange('qr_code', '')}
+                              className="text-xs text-red-600 hover:text-red-800 mt-1"
+                            >
+                              Remove QR code
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Info Summary */}
+              {(formData.gcash_number || formData.qr_code) && (
+                <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-800">
+                  <strong>💡 Payment Options Available:</strong>
+                  <ul className="mt-1 space-y-1">
+                    {formData.gcash_number && (
+                      <li>• Manual transfer to GCash number: {formData.gcash_number}</li>
+                    )}
+                    {formData.qr_code && <li>• QR code scanning for instant payment</li>}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             {editingCampaign && (
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
@@ -465,15 +677,15 @@ export function FundraisingModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting || isUploading || isQrCodeUploading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
-              {isSubmitting || isUploading ? (
+            <Button type="submit" disabled={isSubmitting || isUploading || isQrCodeUploading}>
+              {isSubmitting || isUploading || isQrCodeUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isUploading
+                  {isUploading || isQrCodeUploading
                     ? editingCampaign
                       ? 'Uploading...'
                       : 'Uploading...'

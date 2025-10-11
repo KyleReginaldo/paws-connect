@@ -201,8 +201,10 @@ export async function POST(request: NextRequest) {
       images?: string[];
       end_date: string;
       facebook_link?: string;
+      qr_code?: string;
+      gcash_number?: string;
     };
-    const { title, description, created_by, target_amount, status, images } = parsed;
+    const { title, description, created_by, target_amount, status, images, end_date, facebook_link, qr_code, gcash_number } = parsed;
 
     console.log('✅ Validation successful. Creating fundraising campaign with:', {
       title,
@@ -211,7 +213,11 @@ export async function POST(request: NextRequest) {
       target_amount,
       status,
       images: images ? `${images.length} image(s)` : 'no images',
-      imageUrls: images
+      imageUrls: images,
+      end_date,
+      facebook_link,
+      qr_code,
+      gcash_number
     });
 
     const insertData = {
@@ -222,6 +228,10 @@ export async function POST(request: NextRequest) {
       raised_amount: 0, // Initialize with 0
       status: status || 'PENDING', // Default to PENDING if not provided
       created_by,
+      end_date,
+      facebook_link,
+      qr_code,
+      gcash_number,
     };
 
     console.log('💾 Inserting to database:', insertData);

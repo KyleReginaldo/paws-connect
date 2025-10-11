@@ -30,6 +30,18 @@ export const createFundraisingSchema = z.object({
       (val) => val === null || val === undefined || z.string().url().safeParse(val).success,
       'Invalid Facebook URL',
     ),
+  qr_code: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? null : val)),
+  gcash_number: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (val) => val === null || val === undefined || /^(09|\+639)\d{9}$/.test(val),
+      'Invalid GCash number format. Use format: 09XXXXXXXXX or +639XXXXXXXXX',
+    ),
   // Note: raised_amount is NOT included in create schema - it starts at 0 and is updated via donations
 });
 
@@ -62,6 +74,18 @@ export const updateFundraisingSchema = z.object({
     .refine(
       (val) => val === null || val === undefined || z.string().url().safeParse(val).success,
       'Invalid Facebook URL',
+    )
+    .optional(),
+  qr_code: z
+    .string()
+    .transform((val) => (val === '' ? null : val))
+    .optional(),
+  gcash_number: z
+    .string()
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (val) => val === null || val === undefined || /^(09|\+639)\d{9}$/.test(val),
+      'Invalid GCash number format. Use format: 09XXXXXXXXX or +639XXXXXXXXX',
     )
     .optional(),
 });

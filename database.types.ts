@@ -168,6 +168,8 @@ export type Database = {
           fundraising: number | null
           id: number
           message: string | null
+          reference_number: string | null
+          screenshot: string | null
         }
         Insert: {
           amount?: number | null
@@ -176,6 +178,8 @@ export type Database = {
           fundraising?: number | null
           id?: number
           message?: string | null
+          reference_number?: string | null
+          screenshot?: string | null
         }
         Update: {
           amount?: number | null
@@ -184,6 +188,8 @@ export type Database = {
           fundraising?: number | null
           id?: number
           message?: string | null
+          reference_number?: string | null
+          screenshot?: string | null
         }
         Relationships: [
           {
@@ -508,8 +514,10 @@ export type Database = {
           description: string | null
           end_date: string | null
           facebook_link: string | null
+          gcash_number: string | null
           id: number
           images: string[] | null
+          qr_code: string | null
           raised_amount: number | null
           status: Database["public"]["Enums"]["fundraising_status"] | null
           target_amount: number | null
@@ -521,8 +529,10 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           facebook_link?: string | null
+          gcash_number?: string | null
           id?: number
           images?: string[] | null
+          qr_code?: string | null
           raised_amount?: number | null
           status?: Database["public"]["Enums"]["fundraising_status"] | null
           target_amount?: number | null
@@ -534,8 +544,10 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           facebook_link?: string | null
+          gcash_number?: string | null
           id?: number
           images?: string[] | null
+          qr_code?: string | null
           raised_amount?: number | null
           status?: Database["public"]["Enums"]["fundraising_status"] | null
           target_amount?: number | null
@@ -774,6 +786,8 @@ export type Database = {
           email: string | null
           house_images: string[] | null
           id: string
+          is_active: boolean | null
+          last_active_at: string | null
           password_changed: boolean | null
           payment_method: string | null
           paymongo_id: string | null
@@ -789,6 +803,8 @@ export type Database = {
           email?: string | null
           house_images?: string[] | null
           id: string
+          is_active?: boolean | null
+          last_active_at?: string | null
           password_changed?: boolean | null
           payment_method?: string | null
           paymongo_id?: string | null
@@ -804,6 +820,8 @@ export type Database = {
           email?: string | null
           house_images?: string[] | null
           id?: string
+          is_active?: boolean | null
+          last_active_at?: string | null
           password_changed?: boolean | null
           payment_method?: string | null
           paymongo_id?: string | null

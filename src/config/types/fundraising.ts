@@ -10,6 +10,8 @@ export interface Fundraising {
   created_at: string;
   end_date: string | null;
   facebook_link: string | null;
+  qr_code: string | null;
+  gcash_number: string | null;
 }
 
 export interface FundraisingWithUser extends Fundraising {
@@ -29,6 +31,8 @@ export interface FundraisingWithDonations extends Fundraising {
     amount: number;
     message: string | null;
     donated_at: string;
+    reference_number: string | null;
+    screenshot: string | null;
     donor: {
       id: string;
       username: string | null;
