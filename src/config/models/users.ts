@@ -9,4 +9,5 @@ export interface User {
   profile_image_link: string | null;
   house_images: string[] | null; 
   onboarded?: boolean | null; // Whether the user has completed onboarding
+  violations?: string[] | null; // Array of violation descriptions with timestamps
 }

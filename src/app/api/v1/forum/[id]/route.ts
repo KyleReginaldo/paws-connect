@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest, context: any) {
 
     if (error) return createErrorResponse(error.message, 500);
 
-    return createResponse({ data });
+    return createResponse({ message: 'Forum updated successfully', data});
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }
@@ -94,12 +94,12 @@ export async function DELETE(_request: NextRequest, context: any) {
       .from('forum')
       .delete()
       .eq('id', pathId)
-      .select('id')
+      .select()
       .single();
 
     if (error) return createErrorResponse(error.message, 500);
 
-    return createResponse({ data });
+    return createResponse({ message: 'Forum deleted successfully', data });
   } catch (err) {
     return createErrorResponse('Internal Server Error', 500, (err as Error).message);
   }

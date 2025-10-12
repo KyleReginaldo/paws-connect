@@ -407,6 +407,7 @@ export type Database = {
           id: number
           image_url: string | null
           message: string | null
+          message_warning: string | null
           reactions: Json[] | null
           replied_to: number | null
           sender: string | null
@@ -418,6 +419,7 @@ export type Database = {
           id?: number
           image_url?: string | null
           message?: string | null
+          message_warning?: string | null
           reactions?: Json[] | null
           replied_to?: number | null
           sender?: string | null
@@ -429,6 +431,7 @@ export type Database = {
           id?: number
           image_url?: string | null
           message?: string | null
+          message_warning?: string | null
           reactions?: Json[] | null
           replied_to?: number | null
           sender?: string | null
@@ -637,35 +640,6 @@ export type Database = {
           },
         ]
       }
-      global_chat_messages: {
-        Row: {
-          id: number
-          message: string
-          user_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: number
-          message: string
-          user_id?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: number
-          message?: string
-          user_id?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "global_chat_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pets: {
         Row: {
           added_by: string | null
@@ -826,6 +800,7 @@ export type Database = {
           role: number
           status: Database["public"]["Enums"]["user_status"] | null
           username: string | null
+          violations: string[] | null
         }
         Insert: {
           created_at?: string
@@ -844,6 +819,7 @@ export type Database = {
           role: number
           status?: Database["public"]["Enums"]["user_status"] | null
           username?: string | null
+          violations?: string[] | null
         }
         Update: {
           created_at?: string
@@ -862,6 +838,7 @@ export type Database = {
           role?: number
           status?: Database["public"]["Enums"]["user_status"] | null
           username?: string | null
+          violations?: string[] | null
         }
         Relationships: [
           {

@@ -596,3 +596,64 @@ export function createErrorResponse(message: string, status = 500, details?: unk
   }
   return createResponse(responseData, status);
 }
+
+// Global forum utilities
+export async function addUserToGlobalForum(userId: string): Promise<boolean> {
+  try {
+    console.log(`🌍 Adding user ${userId} to global forum...`);
+    
+    // Find the global forum
+    const { data: globalForum, error: forumError } = await supabase
+      .from('forum')
+      .select('id')
+      .eq('forum_name', 'Global Chat')
+      .eq('private', false)
+      .single();
+
+    if (forumError || !globalForum) {
+      console.error('❌ Global forum not found:', forumError?.message);
+      return false;
+    }
+
+    console.log(`✅ Global forum found with ID: ${globalForum.id}`);
+
+    // Check if user is already a member
+    const { data: existingMember, error: memberCheckError } = await supabase
+      .from('forum_members')
+      .select('id')
+      .eq('forum', globalForum.id)
+      .eq('member', userId)
+      .single();
+
+    if (existingMember && !memberCheckError) {
+      console.log(`ℹ User ${userId} is already a member of global forum`);
+      return true; // User is already a member, consider this success
+    }
+
+    // Add user to the global forum as an approved member
+    const { error: insertError } = await supabase
+      .from('forum_members')
+      .insert({
+        forum: globalForum.id,
+        member: userId,
+        invitation_status: 'APPROVED',
+        created_at: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error(`❌ Failed to add user ${userId} to global forum:`, insertError.message);
+      return false;
+    }
+
+    console.log(`✅ Successfully added user ${userId} to global forum`);
+    
+    // Invalidate relevant caches
+    invalidateForumCache(globalForum.id);
+    invalidateUserForumsCache(userId);
+    
+    return true;
+  } catch (error) {
+    console.error(`❌ Error adding user ${userId} to global forum:`, error);
+    return false;
+  }
+}

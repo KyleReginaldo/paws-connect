@@ -9,21 +9,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, MoreHorizontal, Trash2, UserCheck, UserX } from 'lucide-react';
+import { AlertTriangle, Edit, Eye, MoreHorizontal, Trash2, UserCheck, UserX } from 'lucide-react';
+import { useState } from 'react';
 import type { User } from '../config/models/users';
 import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { ScrollArea } from './ui/scroll-area';
 
 interface UserTableProps {
   users: User[];
   onEdit?: (user: User) => void;
   onDelete?: (userId: string) => void;
   onStatusChange?: (userId: string, status: string) => void;
+  onAddViolation?: (userId: string, violation: string) => void;
   currentUserRole?: number; // Add current user role for permission checks
 }
 
@@ -32,8 +36,10 @@ export function UserTable({
   onEdit,
   onDelete,
   onStatusChange,
+  onAddViolation,
   currentUserRole,
 }: UserTableProps) {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   if (users.length === 0) {
     return (
       <div className="text-center py-12">
@@ -104,6 +110,7 @@ export function UserTable({
             <TableHead>Phone</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Violations</TableHead>
             <TableHead>Joined</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -143,6 +150,50 @@ export function UserTable({
               </TableCell>
               <TableCell>
                 <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+              </TableCell>
+              <TableCell>
+                {user.violations && user.violations.length > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive" className="flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {user.violations.length}
+                    </Badge>
+                    {currentUserRole === 1 && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedUser(user)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>
+                              Violations for {selectedUser?.username || 'Unknown User'}
+                            </DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="max-h-96">
+                            <div className="space-y-3">
+                              {selectedUser?.violations?.map((violation, index) => (
+                                <div
+                                  key={index}
+                                  className="p-3 bg-red-50 border border-red-200 rounded-lg"
+                                >
+                                  <div className="text-sm text-red-800">
+                                    <span className="font-medium">#{index + 1}:</span> {violation}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-green-600 border-green-200">
+                    Clean
+                  </Badge>
+                )}
               </TableCell>
               <TableCell>
                 <div className="text-sm">{formatDate(user.created_at)}</div>
@@ -185,6 +236,20 @@ export function UserTable({
                         <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}>
                           <UserX className="h-4 w-4 mr-2" />
                           Indefinite
+                        </DropdownMenuItem>
+                      )}
+                      {currentUserRole === 1 && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const violation = prompt('Enter violation description:');
+                            if (violation && violation.trim()) {
+                              onAddViolation?.(user.id, violation.trim());
+                            }
+                          }}
+                          className="text-orange-600"
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          Add Violation
                         </DropdownMenuItem>
                       )}
                       {canManageUser(user.role) &&

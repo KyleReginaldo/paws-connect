@@ -2,6 +2,7 @@ import { supabase } from '@/app/supabase/supabase';
 import { UserStatus } from '@/config/enum/user.enum';
 import { USER_QUERY_WITH_ID } from '@/config/query/query';
 import { createUserSchema } from '@/config/schema/userChema';
+import { addUserToGlobalForum } from '@/lib/db-utils';
 import axios from 'axios';
 import { NextRequest } from 'next/server';
 
@@ -345,7 +346,7 @@ export async function POST(request: NextRequest) {
       phone_number: `+${phone_number}`,
       role,
       created_by: parsed.created_by,
-      status: parsed.status || UserStatus.PENDING,
+      status: parsed.role == 1 ?  UserStatus.FULLY_VERIFIED : parsed.status || UserStatus.PENDING,
       paymongo_id: externalCustomerId, // Store the external ID
     };
     console.log('📝 User insert data:', insertData);
@@ -365,6 +366,22 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ User created successfully in database:', user);
     console.log('🆔 Saved paymongo_id:', user.paymongo_id);
+
+    // Add user to global forum if they are SEMI_VERIFIED or FULLY_VERIFIED
+    if (user.status === 'SEMI_VERIFIED' || user.status === 'FULLY_VERIFIED') {
+      console.log(`🌍 User status is ${user.status}, adding to global forum...`);
+      try {
+        const addedToForum = await addUserToGlobalForum(user.id);
+        if (addedToForum) {
+          console.log('✅ User successfully added to global forum');
+        } else {
+          console.warn('⚠️ Failed to add user to global forum, but continuing with user creation');
+        }
+      } catch (forumError) {
+        console.error('❌ Error adding user to global forum:', forumError);
+        // Continue with user creation even if forum addition fails
+      }
+    }
 
     return new Response(JSON.stringify({ message: 'User created successfully', data: user }), {
       status: 201,

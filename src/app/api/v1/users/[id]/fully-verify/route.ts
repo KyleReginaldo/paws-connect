@@ -1,6 +1,6 @@
 import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from "@/app/supabase/supabase";
-import { createErrorResponse, createResponse } from "@/lib/db-utils";
+import { addUserToGlobalForum, createErrorResponse, createResponse } from "@/lib/db-utils";
 import { sendStatusChangeEmail } from "@/lib/email-utils";
 import { NextRequest } from "next/server";
 
@@ -68,6 +68,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     } catch (notificationError) {
       console.error('Failed to send verification notification:', notificationError);
       // Don't fail the entire request if notification fails
+    }
+
+    // Add user to global forum since they are now FULLY_VERIFIED
+    console.log(`🌍 User ${id} is now FULLY_VERIFIED, adding to global forum...`);
+    try {
+      const addedToForum = await addUserToGlobalForum(id);
+      if (addedToForum) {
+        console.log('✅ User successfully added to global forum');
+      } else {
+        console.warn('⚠️ Failed to add user to global forum, but continuing with verification');
+      }
+    } catch (forumError) {
+      console.error('❌ Error adding user to global forum:', forumError);
+      // Continue with verification even if forum addition fails
     }
 
     return createResponse({message: 'User status updated', data}, 200);

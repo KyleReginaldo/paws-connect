@@ -1,0 +1,70 @@
+[
+  {
+    "name": "Beige Tabby-cat",
+    "image": "/Cats/beige-tabby-cat.webp"
+  },
+  {
+    "name": "bicolor Tuxedo Cat",
+    "image": "/Cats/bicolor-tuxedo-cat.webp"
+  },
+  {
+    "name": "bicolor White-n-Yellow",
+    "image": "/Cats/bicolor-white-yellow.webp"
+  },
+  {
+    "name": "Black-cat",
+    "image": "/Cats/black-cat.webp"
+  },
+  {
+    "name": "Calico-cat",
+    "image": "/Cats/calico-cat.webp"
+  },
+  {
+    "name": "Gray-Tabby",
+    "image": "/Cats/gray-tabby.webp"
+  },
+  {
+    "name": "Khao Manee (Heterochromia cat)",
+    "image": "/Cats/khao-manee.webp"
+  },
+  {
+    "name": "Mackerel Tabby-Cat",
+    "image": "/Cats/mackerel-tabby-cat.webp"
+  },
+  {
+    "name": "Mixed Breed",
+    "image": "/Cats/mixed-breed.webp"
+  },
+  {
+    "name": "Orange-tabby-cat",
+    "image": "/Cats/orange-tabby-cat.webp"
+  },
+  {
+    "name": "Siamese cat",
+    "image": "/Cats/siamese-cat.webp"
+  },
+  {
+    "name": "Tabby Cat",
+    "image": "/Cats/tabby-cat.webp"
+  },
+  {
+    "name": "Tortoiseshell-Cat",
+    "image": "/Cats/tortoiseshell-cat.webp"
+  },
+  {
+    "name": "Tuxedo Harlequin Cat",
+    "image": "/Cats/tuxedo-harlequin-cat.webp"
+  },
+  {
+    "name": "Tuxedo Tuxedo Cat",
+    "image": "/Cats/tuxedo-tuxedo-cat.webp"
+  },
+  {
+    "name": "Unknown",
+    "image": "/Cats/unknown.webp"
+  },
+  {
+    "name": "White-cat",
+    "image": "/Cats/white-cat.webp"
+  }
+]

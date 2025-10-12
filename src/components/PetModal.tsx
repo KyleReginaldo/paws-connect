@@ -92,6 +92,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [catBreeds, setCatBreeds] = useState<{ name: string; image: string }[]>([]);
+  const [dogBreeds, setDogBreeds] = useState<{ name: string; image: string }[]>([]);
+  const [breedsLoading, setBreedsLoading] = useState(false);
 
   const validateFile = (file: File): string | null => {
     const maxSize = 5 * 1024 * 1024; // 5MB
@@ -372,9 +375,39 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     setValidationErrors({});
   };
 
+  // Load breed data
+  const loadBreedData = async () => {
+    setBreedsLoading(true);
+    try {
+      const [catResponse, dogResponse] = await Promise.all([
+        fetch('/cat-breeds.json'),
+        fetch('/dog-breeds.json'),
+      ]);
+
+      if (catResponse.ok) {
+        const catData = await catResponse.json();
+        setCatBreeds(catData);
+      }
+
+      if (dogResponse.ok) {
+        const dogData = await dogResponse.json();
+        setDogBreeds(dogData);
+      }
+    } catch (error) {
+      console.error('Failed to load breed data:', error);
+    } finally {
+      setBreedsLoading(false);
+    }
+  };
+
   useEffect(() => {
     console.log(`user in modal: ${userId}`);
     console.log('Modal opened, editingPet:', editingPet);
+
+    // Load breed data when modal opens
+    if (open && (catBreeds.length === 0 || dogBreeds.length === 0)) {
+      loadBreedData();
+    }
 
     if (editingPet) {
       console.log('Setting up form for editing pet, photos:', editingPet.photos);
@@ -444,7 +477,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     } catch {
       // ignore
     }
-  }, [editingPet, open, userId]);
+  }, [editingPet, open, userId, catBreeds.length, dogBreeds.length]);
 
   // Persist draft to sessionStorage
   useEffect(() => {
@@ -506,7 +539,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       console.log('Updating photo field:', value);
     }
 
-    // If changing pet type, clear color if it's not valid for the new type
+    // If changing pet type, clear color and breed if they're not valid for the new type
     if (field === 'type' && typeof value === 'string') {
       const dogColors = [
         'Black',
@@ -548,18 +581,31 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       ];
 
       const currentColor = formData.color;
+      const currentBreed = formData.breed;
       const newType = value;
 
+      // Check if current breed is valid for new type
+      let shouldClearBreed = false;
+      if (currentBreed) {
+        if (newType === 'Dog' && !dogBreeds.some((breed) => breed.name === currentBreed)) {
+          shouldClearBreed = true;
+        } else if (newType === 'Cat' && !catBreeds.some((breed) => breed.name === currentBreed)) {
+          shouldClearBreed = true;
+        }
+      }
+
       // Clear color if it's not valid for the new type
-      if (
+      const shouldClearColor =
         currentColor &&
         ((newType === 'Dog' && !dogColors.includes(currentColor)) ||
-          (newType === 'Cat' && !catColors.includes(currentColor)))
-      ) {
-        setFormData((prev) => ({ ...prev, type: newType, color: '' }));
-      } else {
-        setFormData((prev) => ({ ...prev, type: newType }));
-      }
+          (newType === 'Cat' && !catColors.includes(currentColor)));
+
+      setFormData((prev) => ({
+        ...prev,
+        type: newType,
+        ...(shouldClearColor && { color: '' }),
+        ...(shouldClearBreed && { breed: '' }),
+      }));
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));
     }
@@ -623,12 +669,86 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
             {/* Breed */}
             <div className="space-y-2">
               <Label htmlFor="breed">Breed</Label>
-              <Input
-                id="breed"
-                placeholder="e.g., Golden Retriever"
-                value={formData.breed}
-                onChange={(e) => handleInputChange('breed', e.target.value)}
-              />
+              {formData.type && !breedsLoading ? (
+                <Select
+                  value={formData.breed}
+                  onValueChange={(value) => handleInputChange('breed', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        formData.type === 'Dog'
+                          ? 'Select dog breed...'
+                          : formData.type === 'Cat'
+                            ? 'Select cat breed...'
+                            : 'Select pet type first'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {formData.type === 'Dog'
+                      ? dogBreeds
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((breed) => (
+                            <SelectItem
+                              key={breed.name}
+                              value={breed.name}
+                              className="flex items-center gap-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={breed.image}
+                                  alt={breed.name}
+                                  className="h-6 w-6 rounded object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                                <span>{breed.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                      : formData.type === 'Cat'
+                        ? catBreeds
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((breed) => (
+                              <SelectItem
+                                key={breed.name}
+                                value={breed.name}
+                                className="flex items-center gap-2"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={breed.image}
+                                    alt={breed.name}
+                                    className="h-6 w-6 rounded object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                  <span>{breed.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))
+                        : null}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="breed"
+                  placeholder={
+                    breedsLoading
+                      ? 'Loading breeds...'
+                      : !formData.type
+                        ? 'Please select pet type first'
+                        : 'Select breed'
+                  }
+                  value={formData.breed}
+                  onChange={(e) => handleInputChange('breed', e.target.value)}
+                  disabled
+                  className="bg-muted"
+                />
+              )}
             </div>
 
             {/* Age */}
@@ -806,13 +926,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectValue placeholder="Select health status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Healthy">Healthy</SelectItem>
-                  <SelectItem value="Minor Allergies">Minor Allergies</SelectItem>
-                  <SelectItem value="Chronic Condition">Chronic Condition</SelectItem>
-                  <SelectItem value="Disabled">Disabled</SelectItem>
+                  <SelectItem value="Healthy and Active">Healthy and Active</SelectItem>
+                  <SelectItem value="Minor Condition">Minor Condition</SelectItem>
+                  <SelectItem value="Recovering/Under Treatment">
+                    Recovering/Under Treatment
+                  </SelectItem>
+                  <SelectItem value="Special Care Needed">Special Care Needed</SelectItem>
                   <SelectItem value="Injured">Injured</SelectItem>
-                  <SelectItem value="In Treatment">In Treatment</SelectItem>
-                  <SelectItem value="Special Needs">Special Needs</SelectItem>
                   <SelectItem value="Unknown">Unknown</SelectItem>
                 </SelectContent>
               </Select>

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
+import { getStandardWarningMessage, moderateContent } from '@/lib/content-moderation';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest, context: any) {
         `
         id,
         message,
+        message_warning,
         image_url,
         sent_at,
         sender,
@@ -301,6 +303,85 @@ export async function POST(request: NextRequest, context: any) {
 
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    }
+
+    // Do AI moderation asynchronously (don't await to keep response fast)
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (GEMINI_API_KEY && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE' && message) {
+      moderateContent(message, GEMINI_API_KEY)
+        .then(async (moderation) => {
+          if (moderation.isInappropriate && moderation.confidence > 0.5) {
+            console.log(`⚠️ AI flagged forum message ${data.id}:`, {
+              confidence: moderation.confidence,
+              categories: moderation.categories,
+              reason: moderation.reason
+            });
+            
+            // Use the standard warning message
+            const warningText = getStandardWarningMessage();
+            
+            // Try to update the database with the warning
+            try {
+              const { error: updateError } = await supabase
+                .from('forum_chats')
+                .update({ message_warning: warningText })
+                .eq('id', data.id);
+                
+              if (updateError) {
+                if (updateError.message.includes('column "message_warning" does not exist')) {
+                  console.log('⚠️ message_warning column does not exist yet. Please run: ALTER TABLE forum_chats ADD COLUMN message_warning TEXT;');
+                  console.log('For now, logging warning for forum message:', data.id, warningText);
+                } else {
+                  console.error('Failed to update forum message warning:', updateError);
+                }
+              } else {
+                console.log('✅ Successfully added warning to forum message:', data.id);
+              }
+            } catch (dbError) {
+              console.error('Database update error for forum message:', dbError);
+            }
+
+            // Add violation to the user's record
+            try {
+              // Get current user violations
+              const { data: currentUser, error: userFetchError } = await supabase
+                .from('users')
+                .select('violations')
+                .eq('id', sender)
+                .single();
+
+              if (!userFetchError && currentUser) {
+                // Create violation entry
+                const timestamp = new Date().toISOString();
+                const violationText = `Inappropriate content in forum: "${message.substring(0, 100)}${message.length > 100 ? '...' : ''}"`;
+                const violationEntry = `[${timestamp}] ${violationText} (Auto-detected)`;
+                
+                // Add to existing violations
+                const currentViolations = currentUser.violations || [];
+                const updatedViolations = [...currentViolations, violationEntry];
+
+                // Update user with new violation
+                const { error: violationUpdateError } = await supabase
+                  .from('users')
+                  .update({ violations: updatedViolations })
+                  .eq('id', sender);
+
+                if (violationUpdateError) {
+                  console.error('Failed to add violation to user:', violationUpdateError);
+                } else {
+                  console.log(`✅ Added violation to user ${sender} for inappropriate content`);
+                }
+              } else {
+                console.error('Failed to fetch user for violation update:', userFetchError);
+              }
+            } catch (violationError) {
+              console.error('Error adding violation to user:', violationError);
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('AI moderation failed for forum message:', data.id, error);
+        });
     }
 
     // Store mentions in the mentions table if any

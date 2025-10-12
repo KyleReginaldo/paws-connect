@@ -15,7 +15,7 @@ import * as XLSX from 'xlsx';
 
 const ManageStaff = () => {
   const { userId, userRole } = useAuth();
-  const { users, addUser, updateUser, deleteUser, updateUserStatus } = useUsers();
+  const { users, addUser, updateUser, deleteUser, updateUserStatus, refreshUsers } = useUsers();
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -107,6 +107,42 @@ const ManageStaff = () => {
 
     console.log('Updating user status:', id, newStatus);
     await updateUserStatus(id, newStatus);
+  };
+
+  const handleAddViolation = async (targetUserId: string, violation: string) => {
+    try {
+      if (!targetUserId || !violation.trim()) {
+        warning('Invalid user ID or violation description.');
+        return;
+      }
+
+      const response = await fetch(`/api/v1/users/${targetUserId}/violations`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          violation: violation.trim(),
+          admin_id: userId, // Current logged-in user (admin) who is adding the violation
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add violation');
+      }
+
+      const result = await response.json();
+      console.log('Violation added successfully:', result);
+
+      // Refresh users data to show the new violation
+      await refreshUsers(); // Use context refresh method instead of page reload
+    } catch (error) {
+      console.error('Error adding violation:', error);
+      warning(
+        `Failed to add violation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   };
 
   // Filter users based on search query
@@ -218,6 +254,7 @@ const ManageStaff = () => {
             onEdit={openEditModal}
             onDelete={handleDeleteUser}
             onStatusChange={handleStatusChange}
+            onAddViolation={handleAddViolation}
             currentUserRole={userRole || undefined}
           />
 

@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Alopekis",
+    "image": "/Dogs/alopekis-dog.webp"
+  },
+  {
+    "name": "American Shih tzu",
+    "image": "/Dogs/american-shih-tzu.webp"
+  },
+  {
+    "name": "Aspin - Brown & White",
+    "image": "/Dogs/aspin-brown-white.webp"
+  },
+  {
+    "name": "Beagle",
+    "image": "/Dogs/beagle.webp"
+  },
+  {
+    "name": "Border Collie",
+    "image": "/Dogs/border-collie.webp"
+  },
+  {
+    "name": "Brindle Shih tzu",
+    "image": "/Dogs/brindle-shih-tzu.webp"
+  },
+  {
+    "name": "Bullmastiff",
+    "image": "/Dogs/bullmastiff.webp"
+  },
+  {
+    "name": "Carolina Dog",
+    "image": "/Dogs/carolina-dog.webp"
+  },
+  {
+    "name": "Chinook",
+    "image": "/Dogs/chinook.webp"
+  },
+  {
+    "name": "Cocker Spaniel",
+    "image": "/Dogs/cocker-spaniel.webp"
+  },
+  {
+    "name": "Dameranian (Pomeranian Dachshund)",
+    "image": "/Dogs/dameranian.webp"
+  },
+  {
+    "name": "Golden Retriever",
+    "image": "/Dogs/golden-retriever.webp"
+  },
+  {
+    "name": "Indian Pariah dog",
+    "image": "/Dogs/indian-pariah-dog.webp"
+  },
+  {
+    "name": "Jack Russell Terrier",
+    "image": "/Dogs/jack-russel-terrier.webp"
+  },
+  {
+    "name": "Japanese Shih-Tzu",
+    "image": "/Dogs/japanese-shih-tzu.webp"
+  },
+  {
+    "name": "Labrador Retriever",
+    "image": "/Dogs/labrador-retriever.webp"
+  },
+  {
+    "name": "Maltese",
+    "image": "/Dogs/maltese.webp"
+  },
+  {
+    "name": "Maltipoo (Maltese + Poodle)",
+    "image": "/Dogs/maltipoo.webp"
+  },
+  {
+    "name": "Maltipoo Cute (Maltese + Poodle)",
+    "image": "/Dogs/maltipoo-1.webp"
+  },
+  {
+    "name": "Mini-Pinscher",
+    "image": "/Dogs/mini-pinscher.webp"
+  },
+  {
+    "name": "Mixed Breed",
+    "image": "/Dogs/mixed-breed.webp"
+  },
+  {
+    "name": "Teacup Shih-Tzu",
+    "image": "/Dogs/teacup-shih-tzu.webp"
+  },
+  {
+    "name": "Tricolor Kokoni",
+    "image": "/Dogs/tricolor-kokoni.webp"
+  },
+  {
+    "name": "Unknown",
+    "image": "/Dogs/unknown.webp"
+  },
+  {
+    "name": "Yorkshire",
+    "image": "/Dogs/yorkshire.webp"
+  }
+]

@@ -1,4 +1,5 @@
 import { supabase } from '@/app/supabase/supabase';
+import { getStandardWarningMessage, moderateContent } from '@/lib/content-moderation';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -10,6 +11,39 @@ async function parseJson(request: NextRequest) {
   }
 }
 
+async function getOrCreateGlobalForum() {
+  // First try to get the existing forum
+  const { data: existingForum, error: getError } = await supabase
+    .from('forum')
+    .select('id')
+    .eq('forum_name', 'Global Chat')
+    .eq('private', false)
+    .single();
+
+  if (existingForum) {
+    return { data: existingForum, error: null };
+  }
+
+  // If forum doesn't exist (PGRST116 = no rows returned), create it
+  if (getError && getError.code === 'PGRST116') {
+    const { data: newForum, error: createError } = await supabase
+      .from('forum')
+      .insert({
+        forum_name: 'Global Chat',
+        forum_description: 'A place for all users, staff, and admins to communicate',
+        private: false,
+        created_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    return { data: newForum, error: createError };
+  }
+
+  // Some other error occurred
+  return { data: null, error: getError };
+}
+
 // GET /api/v1/global-chat - Get recent messages from global forum
 export async function GET(request: NextRequest) {
   try {
@@ -17,19 +51,14 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 50));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
-    // First get the global forum ID
-    const { data: globalForum, error: forumError } = await supabase
-      .from('forum')
-      .select('id')
-      .eq('forum_name', 'Global Chat')
-      .eq('private', false)
-      .single();
+    // Get or create the global forum
+    const { data: globalForum, error: forumError } = await getOrCreateGlobalForum();
 
     if (forumError || !globalForum) {
       return new Response(
-        JSON.stringify({ error: 'Global chat forum not found. Please contact administrator.' }),
+        JSON.stringify({ error: 'Failed to access global chat forum' }),
         {
-          status: 404,
+          status: 500,
           headers: { 'Content-Type': 'application/json' },
         },
       );
@@ -41,6 +70,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         message,
+        message_warning,
         sent_at,
         sender,
         image_url,
@@ -66,6 +96,7 @@ export async function GET(request: NextRequest) {
     const reversedMessages = (messages || []).reverse().map((msg) => ({
       id: msg.id,
       message: msg.message,
+      message_warning: msg.message_warning,
       created_at: msg.sent_at,
       user_id: msg.sender,
       user: msg.users
@@ -145,19 +176,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get the global forum ID
-    const { data: globalForum, error: forumError } = await supabase
-      .from('forum')
-      .select('id')
-      .eq('forum_name', 'Global Chat')
-      .eq('private', false)
-      .single();
+    // Get or create the global forum
+    const { data: globalForum, error: forumError } = await getOrCreateGlobalForum();
 
     if (forumError || !globalForum) {
       return new Response(
-        JSON.stringify({ error: 'Global chat forum not found. Please contact administrator.' }),
+        JSON.stringify({ error: 'Failed to access global chat forum' }),
         {
-          status: 404,
+          status: 500,
           headers: { 'Content-Type': 'application/json' },
         },
       );
@@ -190,6 +216,49 @@ export async function POST(request: NextRequest) {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Do AI moderation asynchronously (don't await to keep response fast)
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (GEMINI_API_KEY && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
+      moderateContent(message, GEMINI_API_KEY)
+        .then(async (moderation) => {
+          if (moderation.isInappropriate && moderation.confidence > 0.5) {
+            console.log(`⚠️ AI flagged message ${newMessage.id}:`, {
+              confidence: moderation.confidence,
+              categories: moderation.categories,
+              reason: moderation.reason
+            });
+            
+            // Use the standard warning message
+            const warningText = getStandardWarningMessage();
+            
+            // Try to update the database with the warning
+            try {
+              // First check if the column exists by attempting the update
+              const { error: updateError } = await supabase
+                .from('forum_chats')
+                .update({ message_warning: warningText })
+                .eq('id', newMessage.id);
+                
+              if (updateError) {
+                if (updateError.message.includes('column "message_warning" does not exist')) {
+                  console.log('⚠️ message_warning column does not exist yet. Please run: ALTER TABLE forum_chats ADD COLUMN message_warning TEXT;');
+                  console.log('For now, logging warning for message:', newMessage.id, warningText);
+                } else {
+                  console.error('Failed to update message warning:', updateError);
+                }
+              } else {
+                console.log('✅ Successfully added warning to message:', newMessage.id);
+              }
+            } catch (dbError) {
+              console.error('Database update error:', dbError);
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('AI moderation failed for message:', newMessage.id, error);
+        });
     }
 
     // Format response to match frontend expectations

@@ -2,18 +2,24 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { supabase } from '@/app/supabase/supabase';
-import { MessageCircle, Send, X, Minimize2, Maximize2 } from 'lucide-react';
+import {
+  getStandardWarningMessage,
+  moderateContentWithCache,
+  type ModerationResult,
+} from '@/lib/content-moderation';
+import { Eye, EyeOff, MessageCircle, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 
 type ChatMessage = {
   id: number;
   message: string;
+  message_warning?: string | null;
   user_id: string | null;
   created_at: string;
   user: {
@@ -23,121 +29,154 @@ type ChatMessage = {
   } | null;
 };
 
+type MessageWithModeration = ChatMessage & {
+  moderation?: ModerationResult;
+};
+
 export default function GlobalChatWidget() {
   const { userId } = useAuth();
   const [open, setOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<MessageWithModeration[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [inputWarning, setInputWarning] = useState('');
+  const [isCheckingContent, setIsCheckingContent] = useState(false);
+  const [hiddenMessages, setHiddenMessages] = useState<Set<number>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Add your Gemini API key here - in production, use environment variables
+  const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
 
   // Fetch initial messages from API
   useEffect(() => {
-    const fetchInitial = async () => {
-      try {
-        const response = await fetch('/api/v1/global-chat?limit=50');
-        const data = await response.json();
-        if (data.data) {
-          setMessages(data.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch initial messages:', error);
-      }
-    };
-    
     if (open) {
-      fetchInitial();
+      fetchMessages();
     }
   }, [open]);
+
+  // Fetch messages from API
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch('/api/v1/global-chat?limit=50');
+      const data = await response.json();
+      if (data.data) {
+        setMessages(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+    }
+  };
 
   // Set up real-time subscription for new messages
   useEffect(() => {
     if (!open) return;
 
-    // First get the global forum ID, then subscribe to changes
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     const setupSubscription = async () => {
-      const { data: globalForum } = await supabase
-        .from('forum')
-        .select('id')
-        .eq('forum_name', 'Global Chat')
-        .single();
+      try {
+        // Get the global forum ID
+        const { data: globalForum } = await supabase
+          .from('forum')
+          .select('id')
+          .eq('forum_name', 'Global Chat')
+          .single();
 
-      if (!globalForum) return;
+        if (!globalForum) {
+          console.error('Global chat forum not found');
+          return;
+        }
 
-      const channel = supabase
-        .channel('global_chat_realtime')
-        .on(
-          'postgres_changes',
-          { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'forum_chats',
-            filter: `forum=eq.${globalForum.id}`
-          },
-          async (payload) => {
-            // Fetch the complete message with user info
-            const { data: newMessageData } = await supabase
-              .from('forum_chats')
-              .select(`
-                id,
-                message,
-                sent_at,
-                sender,
-                users!forum_chats_sender_fkey (
-                  id,
-                  username,
-                  role
-                )
-              `)
-              .eq('id', payload.new.id)
-              .single();
+        console.log('Setting up real-time subscription for forum:', globalForum.id);
 
-            if (newMessageData) {
-              const formattedMessage: ChatMessage = {
-                id: newMessageData.id,
-                message: newMessageData.message || '',
-                created_at: newMessageData.sent_at,
-                user_id: newMessageData.sender,
-                user: newMessageData.users
-                  ? {
-                      id: newMessageData.users.id,
-                      username: newMessageData.users.username,
-                      role: newMessageData.users.role,
-                    }
-                  : null,
-              };
-              setMessages((prev) => [...prev, formattedMessage]);
+        // Create the channel with a unique name
+        channel = supabase.channel(`global_chat_${Date.now()}`);
+
+        channel
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'forum_chats',
+              filter: `forum=eq.${globalForum.id}`,
+            },
+            async (payload: { new: unknown }) => {
+              console.log('New message received via real-time:', payload);
+
+              // Re-fetch all messages to ensure consistency
+              await fetchMessages();
+            },
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'forum_chats',
+              filter: `forum=eq.${globalForum.id}`,
+            },
+            async (payload: { old: unknown; new: unknown }) => {
+              console.log('Message updated via real-time:', payload);
+
+              // Re-fetch all messages to ensure consistency
+              await fetchMessages();
+            },
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'DELETE',
+              schema: 'public',
+              table: 'forum_chats',
+              filter: `forum=eq.${globalForum.id}`,
+            },
+            async (payload: { old: unknown }) => {
+              console.log('Message deleted via real-time:', payload);
+
+              // Re-fetch all messages to ensure consistency
+              await fetchMessages();
+            },
+          )
+          .subscribe((status: string) => {
+            console.log('Real-time subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Real-time chat subscription active');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('❌ Real-time subscription error');
             }
-          },
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+          });
+      } catch (error) {
+        console.error('Failed to setup real-time subscription:', error);
+      }
     };
 
-    const cleanup = setupSubscription();
+    setupSubscription();
+
+    // Cleanup function
     return () => {
-      cleanup.then((fn) => fn?.());
+      if (channel) {
+        console.log('Cleaning up real-time subscription');
+        supabase.removeChannel(channel);
+      }
     };
   }, [open]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (open && !minimized) {
+    if (open) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, open, minimized]);
+  }, [messages, open]);
 
   const send = async () => {
     const content = text.trim();
     if (!content || !userId || loading) return;
-    
+
     setLoading(true);
     setText('');
-    
+    setInputWarning(''); // Clear any previous warnings
+
     try {
       const response = await fetch('/api/v1/global-chat', {
         method: 'POST',
@@ -151,34 +190,118 @@ export default function GlobalChatWidget() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
+
+      // Successfully sent, message will appear via real-time subscription
     } catch (error) {
       console.error('Failed to send message:', error);
-      setText(content); // Restore text on error
+
+      // Show user-friendly error message
+      console.error(
+        'Message failed to send:',
+        error instanceof Error ? error.message : 'Failed to send message',
+      );
+
+      // For now, just restore the text. In a production app, you might show a toast notification
+      setText(content);
+
+      // You could add a toast notification here:
+      // toast.error(`Message failed to send: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
+  // Check message content while typing (debounced)
+  useEffect(() => {
+    if (!text.trim() || !GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      setInputWarning('');
+      return;
+    }
+
+    const checkContent = async () => {
+      try {
+        setIsCheckingContent(true);
+        const moderation = await moderateContentWithCache(text.trim(), GEMINI_API_KEY);
+
+        if (moderation.isInappropriate && moderation.confidence > 0.7) {
+          setInputWarning(getStandardWarningMessage());
+        } else {
+          setInputWarning('');
+        }
+      } catch (error) {
+        console.error('Content check failed:', error);
+        setInputWarning('');
+      } finally {
+        setIsCheckingContent(false);
+      }
+    };
+
+    // Debounce the content check
+    const timeoutId = setTimeout(checkContent, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [text, GEMINI_API_KEY]);
+
   const getRoleBadge = (role: number) => {
     switch (role) {
       case 1:
-        return <Badge variant="destructive" className="text-xs">Admin</Badge>;
+        return (
+          <Badge variant="destructive" className="text-xs">
+            Admin
+          </Badge>
+        );
       case 2:
-        return <Badge variant="secondary" className="text-xs">Staff</Badge>;
+        return (
+          <Badge variant="secondary" className="text-xs">
+            Staff
+          </Badge>
+        );
       case 3:
-        return <Badge variant="outline" className="text-xs">User</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs">
+            User
+          </Badge>
+        );
       default:
         return null;
     }
   };
 
-  const getUserDisplayName = (msg: ChatMessage) => {
+  const getUserDisplayName = (msg: MessageWithModeration) => {
     if (!msg.user) return 'Anonymous';
     return msg.user.username || `User${msg.user.id.slice(-4)}`;
   };
 
+  // Function to check if message is inappropriate using database warning
+  const isMessageInappropriate = (msg: MessageWithModeration) => {
+    return Boolean(msg.message_warning);
+  };
+
+  // Function to get warning message from database
+  const getWarningMessage = (msg: MessageWithModeration) => {
+    return msg.message_warning || '';
+  };
+
+  // Function to toggle message visibility
+  const toggleMessageVisibility = (messageId: number) => {
+    setHiddenMessages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  // Function to check if message should be hidden
+  const isMessageHidden = (msg: MessageWithModeration) => {
+    return isMessageInappropriate(msg) && !hiddenMessages.has(msg.id);
+  };
   if (!userId) {
     return null; // Don't show chat if user is not logged in
   }
@@ -186,65 +309,123 @@ export default function GlobalChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {open ? (
-        <Card className={`w-80 shadow-lg transition-all duration-200 ${minimized ? 'h-12' : 'h-96'}`}>
-          <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
-            <div className="flex items-center gap-2">
+        /* Full Chat UI - When opened */
+        <Card className="w-96 h-[600px] shadow-2xl transition-all duration-300 ease-in-out bg-white border border-gray-200">
+          {/* Header */}
+          <CardHeader className="flex flex-row items-center justify-between py-2 px-3 border-b bg-white rounded-t-lg">
+            <div className="flex items-center gap-1.5">
               <MessageCircle className="h-4 w-4 text-orange-500" />
-              <CardTitle className="text-sm font-medium">Global Chat</CardTitle>
-              <Badge variant="outline" className="text-xs">{messages.length}</Badge>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={() => setMinimized(!minimized)}
-                className="h-6 w-6 p-0"
+              <CardTitle className="text-sm font-semibold text-gray-800">Global Chat</CardTitle>
+              <Badge
+                variant="outline"
+                className="text-xs bg-orange-50 text-orange-600 border-orange-200 px-1.5 py-0.5"
               >
-                {minimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
+                {messages.length}
+              </Badge>
+            </div>
+            <div className="flex items-center">
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={() => setOpen(false)}
-                className="h-6 w-6 p-0"
+                className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600 rounded-md transition-colors"
+                title="Close chat"
               >
                 <X className="h-3 w-3" />
               </Button>
             </div>
           </CardHeader>
-          
-          {!minimized && (
-            <CardContent className="p-0 flex flex-col h-80">
-              <ScrollArea className="flex-1 px-4">
-                <div className="space-y-3 py-2">
+
+          {/* Chat Content */}
+          <div className="flex flex-col h-[536px] overflow-hidden">
+            {/* Messages Area */}
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full px-2 py-1.5">
+                <div className="space-y-2.5 pb-1.5">
                   {messages.length === 0 ? (
-                    <div className="text-center text-muted-foreground text-sm py-8">
-                      <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No messages yet.</p>
-                      <p className="text-xs">Be the first to say hello!</p>
+                    <div className="text-center text-muted-foreground py-8">
+                      <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-orange-300" />
+                      <p className="text-sm font-medium text-gray-600">No messages yet</p>
+                      <p className="text-xs mt-1 text-gray-500">Start the conversation!</p>
                     </div>
                   ) : (
                     messages.map((msg) => (
-                      <div key={msg.id} className="flex items-start gap-2 text-sm">
-                        <Avatar className="h-6 w-6 flex-shrink-0">
-                          <AvatarFallback className="text-xs bg-orange-100 text-orange-700">
+                      <div
+                        key={msg.id}
+                        className="flex items-start gap-2 animate-in slide-in-from-bottom-2 duration-200 mb-[20px]"
+                      >
+                        <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5 ring-1 ring-orange-100">
+                          <AvatarFallback className="text-xs bg-orange-100 text-orange-700 font-semibold">
                             {getUserDisplayName(msg)[0]?.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-xs truncate">
+                          <div className="flex items-center gap-1.5 mb-[8px]">
+                            <span className="font-semibold text-xs text-gray-800 truncate">
                               {getUserDisplayName(msg)}
                             </span>
                             {msg.user && getRoleBadge(msg.user.role)}
                             <span className="text-muted-foreground text-xs">
-                              {new Date(msg.created_at).toLocaleTimeString([], { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
+                              {new Date(msg.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
                               })}
                             </span>
                           </div>
-                          <p className="text-sm text-foreground break-words">{msg.message}</p>
+                          {/* Message Content */}
+                          {isMessageInappropriate(msg) ? (
+                            /* Inappropriate Message - Show warning or hidden content */
+                            <div className="bg-red-50 border-2 border-red-300 shadow-md rounded-md px-2.5 py-1.5 w-fit max-w-[300px]">
+                              {isMessageHidden(msg) ? (
+                                /* Hidden State */
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <EyeOff className="h-3 w-3 text-red-500" />
+                                    <span className="text-xs text-red-600 font-medium">
+                                      Message hidden due to policy violation
+                                    </span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleMessageVisibility(msg.id)}
+                                    className="h-6 w-6 p-0 hover:bg-red-200 text-red-600 hover:text-red-700"
+                                    title="Show message"
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                /* Visible State */
+                                <div>
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    <span className="text-xs text-red-600 font-medium">
+                                      {getWarningMessage(msg)}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleMessageVisibility(msg.id)}
+                                      className="h-6 w-6 p-0 hover:bg-red-200 text-red-600 hover:text-red-700"
+                                      title="Hide message"
+                                    >
+                                      <EyeOff className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <p className="text-sm text-gray-900 break-words leading-snug">
+                                    {msg.message}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            /* Normal Message */
+                            <div className="bg-gray-50 hover:bg-gray-100 transition-colors rounded-md px-2.5 py-1.5 w-fit max-w-[300px] border border-gray-100">
+                              <p className="text-sm text-gray-900 break-words leading-snug">
+                                {msg.message}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
@@ -252,41 +433,72 @@ export default function GlobalChatWidget() {
                   <div ref={bottomRef} />
                 </div>
               </ScrollArea>
-              
-              <div className="border-t p-3">
-                <div className="flex gap-2">
+            </div>
+
+            {/* Input Area - Contained within the card */}
+            {/* Input Area */}
+            <div className="border-t bg-white px-2 py-2">
+              {inputWarning && (
+                <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-700">{inputWarning}</p>
+                  <p className="text-xs text-yellow-600 mt-1">Consider rephrasing your message.</p>
+                </div>
+              )}
+              <div className="flex gap-1.5 items-end">
+                <div className="flex-1">
                   <Input
-                    placeholder="Type a message..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && send()}
+                    placeholder="Type your message..."
+                    className={`resize-none focus:border-orange-300 focus:ring-orange-200 rounded-md text-sm leading-snug py-2 px-2.5 min-h-[34px] transition-all duration-200 ${
+                      inputWarning ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'
+                    }`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        send();
+                      }
+                    }}
                     disabled={loading}
-                    className="text-sm"
                   />
-                  <Button 
-                    onClick={send} 
-                    disabled={!text.trim() || loading}
-                    size="sm"
-                  >
-                    {loading ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
                 </div>
+                <Button
+                  onClick={send}
+                  disabled={loading || !text.trim()}
+                  className={`text-white px-2 py-2 rounded-md h-[34px] w-[34px] flex items-center justify-center transition-all duration-200 disabled:opacity-50 ${
+                    inputWarning
+                      ? 'bg-yellow-500 hover:bg-yellow-600'
+                      : 'bg-orange-500 hover:bg-orange-600'
+                  }`}
+                  title={
+                    inputWarning ? 'Message may be inappropriate - send anyway?' : 'Send message'
+                  }
+                >
+                  {loading ? (
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : isCheckingContent ? (
+                    <div className="h-3 w-3 animate-pulse rounded-full bg-white/50" />
+                  ) : (
+                    <Send className="h-3 w-3" />
+                  )}
+                </Button>
               </div>
-            </CardContent>
-          )}
+            </div>
+          </div>
         </Card>
       ) : (
-        <Button 
+        /* Chat Icon - When closed */
+        <Button
           onClick={() => setOpen(true)}
-          className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg"
-          size="sm"
+          className="h-14 w-14 bg-orange-500 hover:bg-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-110 rounded-full"
+          title="Open Global Chat"
         >
-          <MessageCircle className="h-4 w-4 mr-2" />
-          Chat
+          <MessageCircle className="h-6 w-6" />
+          {messages.length > 0 && (
+            <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[1.25rem] h-5 flex items-center justify-center">
+              {messages.length}
+            </Badge>
+          )}
         </Button>
       )}
     </div>
