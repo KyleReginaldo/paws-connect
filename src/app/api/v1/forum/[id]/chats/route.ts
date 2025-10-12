@@ -251,10 +251,10 @@ export async function POST(request: NextRequest, context: any) {
       }
     }
 
-    // Verify user exists
+    // Verify user exists and get role info
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, username')
+      .select('id, username, role')
       .eq('id', sender)
       .single();
 
@@ -465,8 +465,14 @@ export async function POST(request: NextRequest, context: any) {
             .eq('id', mentionedUserId)
             .single();
 
-          const mentionTitle = `You were mentioned by ${user.username}`;
-          const mentionContent = `${user.username} mentioned you in ${forum.forum_name}: ${message}`;
+          // Enhanced mention notifications for admin messages
+          const isAdminMention = user.role === 1;
+          const mentionTitle = isAdminMention 
+            ? `🚨 Admin ${user.username} mentioned you`
+            : `You were mentioned by ${user.username}`;
+          const mentionContent = isAdminMention
+            ? `ADMIN ${user.username} mentioned you in ${forum.forum_name}: ${message}`
+            : `${user.username} mentioned you in ${forum.forum_name}: ${message}`;
 
           const mentionPush = pushNotification(
             mentionedUserId,
@@ -494,21 +500,38 @@ export async function POST(request: NextRequest, context: any) {
     }
 
     // Send regular forum notifications to non-mentioned members
+    // Admin messages override mute settings to ensure important information reaches everyone
+    const isAdminMessage = user.role === 1;
+    
     for (const member of members) {
       const recipientId = member.member?.id;
       const isMentioned = recipientId && mentions && mentions.includes(recipientId);
       
-      if (recipientId && recipientId !== sender && member.invitation_status === 'APPROVED' && !member.mute && !isMentioned) {
+      // Admin messages bypass mute settings, regular messages respect mute settings
+      const shouldNotify = recipientId && 
+        recipientId !== sender && 
+        member.invitation_status === 'APPROVED' && 
+        !isMentioned && 
+        (isAdminMessage || !member.mute);
+      
+      if (shouldNotify) {
         // Customize notification for original message owner if this is a reply
         const isOriginalMessageOwner = replied_to && recipientId === originalMessageOwnerId;
         
         let notificationTitle: string;
         let notificationContent: string;
         
+        // Check if sender is admin (role 1) for special notification handling
+        const isAdmin = user.role === 1;
+        
         if (isOriginalMessageOwner) {
           // Special reply notification for original message owner
           notificationTitle = `${user.username} replied to your message`;
           notificationContent = `${user.username} replied to your message in ${forum.forum_name}: ${message}`;
+        } else if (isAdmin) {
+          // Special admin notification - more prominent and urgent
+          notificationTitle = `🚨 Admin Message from ${user.username}`;
+          notificationContent = `ADMIN: ${message}`;
         } else {
           // Regular forum notification for other members
           notificationTitle = user.username ?? forum.forum_name ?? 'PawsConnect';

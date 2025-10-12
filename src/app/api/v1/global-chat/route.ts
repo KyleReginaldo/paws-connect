@@ -1,3 +1,4 @@
+import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
 import { getStandardWarningMessage, moderateContent } from '@/lib/content-moderation';
 import { NextRequest } from 'next/server';
@@ -260,6 +261,64 @@ export async function POST(request: NextRequest) {
           console.error('AI moderation failed for message:', newMessage.id, error);
         });
     }
+
+    // Send notifications to all users asynchronously (don't await to keep response fast)
+    void (async () => {
+      try {
+        // Get all active users except the sender
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, username')
+          .neq('id', user_id)
+          .neq('status', 'INDEFINITE'); // Exclude indefinitely suspended users
+
+        if (usersError || !users) {
+          console.error('Error fetching users for global chat notification:', usersError);
+          return;
+        }
+
+        // Enhanced notifications for admin messages
+        const isAdmin = user.role === 1;
+        const notificationTitle = `${user.username} - Global Chat`;
+        const notificationContent = isAdmin 
+          ? `ADMIN: ${message}`
+          : message;
+
+        // Send notifications to all users in batches
+        const batchSize = 50;
+        for (let i = 0; i < users.length; i += batchSize) {
+          const batch = users.slice(i, i + batchSize);
+          
+          // Process batch in parallel
+          await Promise.allSettled(
+            batch.map(async (targetUser) => {
+              try {
+                // Send push notification
+                await pushNotification(
+                  targetUser.id,
+                  notificationTitle,
+                  notificationContent,
+                  `/forum-chat/${globalForum.id}`
+                );
+
+                // Store in-app notification
+                await storeNotification(
+                  targetUser.id,
+                  notificationTitle,
+                  notificationContent
+                );
+              } catch (error) {
+                console.error(`Failed to notify user ${targetUser.id}:`, error);
+              }
+            })
+          );
+        }
+
+        console.log(`Global chat notification sent to ${users.length} users for message from ${user.username}`);
+      } catch (error) {
+        console.error('Error in global chat notifications:', error);
+      }
+    })();
 
     // Format response to match frontend expectations
     const formattedMessage = {

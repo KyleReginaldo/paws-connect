@@ -111,3 +111,132 @@ export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string
         console.error('Error in notifyAllUsersNewEvent:', error);
     }
 }
+
+// Notify all forum members when admin sends a message (enhanced notification)
+export async function notifyAllForumMembersAdminMessage(
+    forumId: number, 
+    adminUsername: string, 
+    message: string, 
+    senderId: string,
+    imageUrl?: string
+) {
+    try {
+        // Get all forum members (except the sender)
+        const { data: members, error } = await supabase
+            .from('forum_members')
+            .select(`
+                member(id, username),
+                invitation_status,
+                mute
+            `)
+            .eq('forum', forumId)
+            .eq('invitation_status', 'APPROVED')
+            .neq('member', senderId);
+
+        if (error || !members) {
+            console.error('Error fetching forum members for admin notification:', error);
+            return;
+        }
+
+        const notificationTitle = `🚨 URGENT: Admin Message from ${adminUsername}`;
+        const notificationContent = `ADMIN ANNOUNCEMENT: ${message}`;
+
+        // Send to all members regardless of mute status (admin messages are important)
+        const notificationPromises = members.map(async (member) => {
+            const userId = member.member?.id;
+            if (!userId) return;
+
+            try {
+                // Send push notification
+                await pushNotification(
+                    userId,
+                    notificationTitle,
+                    notificationContent,
+                    `/forum-chat/${forumId}`,
+                    imageUrl
+                );
+
+                // Store in-app notification
+                await storeNotification(
+                    userId,
+                    notificationTitle,
+                    notificationContent
+                );
+            } catch (error) {
+                console.error(`Failed to notify forum member ${userId}:`, error);
+            }
+        });
+
+        await Promise.allSettled(notificationPromises);
+        console.log(`Admin message notification sent to ${members.length} forum members`);
+    } catch (error) {
+        console.error('Error in notifyAllForumMembersAdminMessage:', error);
+    }
+}
+
+// Notify all users about a new global chat message
+export async function notifyAllUsersGlobalChat(
+    senderUsername: string, 
+    message: string, 
+    senderId: string,
+    senderRole: number,
+    imageUrl?: string
+) {
+    try {
+        // Get all active users except the sender
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('id, username')
+            .neq('id', senderId)
+            .neq('status', 'INDEFINITE'); // Exclude indefinitely suspended users
+
+        if (error || !users) {
+            console.error('Error fetching users for global chat notification:', error);
+            return;
+        }
+
+        // Enhanced notifications for admin messages
+        const isAdmin = senderRole === 1;
+        const notificationTitle = isAdmin 
+            ? `🚨 Admin ${senderUsername} - Global Chat`
+            : `💬 ${senderUsername} - Global Chat`;
+        const notificationContent = isAdmin 
+            ? `ADMIN: ${message}`
+            : message;
+
+        // Send notifications to all users in batches to avoid overwhelming the system
+        const batchSize = 50;
+        for (let i = 0; i < users.length; i += batchSize) {
+            const batch = users.slice(i, i + batchSize);
+            
+            // Process batch in parallel
+            await Promise.allSettled(
+                batch.map(async (user) => {
+                    try {
+                        // Send push notification
+                        await pushNotification(
+                            user.id,
+                            notificationTitle,
+                            notificationContent,
+                            '/global-chat',
+                            imageUrl
+                        );
+
+                        // Store in-app notification
+                        await storeNotification(
+                            user.id,
+                            notificationTitle,
+                            notificationContent
+                        );
+                    } catch (error) {
+                        console.error(`Failed to notify user ${user.id}:`, error);
+                    }
+                })
+            );
+        }
+
+        console.log(`Global chat notification sent to ${users.length} users for message from ${senderUsername}`);
+    } catch (error) {
+        console.error('Error in notifyAllUsersGlobalChat:', error);
+    }
+}
