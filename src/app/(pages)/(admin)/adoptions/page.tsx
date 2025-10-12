@@ -21,8 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, PawPrint, SearchIcon } from 'lucide-react';
+import { PawPrint, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { TableSkeleton } from '@/components/ui/skeleton-patterns';
 
 import { useRouter } from 'next/navigation';
 interface Adoption {
@@ -192,14 +193,7 @@ const AdoptionsPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
-          <p className="text-gray-600">Loading adoption applications...</p>
-        </div>
-      </div>
-    );
+    return <TableSkeleton />;
   }
 
   if (error) {

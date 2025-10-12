@@ -14,6 +14,7 @@ import { useNotifications } from '@/components/ui/notification';
 import { Camera, CheckCircle, Heart, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useRef, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface HappinessImageUploadProps {
   adoptionId: number;
@@ -263,9 +264,12 @@ export function HappinessImageUpload({
               onDragLeave={handleDragLeave}
             >
               {isUploading ? (
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                  <p className="text-sm text-orange-700">Uploading your happiness photo...</p>
+                <div className="flex flex-col items-center space-y-3 p-8">
+                  <Skeleton className="h-20 w-20 rounded-full" />
+                  <div className="space-y-2 text-center">
+                    <Skeleton className="h-4 w-48 mx-auto" />
+                    <Skeleton className="h-3 w-32 mx-auto" />
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">

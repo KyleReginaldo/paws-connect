@@ -12,6 +12,7 @@ import { Calendar, Download, Plus, Search, Sparkles, TrendingUp, Users, X } from
 import Image from 'next/image';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
+import { CardListSkeleton } from '@/components/ui/skeleton-patterns';
 
 const ManageEvents = () => {
   const { userRole, userId } = useAuth();
@@ -176,13 +177,7 @@ const ManageEvents = () => {
   const uniqueCreators = new Set(events?.map((e) => e.created_by).filter(Boolean)).size;
 
   if (status === 'loading') {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
+    return <CardListSkeleton />;
   }
 
   if (status === 'error') {

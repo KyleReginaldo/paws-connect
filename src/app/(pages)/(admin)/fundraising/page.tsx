@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { type Fundraising, type FundraisingStatus } from '@/config/types/fundraising';
+import { CardListSkeleton } from '@/components/ui/skeleton-patterns';
 import {
   DollarSign,
   Download,
@@ -161,14 +162,7 @@ const Fundraising = () => {
   };
 
   if (status === 'loading') {
-    return (
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading campaigns...</span>
-        </div>
-      </div>
-    );
+    return <CardListSkeleton />;
   }
 
   if (status === 'error') {

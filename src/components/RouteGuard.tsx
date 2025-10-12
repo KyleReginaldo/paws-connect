@@ -2,6 +2,7 @@
 import { AuthStatus, useAuth } from '@/app/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { LoadingSkeleton } from '@/components/ui/skeleton-patterns';
 
 export default function RouteGuard({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
@@ -33,8 +34,8 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
 
   if (status === AuthStatus.loading || status === AuthStatus.authenticating) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen">
+        <LoadingSkeleton lines={10} />
       </div>
     );
   }

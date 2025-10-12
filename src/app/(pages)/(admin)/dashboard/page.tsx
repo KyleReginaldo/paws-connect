@@ -19,7 +19,6 @@ import {
   DollarSign,
   FileText,
   Heart,
-  Loader2,
   PawPrint,
   Shield,
   TrendingUp,
@@ -37,7 +36,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
-import DashboardTour from '@/components/DashboardTour';
+import { DashboardSkeleton } from '@/components/ui/skeleton-patterns';
 
 const chartConfig = {
   users: {
@@ -842,14 +841,7 @@ const Page = () => {
 
   // Show loading state
   if (loading) {
-    return (
-      <div className="flex-1 min-h-screen bg-gradient-to-br from-orange-25/50 to-orange-50/50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
-          <p className="text-muted-foreground">Loading dashboard data...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Show error state
@@ -936,8 +928,6 @@ const Page = () => {
 
   return (
     <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
-      {/* Onboarding Tour (runs only when appropriate) */}
-      <DashboardTour />
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
         <div className="flex items-center space-x-2 flex-shrink-0">
