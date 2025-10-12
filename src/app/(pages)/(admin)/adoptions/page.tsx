@@ -220,7 +220,7 @@ const AdoptionsPage = () => {
             placeholder="Search applications..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 w-md"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>

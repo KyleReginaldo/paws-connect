@@ -200,21 +200,21 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Sidebar>
             <SidebarInset className="flex-1 flex flex-col min-w-0">
               <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-                <SidebarTrigger className="-ml-1" />
+                <SidebarTrigger className="ml-1" />
                 <div className="flex-1 flex justify-between items-center">
                   <div>
-                    <h1 className="text-[15px] font-semibold text-gray-900">{getTitle()}</h1>
-                    <p className="text-[12px] font-light text-gray-700">{getSubtitle()}</p>
+                    <h1 className="text-sm font-semibold text-gray-900">{getTitle()}</h1>
+                    <p className="text-xs font-light text-gray-700">{getSubtitle()}</p>
                   </div>
-                  <div
+                  {/* <div
                     className={`${userRole === 1 ? 'bg-orange-500' : 'bg-red-500'} flex gap-1 items-center py-1.5 px-3 rounded-full text-xs text-white`}
                   >
                     <div className="rounded-full h-1.5 w-1.5 bg-white"></div>
                     {userRole === 1 ? 'ADMIN' : 'STAFF'}
-                  </div>
+                  </div> */}
                 </div>
               </header>
-              <main className="flex-1 overflow-auto p-4 bg-gray-50 min-w-0">
+              <main className="flex-1 overflow-auto bg-gray-50 min-w-0">
                 <Suspense fallback={<div className="text-sm text-gray-500">Loading…</div>}>
                   {children}
                 </Suspense>

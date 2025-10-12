@@ -10,6 +10,7 @@ import {
 import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { AvatarCircles } from './ui/avatar-circles';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -22,11 +23,17 @@ type ChatMessage = {
   message_warning?: string | null;
   user_id: string | null;
   created_at: string;
+  viewers?: Viewer[];
   user: {
     id: string;
     username: string | null;
     role: number;
   } | null;
+};
+type Viewer = {
+  id: string;
+  username: string;
+  profile_image_link: string | null;
 };
 
 type MessageWithModeration = ChatMessage & {
@@ -292,7 +299,7 @@ export default function GlobalChatWidget() {
           <div className="flex flex-row items-center justify-between border-b bg-white rounded-t-lg px-3 py-2">
             <div className="flex items-center gap-1.5">
               <Globe2 className="w-4 text-orange-500" />
-              <h3 className="text-sm font-semibold text-gray-800">Global Chat</h3>
+              <h3 className="text-xs font-semibold text-gray-800">Global Chat</h3>
               <Badge
                 variant="outline"
                 className="text-xs bg-orange-50 text-orange-600 border-orange-200 px-1.5 py-0.5"
@@ -312,17 +319,14 @@ export default function GlobalChatWidget() {
               </Button>
             </div>
           </div>
-
-          {/* Chat Content */}
           <div className="flex flex-col h-[536px] p-0 m-0 overflow-hidden">
-            {/* Messages Area */}
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full px-2 py-1.5">
                 <div className="space-y-2.5 pb-1.5">
                   {messages.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">
                       <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30 text-orange-300" />
-                      <p className="text-sm font-medium text-gray-600">No messages yet</p>
+                      <p className="text-xs font-medium text-gray-600">No messages yet</p>
                       <p className="text-xs mt-1 text-gray-500">Start the conversation!</p>
                     </div>
                   ) : (
@@ -386,7 +390,7 @@ export default function GlobalChatWidget() {
                                       <EyeOff className="h-3 w-3" />
                                     </Button>
                                   </div>
-                                  <p className="text-sm text-gray-900 break-words leading-snug">
+                                  <p className="text-xs text-gray-900 break-words leading-snug">
                                     {msg.message}
                                   </p>
                                 </div>
@@ -394,11 +398,31 @@ export default function GlobalChatWidget() {
                             </div>
                           ) : (
                             <div className="bg-gray-50 hover:bg-gray-100 transition-colors rounded-md px-2.5 py-1.5 w-fit max-w-[300px] border border-gray-100">
-                              <p className="text-sm text-gray-900 break-words leading-snug">
+                              <p className="text-xs text-gray-900 break-words leading-snug">
                                 {msg.message}
                               </p>
                             </div>
                           )}
+                          {/* Show viewers only on the last message */}
+                          {messages.indexOf(msg) === messages.length - 1 &&
+                            msg.viewers &&
+                            msg.viewers.length > 0 && (
+                              <div className="mt-1">
+                                <AvatarCircles
+                                  avatarUrls={msg.viewers
+                                    .filter((viewer) => viewer.profile_image_link)
+                                    .map((viewer) => ({
+                                      imageUrl:
+                                        viewer.profile_image_link ||
+                                        `https://api.dicebear.com/6.x/initials/svg?seed=${viewer.username}&backgroundColor=ffebc8`,
+                                      profileUrl:
+                                        viewer.profile_image_link ||
+                                        `https://api.dicebear.com/6.x/initials/svg?seed=${viewer.username}&backgroundColor=ffebc8`,
+                                    }))}
+                                  numPeople={Math.max(0, msg.viewers.length - 5)}
+                                />
+                              </div>
+                            )}
                         </div>
                       </div>
                     ))
@@ -410,6 +434,7 @@ export default function GlobalChatWidget() {
 
             {/* Input Area - Contained within the card */}
             {/* Input Area */}
+
             <div className="border-t bg-white px-2 py-2">
               {inputWarning && (
                 <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">

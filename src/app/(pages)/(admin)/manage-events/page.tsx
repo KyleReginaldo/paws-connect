@@ -3,13 +3,12 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { Event, useEvents } from '@/app/context/EventsContext';
 import { EventModal } from '@/components/EventModal';
-import { EventTable } from '@/components/EventTable';
+import { EventTableFiltered } from '@/components/EventTableFiltered';
 import { Button } from '@/components/ui/button';
 import { useConfirmation } from '@/components/ui/confirmation';
-import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/components/ui/notification';
 import { CardListSkeleton } from '@/components/ui/skeleton-patterns';
-import { Calendar, Download, Plus, Search, Sparkles, TrendingUp, Users, X } from 'lucide-react';
+import { Calendar, Download, Plus, Sparkles, TrendingUp, Users } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
@@ -17,7 +16,6 @@ import * as XLSX from 'xlsx';
 const ManageEvents = () => {
   const { userRole, userId } = useAuth();
   const { events, status, addEvent, updateEvent, deleteEvent, endEvent, reopenEvent } = useEvents();
-  const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const { success, error, warning } = useNotifications();
@@ -138,18 +136,6 @@ const ManageEvents = () => {
     }
   };
 
-  // Filter events based on search query
-  const filteredEvents =
-    events?.filter((event) => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      return (
-        event.title.toLowerCase().includes(query) ||
-        event.description?.toLowerCase().includes(query) ||
-        event.users?.username?.toLowerCase().includes(query)
-      );
-    }) || [];
-
   const handleExport = () => {
     if (!events || events.length === 0) return;
 
@@ -205,12 +191,12 @@ const ManageEvents = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleExport} variant="outline" size="sm">
+          <Button onClick={handleExport} variant="outline" size="sm" className="rounded-full">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
           {canManageEvents() && (
-            <Button onClick={openAddModal}>
+            <Button onClick={openAddModal} className="rounded-full" size={'sm'}>
               <Plus className="h-4 w-4 mr-2" />
               Add Event
             </Button>
@@ -218,61 +204,42 @@ const ManageEvents = () => {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border">
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-blue-500" />
-            <span className="text-sm font-medium text-gray-600">Total Events</span>
-          </div>
-          <p className="text-2xl font-bold mt-1">{totalEvents}</p>
+      {/* Statistics Badges */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        {/* Total Events Badge */}
+        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+          <Calendar className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{totalEvents}</span>
+          <span className="text-xs opacity-75">Total Events</span>
         </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-sm font-medium text-gray-600">With Images</span>
-          </div>
-          <p className="text-2xl font-bold mt-1">{eventsWithImages}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="h-4 w-4 text-purple-500" />
-            <span className="text-sm font-medium text-gray-600">AI Enhanced</span>
-          </div>
-          <p className="text-2xl font-bold mt-1">{eventsWithSuggestions}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <div className="flex items-center space-x-2">
-            <Users className="h-4 w-4 text-orange-500" />
-            <span className="text-sm font-medium text-gray-600">Creators</span>
-          </div>
-          <p className="text-2xl font-bold mt-1">{uniqueCreators}</p>
-        </div>
-      </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search events by title, description, or creator..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Events with Images Badge */}
+        <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+          <TrendingUp className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{eventsWithImages}</span>
+          <span className="text-xs opacity-75">With Images</span>
         </div>
-        {searchQuery && (
-          <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
-            <X className="h-4 w-4" />
-          </Button>
-        )}
+
+        {/* AI Enhanced Badge */}
+        <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">
+          <Sparkles className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{eventsWithSuggestions}</span>
+          <span className="text-xs opacity-75">AI Enhanced</span>
+        </div>
+
+        {/* Creators Badge */}
+        <div className="inline-flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full border border-orange-200">
+          <Users className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{uniqueCreators}</span>
+          <span className="text-xs opacity-75">Creators</span>
+        </div>
       </div>
 
       {/* Events Table */}
       <div className="rounded-lg">
-        {filteredEvents.length > 0 ? (
-          <EventTable
-            events={filteredEvents}
+        {events && events.length > 0 ? (
+          <EventTableFiltered
+            events={events}
             onEdit={openEditModal}
             onDelete={handleDelete}
             onEndEvent={handleEndEvent}
@@ -283,24 +250,16 @@ const ManageEvents = () => {
             <div className="mb-4 flex justify-center">
               <Image src="/empty.png" alt="No events" width={120} height={120} />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
-              {searchQuery ? 'No events found' : 'No events yet'}
-            </h3>
+            <h3 className="text-lg font-semibold mb-2">No events yet</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery
-                ? `No events match "${searchQuery}"`
-                : 'Start creating events to engage with the community'}
+              Start creating events to engage with the community
             </p>
-            {searchQuery ? (
-              <Button onClick={() => setSearchQuery('')} variant="outline">
-                Clear Search
-              </Button>
-            ) : canManageEvents() ? (
+            {canManageEvents() && (
               <Button className="gap-2" onClick={openAddModal}>
                 <Plus className="h-4 w-4" />
                 Create Event
               </Button>
-            ) : null}
+            )}
           </div>
         )}
       </div>

@@ -14,7 +14,6 @@ import {
   DollarSign,
   Heart,
   QrCode,
-  Smartphone,
   User,
   Users,
 } from 'lucide-react';
@@ -203,7 +202,7 @@ const FundraisingPage = () => {
                         {campaign.gcash_number && (
                           <div className="flex items-center justify-between py-2 border-b border-gray-100">
                             <span className="text-sm font-medium text-gray-600">GCash Number:</span>
-                            <span className="text-sm font-mono font-semibold text-blue-600">
+                            <span className="text-sm font-mono font-medium text-blue-600">
                               {campaign.gcash_number}
                             </span>
                           </div>
@@ -212,7 +211,6 @@ const FundraisingPage = () => {
                           <div className="flex items-center justify-between py-2 border-b border-gray-100">
                             <span className="text-sm font-medium text-gray-600">QR Code:</span>
                             <span className="text-sm text-green-600 flex items-center gap-1">
-                              <Smartphone className="h-3 w-3" />
                               Available
                             </span>
                           </div>
@@ -268,7 +266,7 @@ const FundraisingPage = () => {
           <div className="space-y-6">
             {/* Donation Statistics */}
             <Card className="shadow-sm">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-0">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <DollarSign className="h-4 w-4 text-primary" />
                   Donation Statistics
@@ -327,7 +325,7 @@ const FundraisingPage = () => {
                           </div>
                           <span className="font-medium text-sm">GCash Number</span>
                         </div>
-                        <p className="text-lg font-mono font-bold text-blue-700 mb-1">
+                        <p className="text-[15px] font-mono text-blue-700 mb-1">
                           {campaign.gcash_number}
                         </p>
                         <p className="text-xs text-blue-600">
@@ -369,7 +367,7 @@ const FundraisingPage = () => {
 
                           <div className="text-center">
                             <p className="text-xs text-green-600 font-medium">
-                              ✅ Scan to pay via GCash
+                              Scan to pay via GCash
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
                               Point your GCash app camera here
@@ -378,20 +376,6 @@ const FundraisingPage = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Payment Instructions */}
-                    <div className="p-3 rounded-lg border bg-gray-50">
-                      <h4 className="font-medium text-sm mb-2 text-gray-700">💡 How to donate:</h4>
-                      <ul className="space-y-1 text-xs text-gray-600">
-                        {campaign.qr_code && <li>• Open GCash app and scan the QR code above</li>}
-                        {campaign.gcash_number && (
-                          <li>• Send money to GCash number: {campaign.gcash_number}</li>
-                        )}
-                        <li>• Enter your donation amount</li>
-                        <li>• Complete the transaction</li>
-                        <li>• Your donation will help this campaign!</li>
-                      </ul>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

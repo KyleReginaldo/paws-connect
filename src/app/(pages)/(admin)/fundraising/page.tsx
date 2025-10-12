@@ -401,70 +401,37 @@ const Fundraising = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">
-                  ₱{(stats?.total_raised || 0).toLocaleString()}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Total Raised</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Statistics Badges */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        {/* Total Raised Badge */}
+        <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+          <DollarSign className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">
+            ₱{(stats?.total_raised || 0).toLocaleString()}
+          </span>
+          <span className="text-xs opacity-75">Total Raised</span>
+        </div>
 
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
-                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-xl md:text-2xl font-bold">
-                  {stats?.ongoing_campaigns || 0}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Ongoing</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Ongoing Campaigns Badge */}
+        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+          <Target className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{stats?.ongoing_campaigns || 0}</span>
+          <span className="text-xs opacity-75">Ongoing</span>
+        </div>
 
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-xl md:text-2xl font-bold">
-                  {stats?.completed_campaigns || 0}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Completed Campaigns Badge */}
+        <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">
+          <TrendingUp className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{stats?.completed_campaigns || 0}</span>
+          <span className="text-xs opacity-75">Completed</span>
+        </div>
 
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
-                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-xl md:text-2xl font-bold">
-                  {stats?.pending_campaigns || 0}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pending Campaigns Badge */}
+        <div className="inline-flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full border border-orange-200">
+          <Users className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">{stats?.pending_campaigns || 0}</span>
+          <span className="text-xs opacity-75">Pending</span>
+        </div>
       </div>
 
       {/* Search and Add Button */}
@@ -475,11 +442,11 @@ const Fundraising = () => {
             placeholder="Search campaigns..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 w-md"
           />
         </div>
         <div className="flex items-center gap-3">
-          <Button className="gap-2" onClick={handleNewCampaignClick}>
+          <Button onClick={handleNewCampaignClick} className="gap-2 rounded-full" size={'sm'}>
             <Plus className="h-4 w-4" />
             New Campaign
           </Button>

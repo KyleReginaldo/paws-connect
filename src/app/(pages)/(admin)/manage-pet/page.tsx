@@ -3,20 +3,18 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { usePets } from '@/app/context/PetsContext';
 import { PetModal } from '@/components/PetModal';
-import { PetTable } from '@/components/PetTable';
+import { PetTableFiltered } from '@/components/PetTableFiltered';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/components/ui/notification';
 import { Pet } from '@/config/types/pet';
-import { Download, Plus, Search, Upload, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Download, Plus, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 export default function PetManagement() {
   const { pets, addPet, updatePet, deletePet: deletePetFromContext } = usePets();
   const { userId } = useAuth();
   const { success, error, warning } = useNotifications();
-  const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,14 +30,12 @@ export default function PetManagement() {
   };
 
   const handleDeletePet = async (id: number) => {
-    console.log('Deleting pet with id:', id);
     await deletePetFromContext(id);
   };
 
   const handleImport = async (file: File) => {
     if (!file) return;
 
-    console.log('Import started with file:', file.name);
     setIsImporting(true);
 
     if (!userId) {
@@ -62,9 +58,6 @@ export default function PetManagement() {
     };
 
     const normalizeRow = (r: Record<string, unknown>) => {
-      console.log('Raw imported row:', r);
-
-      // Handle good_with array - exported as comma-separated string
       const gwRaw =
         (r as Record<string, unknown>).good_with ??
         (r as Record<string, unknown>).goodWith ??
@@ -79,7 +72,6 @@ export default function PetManagement() {
             .filter(Boolean);
 
       const normalized = {
-        // All required fields for createPetSchema
         name: String(r.name ?? '').trim() || 'Unknown',
         type: String(r.type ?? '').trim() || 'Dog',
         breed: String(r.breed ?? '').trim() || 'Mixed',
@@ -96,11 +88,10 @@ export default function PetManagement() {
         rescue_address: String(r.rescue_address ?? '').trim() || '',
         description: String(r.description ?? '').trim() || '',
         special_needs: String(r.special_needs ?? '').trim() || '',
-        added_by: userId, // Always use current user
-        photos: String(r.photo ?? '').trim() ? [String(r.photo).trim()] : ['/empty_pet.png'], // Default photo if none provided
+        added_by: userId,
+        photos: String(r.photo ?? '').trim() ? [String(r.photo).trim()] : ['/empty_pet.png'],
       };
 
-      console.log('Normalized row:', normalized);
       return normalized;
     };
 
@@ -109,15 +100,12 @@ export default function PetManagement() {
       if (file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
         reader.onload = async (ev: ProgressEvent<FileReader>) => {
           try {
-            console.log('Parsing XLSX file...');
             const data = ev.target?.result as ArrayBuffer;
             const workbook = XLSX.read(data, { type: 'array' });
             const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(
               workbook.Sheets[workbook.SheetNames[0]],
               { defval: '' },
             );
-
-            console.log('Raw XLSX data:', json);
 
             if (json.length === 0) {
               error(
@@ -128,10 +116,7 @@ export default function PetManagement() {
               return;
             }
 
-            // exported file uses the full pet objects; normalize each row to create shape
             const normalized = json.map(normalizeRow);
-
-            console.log('Sending to bulk API:', { pets: normalized });
 
             const resp = await fetch('/api/v1/pets/bulk', {
               method: 'POST',
@@ -139,14 +124,11 @@ export default function PetManagement() {
               body: JSON.stringify({ pets: normalized }),
             });
 
-            console.log('API response status:', resp.status);
             const result = await resp.json().catch(() => ({}));
-            console.log('API response data:', result);
 
             if (!resp.ok) {
               const message = result?.message || 'Import failed';
               const errors = result?.errors ? JSON.stringify(result.errors, null, 2) : '';
-              console.error('Import failed:', message, errors);
               error(`${message}${errors ? '\n' + errors : ''}`);
               setIsImporting(false);
               return;
@@ -155,10 +137,8 @@ export default function PetManagement() {
             const created = result.created || 0;
             success(`Import succeeded! ${created} pets created.`);
 
-            // Refresh pets context instead of full page reload
             window.location.reload();
           } catch (err) {
-            console.error('Excel parsing error:', err);
             error('Failed to parse Excel file: ' + String(err));
             setIsImporting(false);
           }
@@ -169,48 +149,30 @@ export default function PetManagement() {
         setIsImporting(false);
       }
     } catch (err) {
-      console.error('Import failed:', err);
       error('Import failed: ' + String(err));
       setIsImporting(false);
     }
   };
 
-  // Filter pets based on search query
-  const filteredPets =
-    pets?.filter((pet) => {
-      if (!searchQuery) return true;
-
-      const query = searchQuery.toLowerCase().trim();
-      return (
-        pet.name.toLowerCase().includes(query) ||
-        pet.type.toLowerCase().includes(query) ||
-        (pet.breed && pet.breed.toLowerCase().includes(query))
-      );
-    }) || [];
-
-  useEffect(() => {
-    console.log(`user id: ${userId}`);
-  }, [userId]);
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search pets by name, type, or breed..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-wrap gap-3">
+          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="text-sm font-medium">{pets ? pets.length : 0}</span>
+            <span className="text-xs opacity-75">Total Pets</span>
+          </div>
+
+          <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="text-sm font-medium">
+              {pets ? [...new Set(pets.map((pet) => pet.type))].length : 0}
+            </span>
+            <span className="text-xs opacity-75">Pet Types</span>
+          </div>
         </div>
+
         <div className="flex items-center gap-3">
           <input
             ref={fileInputRef}
@@ -242,7 +204,6 @@ export default function PetManagement() {
               variant="outline"
               size="sm"
               onClick={() => {
-                // Export pets to Excel - format good_with array as comma-separated string
                 const exportData = (pets || []).map((pet) => ({
                   ...pet,
                   good_with: Array.isArray(pet.good_with)
@@ -262,46 +223,16 @@ export default function PetManagement() {
             </Button>
           </div>
 
-          <Button onClick={openAddModal} className="gap-2">
+          <Button onClick={openAddModal} className="gap-2 rounded-full" size={'sm'}>
             <Plus className="h-4 w-4" />
             Add Pet
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">{pets ? pets.length : 0}</div>
-          <div className="text-sm text-muted-foreground">Total Pets</div>
-        </div>
-
-        <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">
-            {pets ? [...new Set(pets.map((pet) => pet.type))].length : 0}
-          </div>
-          <div className="text-sm text-muted-foreground">Pet Types</div>
-        </div>
-      </div>
-
-      {pets && filteredPets.length > 0 && (
-        <PetTable pets={filteredPets} onEdit={openEditModal} onDelete={handleDeletePet} />
-      )}
-
-      {pets && filteredPets.length === 0 && searchQuery && (
-        <div className="text-center py-12">
-          <div className="text-lg font-medium text-muted-foreground mb-2">
-            No pets found matching &quot;{searchQuery}&quot;
-          </div>
-          <div className="text-sm text-muted-foreground mb-4">
-            Try searching by a different name, type, or breed
-          </div>
-          <Button onClick={() => setSearchQuery('')} variant="outline">
-            Clear Search
-          </Button>
-        </div>
-      )}
-
-      {pets && pets.length === 0 && !searchQuery && (
+      {pets && pets.length > 0 ? (
+        <PetTableFiltered pets={pets} onEdit={openEditModal} onDelete={handleDeletePet} />
+      ) : (
         <div className="text-center py-12">
           <div className="text-lg font-medium text-muted-foreground mb-2">No pets yet</div>
           <div className="text-sm text-muted-foreground mb-4">
@@ -319,18 +250,9 @@ export default function PetManagement() {
         onOpenChange={setModalOpen}
         onSubmit={async (petData) => {
           if (!editingPet) {
-            // Adding a new pet
-            const newPet = await addPet(petData);
-            if (newPet) {
-              console.log('Pet added successfully:', newPet);
-            }
+            await addPet(petData);
           } else {
-            // Updating existing pet
-            console.log(`editing pet:${editingPet.id}`);
-            const updatedPet = await updatePet(editingPet.id, petData);
-            if (updatedPet) {
-              console.log('Pet updated successfully:', updatedPet);
-            }
+            await updatePet(editingPet.id, petData);
           }
         }}
         editingPet={editingPet}

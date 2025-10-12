@@ -56,8 +56,8 @@ export default function NotFound() {
                 </div>
               </div>
 
-              <h3 className="text-xl font-semibold text-gray-800">Get the Paws Connect App</h3>
-              <p className="text-gray-600">
+              <h3 className="text-lg font-semibold text-gray-800">Get the Paws Connect App</h3>
+              <p className="text-gray-600 text-sm">
                 Find your perfect furry companion, donate to causes you care about, and stay
                 connected with our pet community – all from your phone!
               </p>

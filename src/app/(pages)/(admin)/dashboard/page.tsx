@@ -936,7 +936,7 @@ const Page = () => {
             onClick={handleGenerateReport}
             variant="outline"
             size="sm"
-            className="gap-2 border-orange-200 hover:bg-orange-25 bg-transparent"
+            className="gap-2 border-orange-200 hover:bg-orange-25 bg-transparent rounded-full"
           >
             <FileText className="h-4 w-4 text-orange-500" />
             Generate Report
@@ -946,7 +946,8 @@ const Page = () => {
               <Button
                 id="pc-dash-date-filter"
                 variant="outline"
-                className="border-orange-200 hover:bg-orange-25 bg-transparent whitespace-nowrap"
+                size={'sm'}
+                className="border-orange-200 hover:bg-orange-25 bg-transparent whitespace-nowrap rounded-full"
               >
                 <CalendarIcon className="mr-2 h-4 w-4 text-orange-500 flex-shrink-0" />
                 <span className="hidden sm:inline">
@@ -1022,7 +1023,7 @@ const Page = () => {
               <stat.icon className={`h-5 w-5 ${stat.iconColor} flex-shrink-0`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
+              <div className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                 {stat.value}
               </div>
               <div className="flex items-center text-xs mt-2">
@@ -1038,10 +1039,8 @@ const Page = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-              Analytics
-            </h3>
-            <p className="text-muted-foreground text-sm sm:text-base">
+            <h3 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900">Analytics</h3>
+            <p className="text-muted-foreground text-xs sm:text-sm">
               Comprehensive insights with weekly, monthly, and annual breakdowns
             </p>
           </div>
@@ -1208,13 +1207,6 @@ const Page = () => {
                     </div>
                   </div>
                 ))}
-                <Button
-                  variant="outline"
-                  className="w-full border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
-                >
-                  <ArrowUpRight className="mr-2 h-4 w-4 flex-shrink-0" />
-                  View All Applications
-                </Button>
               </div>
             ) : (
               <div className="py-8 text-center">
@@ -1243,8 +1235,8 @@ const Page = () => {
         {/* Activity Feed */}
         <Card className="col-span-1 lg:col-span-3 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
-              <Activity className="h-5 w-5 text-orange-500 flex-shrink-0" />
+            <CardTitle className="flex items-center gap-2 text-gray-900 text-sm sm:text-base">
+              <Activity className="h-4 w-4 text-orange-500 flex-shrink-0" />
               <span className="truncate">Recent Activity</span>
             </CardTitle>
             <CardDescription className="text-sm">
@@ -1309,15 +1301,6 @@ const Page = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
-          <div className="mt-6">
-            <Button
-              variant="outline"
-              className="w-full border-orange-200 hover:bg-orange-25 text-orange-500 bg-transparent"
-            >
-              <ArrowUpRight className="mr-2 h-4 w-4 flex-shrink-0" />
-              View All Campaigns
-            </Button>
           </div>
         </CardContent>
       </Card>

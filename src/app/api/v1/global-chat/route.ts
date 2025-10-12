@@ -79,7 +79,8 @@ export async function GET(request: NextRequest) {
           id,
           username,
           role
-        )
+        ),
+        viewers
       `)
       .eq('forum', globalForum.id)
       .not('message', 'is', null) // Only get text messages for now
@@ -93,21 +94,45 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Reverse to show oldest first for display, and format for frontend
-    const reversedMessages = (messages || []).reverse().map((msg) => ({
-      id: msg.id,
-      message: msg.message,
-      message_warning: msg.message_warning,
-      created_at: msg.sent_at,
-      user_id: msg.sender,
-      user: msg.users
-        ? {
-            id: msg.users.id,
-            username: msg.users.username,
-            role: msg.users.role,
-          }
-        : null,
+    // Process messages to fetch viewer details and format for frontend
+    const processedMessages = await Promise.all((messages || []).map(async (msg) => {
+      let viewerDetails: Array<{id: string, username: string, profile_image_link: string | null}> = [];
+      
+      if (msg.viewers && msg.viewers.length > 0) {
+        // Fetch viewer details
+        const { data: viewers, error: viewersError } = await supabase
+          .from('users')
+          .select('id, username, profile_image_link')
+          .in('id', msg.viewers);
+        
+        if (!viewersError && viewers) {
+          viewerDetails = viewers.map(viewer => ({
+            id: viewer.id,
+            username: viewer.username || 'Unknown User',
+            profile_image_link: viewer.profile_image_link
+          }));
+        }
+      }
+
+      return {
+        id: msg.id,
+        message: msg.message,
+        message_warning: msg.message_warning,
+        created_at: msg.sent_at,
+        user_id: msg.sender,
+        viewers: viewerDetails,
+        user: msg.users
+          ? {
+              id: msg.users.id,
+              username: msg.users.username,
+              role: msg.users.role,
+            }
+          : null,
+      };
     }));
+
+    // Reverse to show oldest first for display
+    const reversedMessages = processedMessages.reverse();
 
     return new Response(
       JSON.stringify({
