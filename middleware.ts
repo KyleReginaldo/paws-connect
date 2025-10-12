@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Hard-disable deprecated Forum API routes
+  if (pathname.startsWith('/api/v1/forum')) {
+    return NextResponse.json(
+      { error: 'Forum API has been removed', message: 'This endpoint is no longer available.' },
+      { status: 410, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
   
   // Define your valid routes (add more as needed)
   const validRoutes = [
@@ -39,6 +46,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Explicitly match Forum API to block it above
+    '/api/v1/forum/:path*',
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)

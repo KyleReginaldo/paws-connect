@@ -42,8 +42,8 @@ export default function DashboardTour() {
             description: 'Click here to export a comprehensive dashboard PDF with key metrics.',
             side: 'bottom',
           },
-          // Circle focus around the button
-          highlightClass: 'pc-driver-circle',
+          // Note: driver.js type definitions don't expose a per-step highlight class.
+          // We keep default highlight shape for now; can customize via global CSS if needed.
         },
         {
           element: '#pc-dash-date-filter',
@@ -90,9 +90,15 @@ export default function DashboardTour() {
           void markOnboarded();
         }
       };
-      d.on('destroyed', onDestroyed);
+      type DriverWithEvents = {
+        on?: (event: string, cb: () => void) => void;
+        off?: (event: string, cb: () => void) => void;
+        destroy: () => void;
+      };
+      const dWithEvents = d as unknown as DriverWithEvents;
+      dWithEvents.on?.('destroyed', onDestroyed);
       driverCleanup = () => {
-        d.off('destroyed', onDestroyed);
+        dWithEvents.off?.('destroyed', onDestroyed);
         d.destroy();
       };
     })();
