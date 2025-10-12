@@ -35,8 +35,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
 import { DashboardSkeleton } from '@/components/ui/skeleton-patterns';
+import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
 
 const chartConfig = {
   users: {

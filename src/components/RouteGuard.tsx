@@ -1,8 +1,8 @@
 'use client';
 import { AuthStatus, useAuth } from '@/app/context/AuthContext';
+import { LoadingSkeleton } from '@/components/ui/skeleton-patterns';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { LoadingSkeleton } from '@/components/ui/skeleton-patterns';
 
 export default function RouteGuard({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();

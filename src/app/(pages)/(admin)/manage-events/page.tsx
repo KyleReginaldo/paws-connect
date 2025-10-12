@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { useConfirmation } from '@/components/ui/confirmation';
 import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/components/ui/notification';
+import { CardListSkeleton } from '@/components/ui/skeleton-patterns';
 import { Calendar, Download, Plus, Search, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
-import { CardListSkeleton } from '@/components/ui/skeleton-patterns';
 
 const ManageEvents = () => {
   const { userRole, userId } = useAuth();

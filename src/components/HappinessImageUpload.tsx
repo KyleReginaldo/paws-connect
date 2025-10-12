@@ -11,10 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useNotifications } from '@/components/ui/notification';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Camera, CheckCircle, Heart, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useRef, useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface HappinessImageUploadProps {
   adoptionId: number;

@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/skeleton-patterns';
 import {
   Table,
   TableBody,
@@ -23,7 +24,6 @@ import {
 } from '@/components/ui/table';
 import { PawPrint, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { TableSkeleton } from '@/components/ui/skeleton-patterns';
 
 import { useRouter } from 'next/navigation';
 interface Adoption {

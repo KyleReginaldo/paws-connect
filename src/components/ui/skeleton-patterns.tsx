@@ -15,7 +15,10 @@ export function DashboardSkeleton() {
       {/* Stats Grid */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-gradient-to-br from-orange-25 to-orange-50 border-0 shadow-sm rounded-lg p-6">
+          <div
+            key={i}
+            className="bg-gradient-to-br from-orange-25 to-orange-50 border-0 shadow-sm rounded-lg p-6"
+          >
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-5 w-5 rounded" />
@@ -71,7 +74,10 @@ export function DashboardSkeleton() {
           </div>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between space-x-4 p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100">
+              <div
+                key={i}
+                className="flex items-center justify-between space-x-4 p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100"
+              >
                 <div className="flex items-center space-x-4 flex-1">
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <div className="flex-1">
@@ -122,7 +128,10 @@ export function DashboardSkeleton() {
         </div>
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="border-l-4 border-l-orange-400 bg-gradient-to-br from-orange-25 to-orange-50 rounded p-6">
+            <div
+              key={i}
+              className="border-l-4 border-l-orange-400 bg-gradient-to-br from-orange-25 to-orange-50 rounded p-6"
+            >
               <div className="space-y-4">
                 <div>
                   <Skeleton className="h-5 w-48 mb-2" />
@@ -203,7 +212,7 @@ export function TableSkeleton() {
             <Skeleton className="h-8 w-64" />
           </div>
         </div>
-        
+
         <div className="divide-y">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="p-4 flex items-center space-x-4">

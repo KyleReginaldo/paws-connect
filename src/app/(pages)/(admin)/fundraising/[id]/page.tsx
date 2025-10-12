@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { LoadingSkeleton } from '@/components/ui/skeleton-patterns';
 import type { FundraisingWithDonations } from '@/config/types/fundraising';
 import {
   AlertCircle,
@@ -20,7 +21,6 @@ import {
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { LoadingSkeleton } from '@/components/ui/skeleton-patterns';
 
 const FundraisingPage = () => {
   const params = useParams();
