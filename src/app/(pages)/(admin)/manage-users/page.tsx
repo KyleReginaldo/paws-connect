@@ -145,6 +145,42 @@ const ManageStaff = () => {
     }
   };
 
+  const handleRemoveViolation = async (targetUserId: string, violationIndex: number) => {
+    try {
+      if (!targetUserId || violationIndex < 0) {
+        warning('Invalid user ID or violation index.');
+        return;
+      }
+
+      const response = await fetch(`/api/v1/users/${targetUserId}/violations`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          violation_index: violationIndex,
+          admin_id: userId, // Current logged-in user (admin) who is removing the violation
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove violation');
+      }
+
+      const result = await response.json();
+      console.log('Violation removed successfully:', result);
+
+      // Refresh users data to show the updated violations
+      await refreshUsers();
+    } catch (error) {
+      console.error('Error removing violation:', error);
+      warning(
+        `Failed to remove violation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  };
+
   // Filter users based on search query
   const filteredUsers =
     users?.filter((user) => {
@@ -255,6 +291,7 @@ const ManageStaff = () => {
             onDelete={handleDeleteUser}
             onStatusChange={handleStatusChange}
             onAddViolation={handleAddViolation}
+            onRemoveViolation={handleRemoveViolation}
             currentUserRole={userRole || undefined}
           />
 

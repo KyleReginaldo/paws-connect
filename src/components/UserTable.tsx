@@ -9,7 +9,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { AlertTriangle, Edit, Eye, MoreHorizontal, Trash2, UserCheck, UserX } from 'lucide-react';
+import {
+  AlertTriangle,
+  Edit,
+  Eye,
+  MoreHorizontal,
+  Trash2,
+  UserCheck,
+  UserX,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { User } from '../config/models/users';
 import { Button } from './ui/button';
@@ -28,6 +37,7 @@ interface UserTableProps {
   onDelete?: (userId: string) => void;
   onStatusChange?: (userId: string, status: string) => void;
   onAddViolation?: (userId: string, violation: string) => void;
+  onRemoveViolation?: (userId: string, violationIndex: number) => void;
   currentUserRole?: number; // Add current user role for permission checks
 }
 
@@ -37,6 +47,7 @@ export function UserTable({
   onDelete,
   onStatusChange,
   onAddViolation,
+  onRemoveViolation,
   currentUserRole,
 }: UserTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -178,8 +189,29 @@ export function UserTable({
                                   key={index}
                                   className="p-3 bg-red-50 border border-red-200 rounded-lg"
                                 >
-                                  <div className="text-sm text-red-800">
-                                    <span className="font-medium">#{index + 1}:</span> {violation}
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="text-sm text-red-800 flex-1">
+                                      <span className="font-medium">#{index + 1}:</span> {violation}
+                                    </div>
+                                    {currentUserRole === 1 && onRemoveViolation && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          if (
+                                            window.confirm(
+                                              'Are you sure you want to remove this violation?',
+                                            )
+                                          ) {
+                                            onRemoveViolation(selectedUser.id, index);
+                                          }
+                                        }}
+                                        className="h-6 w-6 p-0 hover:bg-red-200 text-red-600 hover:text-red-700 flex-shrink-0"
+                                        title="Remove violation"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               ))}
