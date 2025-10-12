@@ -1,9 +1,9 @@
 import { supabase } from '@/app/supabase/supabase';
 
-// POST /api/v1/setup/global-chat - Create Global Chat forum if it doesn't exist
+
 export async function POST() {
   try {
-    // Check if Global Chat forum already exists
+    
     const { data: existingForum, error: checkError } = await supabase
       .from('forum')
       .select('id')
@@ -27,7 +27,7 @@ export async function POST() {
       throw checkError;
     }
 
-    // Create the Global Chat forum
+    
     const { data: newForum, error: createError } = await supabase
       .from('forum')
       .insert({
@@ -42,11 +42,11 @@ export async function POST() {
       throw createError;
     }
 
-    // Optional: Create initial welcome message from first admin user
+    
     const { data: adminUser } = await supabase
       .from('users')
       .select('id')
-      .eq('role', 1) // Admin role
+      .eq('role', 1) 
       .limit(1)
       .single();
 
@@ -56,7 +56,7 @@ export async function POST() {
         .insert({
           forum: newForum.id,
           message: 'Welcome to the Global Chat! This is a space for all community members to connect and communicate. 🐾',
-          sender: adminUser.id, // Admin user as sender
+          sender: adminUser.id, 
           sent_at: new Date().toISOString(),
         });
 

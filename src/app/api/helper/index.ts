@@ -40,9 +40,9 @@ export async function pushNotification(userId: string,headings: string, message:
     }
 }
 
-// Persist an in-app notification to the notifications table so it shows in the notifications screen.
-// Columns are inferred as: user_id (UUID), title (string), message (string), route (string|null), image_url (string|null)
-// If your schema differs (e.g., additional required fields), adjust accordingly.
+
+
+
 export async function storeNotification(userId: string, title: string, content: string) {
     try {
         const insertObj: TablesInsert<'notifications'> = {
@@ -59,14 +59,14 @@ export async function storeNotification(userId: string, title: string, content: 
     }
 }
 
-// Notify all users about a new event
+
 export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string, creatorName?: string) {
     try {
-        // Get all active user IDs
+        
         const { data: users, error } = await supabase
             .from('users')
             .select('id')
-            .neq('status', 'INDEFINITE'); // Exclude indefinitely suspended users
+            .neq('status', 'INDEFINITE'); 
 
         if (error || !users) {
             console.error('Error fetching users for event notification:', error);
@@ -76,16 +76,16 @@ export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string
         const notificationTitle = '🎉 New Post!';
         const notificationMessage = `${creatorName ? `${creatorName} has` : 'Admin has'} posted: "${eventTitle}". Check it out now!`;
 
-        // Send notifications to all users in batches to avoid overwhelming the system
+        
         const batchSize = 50;
         for (let i = 0; i < users.length; i += batchSize) {
             const batch = users.slice(i, i + batchSize);
             
-            // Process batch in parallel
+            
             await Promise.allSettled(
                 batch.map(async (user) => {
                     try {
-                        // Send push notification
+                        
                         await pushNotification(
                             user.id,
                             notificationTitle,
@@ -93,7 +93,7 @@ export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string
                             `/events/${eventId}`
                         );
 
-                        // Store in-app notification
+                        
                         await storeNotification(
                             user.id,
                             notificationTitle,
@@ -112,7 +112,7 @@ export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string
     }
 }
 
-// Notify all forum members when admin sends a message (enhanced notification)
+
 export async function notifyAllForumMembersAdminMessage(
     forumId: number, 
     adminUsername: string, 
@@ -121,7 +121,7 @@ export async function notifyAllForumMembersAdminMessage(
     imageUrl?: string
 ) {
     try {
-        // Get all forum members (except the sender)
+        
         const { data: members, error } = await supabase
             .from('forum_members')
             .select(`
@@ -141,13 +141,13 @@ export async function notifyAllForumMembersAdminMessage(
         const notificationTitle = `🚨 URGENT: Admin Message from ${adminUsername}`;
         const notificationContent = `ADMIN ANNOUNCEMENT: ${message}`;
 
-        // Send to all members regardless of mute status (admin messages are important)
+        
         const notificationPromises = members.map(async (member) => {
             const userId = member.member?.id;
             if (!userId) return;
 
             try {
-                // Send push notification
+                
                 await pushNotification(
                     userId,
                     notificationTitle,
@@ -156,7 +156,7 @@ export async function notifyAllForumMembersAdminMessage(
                     imageUrl
                 );
 
-                // Store in-app notification
+                
                 await storeNotification(
                     userId,
                     notificationTitle,
@@ -174,7 +174,7 @@ export async function notifyAllForumMembersAdminMessage(
     }
 }
 
-// Notify all users about a new global chat message
+
 export async function notifyAllUsersGlobalChat(
     senderUsername: string, 
     message: string, 
@@ -183,37 +183,37 @@ export async function notifyAllUsersGlobalChat(
     imageUrl?: string
 ) {
     try {
-        // Get all active users except the sender
+        
         const { data: users, error } = await supabase
             .from('users')
             .select('id, username')
             .neq('id', senderId)
-            .neq('status', 'INDEFINITE'); // Exclude indefinitely suspended users
+            .neq('status', 'INDEFINITE'); 
 
         if (error || !users) {
             console.error('Error fetching users for global chat notification:', error);
             return;
         }
 
-        // Enhanced notifications for admin messages
+        
         const isAdmin = senderRole === 1;
         const notificationTitle = isAdmin 
-            ? `🚨 Admin ${senderUsername} - Global Chat`
-            : `💬 ${senderUsername} - Global Chat`;
+            ? `Admin ${senderUsername} - Global Chat`
+            : `${senderUsername} - Global Chat`;
         const notificationContent = isAdmin 
             ? `ADMIN: ${message}`
             : message;
 
-        // Send notifications to all users in batches to avoid overwhelming the system
+        
         const batchSize = 50;
         for (let i = 0; i < users.length; i += batchSize) {
             const batch = users.slice(i, i + batchSize);
             
-            // Process batch in parallel
+            
             await Promise.allSettled(
                 batch.map(async (user) => {
                     try {
-                        // Send push notification
+                        
                         await pushNotification(
                             user.id,
                             notificationTitle,
@@ -222,7 +222,7 @@ export async function notifyAllUsersGlobalChat(
                             imageUrl
                         );
 
-                        // Store in-app notification
+                        
                         await storeNotification(
                             user.id,
                             notificationTitle,

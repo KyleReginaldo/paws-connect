@@ -7,12 +7,12 @@ import {
   moderateContentWithCache,
   type ModerationResult,
 } from '@/lib/content-moderation';
-import { Eye, EyeOff, MessageCircle, Send, X } from 'lucide-react';
+import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card, CardHeader, CardTitle } from './ui/card';
+import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 
@@ -44,22 +44,18 @@ export default function GlobalChatWidget() {
   const [hiddenMessages, setHiddenMessages] = useState<Set<number>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Add your Gemini API key here - in production, use environment variables
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
 
-  // Fetch initial messages from API on component mount (not just when opened)
   useEffect(() => {
-    fetchMessages(); // Always fetch messages to show correct count on FAB
+    fetchMessages();
   }, []);
 
-  // Re-fetch messages when chat is opened for fresh content
   useEffect(() => {
     if (open) {
       fetchMessages();
     }
   }, [open]);
 
-  // Fetch messages from API
   const fetchMessages = async () => {
     try {
       const response = await fetch('/api/v1/global-chat?limit=50');
@@ -72,13 +68,11 @@ export default function GlobalChatWidget() {
     }
   };
 
-  // Set up real-time subscription for new messages (always active, not just when open)
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const setupSubscription = async () => {
       try {
-        // Get the global forum ID
         const { data: globalForum } = await supabase
           .from('forum')
           .select('id')
@@ -92,7 +86,6 @@ export default function GlobalChatWidget() {
 
         console.log('Setting up real-time subscription for forum:', globalForum.id);
 
-        // Create the channel with a unique name
         channel = supabase.channel(`global_chat_${Date.now()}`);
 
         channel
@@ -107,7 +100,6 @@ export default function GlobalChatWidget() {
             async (payload: { new: unknown }) => {
               console.log('New message received via real-time:', payload);
 
-              // Re-fetch all messages to ensure consistency and update FAB badge
               await fetchMessages();
             },
           )
@@ -122,7 +114,6 @@ export default function GlobalChatWidget() {
             async (payload: { old: unknown; new: unknown }) => {
               console.log('Message updated via real-time:', payload);
 
-              // Re-fetch all messages to ensure consistency
               await fetchMessages();
             },
           )
@@ -137,7 +128,6 @@ export default function GlobalChatWidget() {
             async (payload: { old: unknown }) => {
               console.log('Message deleted via real-time:', payload);
 
-              // Re-fetch all messages to ensure consistency
               await fetchMessages();
             },
           )
@@ -156,16 +146,14 @@ export default function GlobalChatWidget() {
 
     setupSubscription();
 
-    // Cleanup function
     return () => {
       if (channel) {
         console.log('Cleaning up real-time subscription');
         supabase.removeChannel(channel);
       }
     };
-  }, []); // Remove dependency on 'open' so it's always active
+  }, []);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (open) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -178,7 +166,7 @@ export default function GlobalChatWidget() {
 
     setLoading(true);
     setText('');
-    setInputWarning(''); // Clear any previous warnings
+    setInputWarning('');
 
     try {
       const response = await fetch('/api/v1/global-chat', {
@@ -197,28 +185,20 @@ export default function GlobalChatWidget() {
         const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
       }
-
-      // Successfully sent, message will appear via real-time subscription
     } catch (error) {
       console.error('Failed to send message:', error);
 
-      // Show user-friendly error message
       console.error(
         'Message failed to send:',
         error instanceof Error ? error.message : 'Failed to send message',
       );
 
-      // For now, just restore the text. In a production app, you might show a toast notification
       setText(content);
-
-      // You could add a toast notification here:
-      // toast.error(`Message failed to send: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Check message content while typing (debounced)
   useEffect(() => {
     if (!text.trim() || !GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
       setInputWarning('');
@@ -243,7 +223,6 @@ export default function GlobalChatWidget() {
       }
     };
 
-    // Debounce the content check
     const timeoutId = setTimeout(checkContent, 1000);
     return () => clearTimeout(timeoutId);
   }, [text, GEMINI_API_KEY]);
@@ -278,17 +257,14 @@ export default function GlobalChatWidget() {
     return msg.user.username || `User${msg.user.id.slice(-4)}`;
   };
 
-  // Function to check if message is inappropriate using database warning
   const isMessageInappropriate = (msg: MessageWithModeration) => {
     return Boolean(msg.message_warning);
   };
 
-  // Function to get warning message from database
   const getWarningMessage = (msg: MessageWithModeration) => {
     return msg.message_warning || '';
   };
 
-  // Function to toggle message visibility
   const toggleMessageVisibility = (messageId: number) => {
     setHiddenMessages((prev) => {
       const newSet = new Set(prev);
@@ -301,24 +277,22 @@ export default function GlobalChatWidget() {
     });
   };
 
-  // Function to check if message should be hidden
   const isMessageHidden = (msg: MessageWithModeration) => {
     return isMessageInappropriate(msg) && !hiddenMessages.has(msg.id);
   };
   if (!userId) {
-    return null; // Don't show chat if user is not logged in
+    return null;
   }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {open ? (
-        /* Full Chat UI - When opened */
-        <Card className="w-96 h-[600px] shadow-2xl transition-all duration-300 ease-in-out bg-white border border-gray-200">
+        <Card className="w-96 h-[600px] p-[0px] m-[0px] shadow-2xl transition-all duration-300 ease-in-out bg-white border border-gray-200">
           {/* Header */}
-          <CardHeader className="flex flex-row items-center justify-between py-2 px-3 border-b bg-white rounded-t-lg">
+          <div className="flex flex-row items-center justify-between border-b bg-white rounded-t-lg px-3 py-2">
             <div className="flex items-center gap-1.5">
-              <MessageCircle className="h-4 w-4 text-orange-500" />
-              <CardTitle className="text-sm font-semibold text-gray-800">Global Chat</CardTitle>
+              <Globe2 className="w-4 text-orange-500" />
+              <h3 className="text-sm font-semibold text-gray-800">Global Chat</h3>
               <Badge
                 variant="outline"
                 className="text-xs bg-orange-50 text-orange-600 border-orange-200 px-1.5 py-0.5"
@@ -337,10 +311,10 @@ export default function GlobalChatWidget() {
                 <X className="h-3 w-3" />
               </Button>
             </div>
-          </CardHeader>
+          </div>
 
           {/* Chat Content */}
-          <div className="flex flex-col h-[536px] overflow-hidden">
+          <div className="flex flex-col h-[536px] p-0 m-0 overflow-hidden">
             {/* Messages Area */}
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full px-2 py-1.5">
@@ -377,10 +351,8 @@ export default function GlobalChatWidget() {
                           </div>
                           {/* Message Content */}
                           {isMessageInappropriate(msg) ? (
-                            /* Inappropriate Message - Show warning or hidden content */
                             <div className="bg-red-50 border-2 border-red-300 shadow-md rounded-md px-2.5 py-1.5 w-fit max-w-[300px]">
                               {isMessageHidden(msg) ? (
-                                /* Hidden State */
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-2">
                                     <EyeOff className="h-3 w-3 text-red-500" />
@@ -399,7 +371,6 @@ export default function GlobalChatWidget() {
                                   </Button>
                                 </div>
                               ) : (
-                                /* Visible State */
                                 <div>
                                   <div className="flex items-center justify-between gap-2 mb-2">
                                     <span className="text-xs text-red-600 font-medium">
@@ -422,7 +393,6 @@ export default function GlobalChatWidget() {
                               )}
                             </div>
                           ) : (
-                            /* Normal Message */
                             <div className="bg-gray-50 hover:bg-gray-100 transition-colors rounded-md px-2.5 py-1.5 w-fit max-w-[300px] border border-gray-100">
                               <p className="text-sm text-gray-900 break-words leading-snug">
                                 {msg.message}
@@ -490,7 +460,6 @@ export default function GlobalChatWidget() {
           </div>
         </Card>
       ) : (
-        /* Chat Icon - When closed */
         <Button
           onClick={() => setOpen(true)}
           className="h-14 w-14 bg-orange-500 hover:bg-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-110 rounded-full"
