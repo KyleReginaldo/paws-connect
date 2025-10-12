@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, ChevronsUpDown } from 'lucide-react';
+import Image from 'next/image';
 import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -47,9 +48,11 @@ export function Combobox({
         >
           <div className="flex items-center gap-2 min-w-0">
             {value && options.find((option) => option.value === value)?.image && (
-              <img
-                src={options.find((option) => option.value === value)?.image}
-                alt={options.find((option) => option.value === value)?.label}
+              <Image
+                src={options.find((option) => option.value === value)?.image || ''}
+                alt={options.find((option) => option.value === value)?.label || ''}
+                width={24}
+                height={24}
                 className="h-6 w-6 rounded object-cover shrink-0"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -93,9 +96,11 @@ export function Combobox({
                   )}
                 />
                 {option.image && (
-                  <img
+                  <Image
                     src={option.image}
                     alt={option.label}
+                    width={28}
+                    height={28}
                     className="h-7 w-7 rounded object-cover shrink-0"
                     onError={(e) => {
                       // Hide image if it fails to load

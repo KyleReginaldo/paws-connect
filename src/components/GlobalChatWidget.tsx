@@ -47,7 +47,12 @@ export default function GlobalChatWidget() {
   // Add your Gemini API key here - in production, use environment variables
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
 
-  // Fetch initial messages from API
+  // Fetch initial messages from API on component mount (not just when opened)
+  useEffect(() => {
+    fetchMessages(); // Always fetch messages to show correct count on FAB
+  }, []);
+
+  // Re-fetch messages when chat is opened for fresh content
   useEffect(() => {
     if (open) {
       fetchMessages();
@@ -67,10 +72,8 @@ export default function GlobalChatWidget() {
     }
   };
 
-  // Set up real-time subscription for new messages
+  // Set up real-time subscription for new messages (always active, not just when open)
   useEffect(() => {
-    if (!open) return;
-
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const setupSubscription = async () => {
@@ -104,7 +107,7 @@ export default function GlobalChatWidget() {
             async (payload: { new: unknown }) => {
               console.log('New message received via real-time:', payload);
 
-              // Re-fetch all messages to ensure consistency
+              // Re-fetch all messages to ensure consistency and update FAB badge
               await fetchMessages();
             },
           )
@@ -160,7 +163,7 @@ export default function GlobalChatWidget() {
         supabase.removeChannel(channel);
       }
     };
-  }, [open]);
+  }, []); // Remove dependency on 'open' so it's always active
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

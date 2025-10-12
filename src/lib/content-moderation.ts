@@ -80,7 +80,7 @@ function fallbackModeration(message: string): ModerationResult {
     'kill yourself', 'die', 'worthless', 'pathetic', 'disgusting', 'trash',
     'garbage', 'scum', 'piece of shit', 'bastard', 'bitch', 'asshole',
     'fuck', 'shit', 'crap', 'piss', 'slut', 'whore', 'retard', 'faggot',
-    'ugly', 'fat', 'dumb', 'retarded',
+    'ugly', 'fat', 'dumb', 'retarded', 'nigga', 'negro',
     
     // Tagalog curse words
     'putang ina', 'putangina', 'puta', 'gago', 'gaga', 'ulol', 'tanga',
@@ -98,7 +98,7 @@ function fallbackModeration(message: string): ModerationResult {
     
     // Other Filipino regional curse words
     'walanghiya', 'pokpok', 'suso', 'tite', 'pekpek', 'betlog', 'oten',
-    'kantot', 'jakol', 'chupa', 'supsop', 'libog', 'malibog', 'bastos',
+    'kantot','kantut', 'jakol', 'chupa', 'supsop', 'libog', 'malibog', 'bastos',
     'manyak', 'salsal', 'torjak', 'bruha', 'mangkukulam', 'demonyo ka',
     
     // Common Filipino internet slang curses

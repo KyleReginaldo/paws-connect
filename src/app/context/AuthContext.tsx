@@ -134,11 +134,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUserId(null);
-    setUserRole(null);
-    setUser(null);
-    setStatus(AuthStatus.unauthenticated);
+    try {
+      console.log('Signing out user...');
+
+      // Clear local state first to ensure UI updates immediately
+      setUserId(null);
+      setUserRole(null);
+      setUser(null);
+      setStatus(AuthStatus.unauthenticated);
+      setError(undefined);
+
+      // Sign out from Supabase with scope 'global' to clear all sessions
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+
+      if (error) {
+        console.error('Error during Supabase sign out:', error);
+        // Continue with navigation even if Supabase signout fails
+      }
+
+      // Clear any stored tokens or session data
+      if (typeof window !== 'undefined') {
+        // Clear localStorage items that might contain auth data
+        const keys = Object.keys(localStorage);
+        keys.forEach((key) => {
+          if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        // Clear sessionStorage as well
+        sessionStorage.clear();
+
+        console.log('Redirecting to signin page...');
+        // Use window.location.href for a hard redirect to ensure clean state
+        window.location.href = '/auth/signin';
+      }
+
+      console.log('Sign out completed successfully');
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error);
+
+      // Ensure local state is still cleared even if there's an error
+      setUserId(null);
+      setUserRole(null);
+      setUser(null);
+      setStatus(AuthStatus.unauthenticated);
+      setError(undefined);
+
+      // Force redirect regardless of error
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/signin';
+      }
+    }
   };
 
   useEffect(() => {

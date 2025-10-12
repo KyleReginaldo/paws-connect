@@ -1039,7 +1039,7 @@ const Page = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-              Enhanced Analytics
+              Analytics
             </h3>
             <p className="text-muted-foreground text-sm sm:text-base">
               Comprehensive insights with weekly, monthly, and annual breakdowns
@@ -1080,9 +1080,7 @@ const Page = () => {
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <Users className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">
-                  User Growth & New Registrations ({analyticsPeriod})
-                </span>
+                <span className="truncate">User Growth ({analyticsPeriod})</span>
               </CardTitle>
               <CardDescription className="text-sm">
                 Total users and new registrations over time
@@ -1102,7 +1100,7 @@ const Page = () => {
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <Shield className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">Staff Role Distribution</span>
+                <span className="truncate">User Distribution</span>
               </CardTitle>
               <CardDescription className="text-sm">
                 Breakdown by staff roles and responsibilities

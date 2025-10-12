@@ -51,8 +51,24 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = async () => {
-    await signOut();
     setShowLogoutDialog(false);
+
+    try {
+      console.log('Logout initiated from admin layout');
+
+      // Call the signOut function from AuthContext
+      await signOut();
+
+      console.log('Logout completed from admin layout');
+    } catch (error) {
+      console.error('Error during logout:', error);
+
+      // Force hard redirect if signOut fails
+      if (typeof window !== 'undefined') {
+        console.log('Forcing redirect due to logout error');
+        window.location.href = '/auth/signin';
+      }
+    }
   };
 
   const getTitle = () => {
@@ -187,8 +203,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 <SidebarTrigger className="-ml-1" />
                 <div className="flex-1 flex justify-between items-center">
                   <div>
-                    <h1 className="text-2xl font-semibold text-gray-900">{getTitle()}</h1>
-                    <p className="text-sm font-light text-gray-700">{getSubtitle()}</p>
+                    <h1 className="text-[15px] font-semibold text-gray-900">{getTitle()}</h1>
+                    <p className="text-[12px] font-light text-gray-700">{getSubtitle()}</p>
                   </div>
                   <div
                     className={`${userRole === 1 ? 'bg-orange-500' : 'bg-red-500'} flex gap-1 items-center py-1.5 px-3 rounded-full text-xs text-white`}

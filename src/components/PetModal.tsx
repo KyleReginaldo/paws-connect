@@ -23,9 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pet } from '@/config/types/pet';
-import { format } from 'date-fns';
-import { CalendarIcon, Info, Upload } from 'lucide-react';
+import { CalendarIcon, HelpCircle, Info, Upload } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -696,9 +696,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                               className="flex items-center gap-2"
                             >
                               <div className="flex items-center gap-2">
-                                <img
+                                <Image
                                   src={breed.image}
                                   alt={breed.name}
+                                  width={24}
+                                  height={24}
                                   className="h-6 w-6 rounded object-cover"
                                   onError={(e) => {
                                     e.currentTarget.style.display = 'none';
@@ -718,9 +720,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                                 className="flex items-center gap-2"
                               >
                                 <div className="flex items-center gap-2">
-                                  <img
+                                  <Image
                                     src={breed.image}
                                     alt={breed.name}
+                                    width={24}
+                                    height={24}
                                     className="h-6 w-6 rounded object-cover"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none';
@@ -893,26 +897,49 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
             {/* Birth Date */}
             <div className="space-y-2">
               <Label>Date of Birth</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal bg-transparent"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {birthDate ? format(birthDate, 'PPP') : 'Pick a date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={birthDate}
-                    onSelect={setBirthDate}
-                    disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                    initialFocus
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    type="date"
+                    value={formData.date_of_birth}
+                    onChange={(e) => {
+                      handleInputChange('date_of_birth', e.target.value);
+                      if (e.target.value) {
+                        setBirthDate(new Date(e.target.value));
+                      } else {
+                        setBirthDate(undefined);
+                      }
+                    }}
+                    max={new Date().toISOString().split('T')[0]}
+                    min="1900-01-01"
+                    placeholder="YYYY-MM-DD"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="shrink-0" type="button">
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={birthDate}
+                      onSelect={(date) => {
+                        setBirthDate(date);
+                        if (date) {
+                          const dateString = date.toISOString().split('T')[0];
+                          handleInputChange('date_of_birth', dateString);
+                        } else {
+                          handleInputChange('date_of_birth', '');
+                        }
+                      }}
+                      disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             {/* Health Status */}
@@ -1030,7 +1057,20 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
             {/* Special Needs */}
             <div className="space-y-2">
-              <Label htmlFor="special_needs">Special Needs</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="special_needs">Special Needs</Label>
+                <Tooltip>
+                  <TooltipTrigger type="button">
+                    <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Specify if the pet requires medical attention, vitamins, special care, or a
+                      special diet.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="special_needs"
                 placeholder="e.g., Medication, Diet, etc."
