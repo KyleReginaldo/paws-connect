@@ -8,4 +8,5 @@ export interface User {
   phone_number: string;
   profile_image_link: string | null;
   house_images: string[] | null; 
+  onboarded?: boolean | null; // Whether the user has completed onboarding
 }

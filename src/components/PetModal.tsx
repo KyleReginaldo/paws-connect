@@ -67,7 +67,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     color: '',
     breed: '',
     gender: '',
-    age: 0,
+    age: 1,
     date_of_birth: '',
     size: '',
     weight: '',
@@ -383,7 +383,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         type: editingPet.type || '',
         breed: editingPet.breed || '',
         gender: editingPet.gender || '',
-        age: editingPet.age || 1,
+        age: editingPet.age && editingPet.age > 0 ? editingPet.age : 1,
         date_of_birth: editingPet.date_of_birth || '',
         size: editingPet.size || '',
         weight: editingPet.weight || '',
@@ -505,7 +505,65 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     if (field === 'photo') {
       console.log('Updating photo field:', value);
     }
-    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // If changing pet type, clear color if it's not valid for the new type
+    if (field === 'type' && typeof value === 'string') {
+      const dogColors = [
+        'Black',
+        'Brown',
+        'White',
+        'Golden',
+        'Gray',
+        'Tan',
+        'Brindle',
+        'Cream',
+        'Red',
+        'Blue',
+        'Merle',
+        'Black/White',
+        'Brown/White',
+        'Golden/White',
+        'Gray/White',
+        'Tri-color',
+        'Mixed',
+      ];
+      const catColors = [
+        'Black',
+        'White',
+        'Gray',
+        'Orange',
+        'Tabby',
+        'Calico',
+        'Tortoiseshell',
+        'Tuxedo',
+        'Siamese',
+        'Russian Blue',
+        'Silver',
+        'Cream',
+        'Brown',
+        'Black/White',
+        'Orange/White',
+        'Gray/White',
+        'Mixed',
+      ];
+
+      const currentColor = formData.color;
+      const newType = value;
+
+      // Clear color if it's not valid for the new type
+      if (
+        currentColor &&
+        ((newType === 'Dog' && !dogColors.includes(currentColor)) ||
+          (newType === 'Cat' && !catColors.includes(currentColor)))
+      ) {
+        setFormData((prev) => ({ ...prev, type: newType, color: '' }));
+      } else {
+        setFormData((prev) => ({ ...prev, type: newType }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+
     // Clear validation error for this field
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: '' }));
@@ -580,8 +638,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 id="age"
                 type="number"
                 min={1}
+                step={1}
                 value={formData.age}
-                onChange={(e) => handleInputChange('age', Number(e.target.value))}
+                onChange={(e) => {
+                  const raw = Number(e.target.value);
+                  const val = Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
+                  handleInputChange('age', val);
+                }}
               />
             </div>
 
@@ -602,14 +665,70 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               </Select>
             </div>
 
+            {/* Color - depends on pet type */}
             <div className="space-y-2">
               <Label htmlFor="color">Color</Label>
-              <Input
-                id="color"
-                placeholder="e.g., Brown/White"
-                value={formData.color}
-                onChange={(e) => handleInputChange('color', e.target.value)}
-              />
+              {formData.type ? (
+                <Select
+                  value={formData.color}
+                  onValueChange={(value) => handleInputChange('color', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.type === 'Dog' ? (
+                      <>
+                        <SelectItem value="Black">Black</SelectItem>
+                        <SelectItem value="Brown">Brown</SelectItem>
+                        <SelectItem value="White">White</SelectItem>
+                        <SelectItem value="Golden">Golden</SelectItem>
+                        <SelectItem value="Gray">Gray</SelectItem>
+                        <SelectItem value="Tan">Tan</SelectItem>
+                        <SelectItem value="Brindle">Brindle</SelectItem>
+                        <SelectItem value="Cream">Cream</SelectItem>
+                        <SelectItem value="Red">Red</SelectItem>
+                        <SelectItem value="Blue">Blue</SelectItem>
+                        <SelectItem value="Merle">Merle</SelectItem>
+                        <SelectItem value="Black/White">Black/White</SelectItem>
+                        <SelectItem value="Brown/White">Brown/White</SelectItem>
+                        <SelectItem value="Golden/White">Golden/White</SelectItem>
+                        <SelectItem value="Gray/White">Gray/White</SelectItem>
+                        <SelectItem value="Tri-color">Tri-color</SelectItem>
+                        <SelectItem value="Mixed">Mixed</SelectItem>
+                      </>
+                    ) : formData.type === 'Cat' ? (
+                      <>
+                        <SelectItem value="Black">Black</SelectItem>
+                        <SelectItem value="White">White</SelectItem>
+                        <SelectItem value="Gray">Gray</SelectItem>
+                        <SelectItem value="Orange">Orange</SelectItem>
+                        <SelectItem value="Tabby">Tabby</SelectItem>
+                        <SelectItem value="Calico">Calico</SelectItem>
+                        <SelectItem value="Tortoiseshell">Tortoiseshell</SelectItem>
+                        <SelectItem value="Tuxedo">Tuxedo</SelectItem>
+                        <SelectItem value="Siamese">Siamese</SelectItem>
+                        <SelectItem value="Russian Blue">Russian Blue</SelectItem>
+                        <SelectItem value="Silver">Silver</SelectItem>
+                        <SelectItem value="Cream">Cream</SelectItem>
+                        <SelectItem value="Brown">Brown</SelectItem>
+                        <SelectItem value="Black/White">Black/White</SelectItem>
+                        <SelectItem value="Orange/White">Orange/White</SelectItem>
+                        <SelectItem value="Gray/White">Gray/White</SelectItem>
+                        <SelectItem value="Mixed">Mixed</SelectItem>
+                      </>
+                    ) : null}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="color"
+                  placeholder="Please select pet type first"
+                  value=""
+                  disabled
+                  className="bg-muted"
+                />
+              )}
             </div>
 
             {/* Size */}
@@ -679,12 +798,24 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
             {/* Health Status */}
             <div className="space-y-2">
               <Label htmlFor="health_status">Health Status</Label>
-              <Input
-                id="health_status"
-                placeholder="e.g., Healthy, Allergies, etc."
+              <Select
                 value={formData.health_status}
-                onChange={(e) => handleInputChange('health_status', e.target.value)}
-              />
+                onValueChange={(value) => handleInputChange('health_status', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select health status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Healthy">Healthy</SelectItem>
+                  <SelectItem value="Minor Allergies">Minor Allergies</SelectItem>
+                  <SelectItem value="Chronic Condition">Chronic Condition</SelectItem>
+                  <SelectItem value="Disabled">Disabled</SelectItem>
+                  <SelectItem value="Injured">Injured</SelectItem>
+                  <SelectItem value="In Treatment">In Treatment</SelectItem>
+                  <SelectItem value="Special Needs">Special Needs</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Good With */}

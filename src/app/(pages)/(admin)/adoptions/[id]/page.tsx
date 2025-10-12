@@ -22,6 +22,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -59,6 +60,15 @@ interface AdoptionData {
     phone_number: string | null;
     status: string | null;
     created_at: string;
+    user_identification: {
+      id: number;
+      id_name: string;
+      id_attachment_url: string;
+      address: string | null;
+      date_of_birth: string | null;
+      status: string | null;
+      created_at: string;
+    } | null;
   } | null;
   pet: PetData | null;
   pets: ExtendedPetData | null;
@@ -255,51 +265,59 @@ const AdoptionPage = () => {
       </div>
     );
   }
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
-        <div className="mb-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-3 py-3 max-w-6xl">
+        <div className="mb-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.back()}
-            className="mb-4 hover:bg-muted h-8"
+            className="mb-2 hover:bg-gray-100 h-7 px-2 text-xs"
           >
             <ArrowLeft className="h-3 w-3 mr-1" />
-            Back
+            Back to Adoptions
           </Button>
 
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground mb-1">
-                Adoption Application #{adoption.id}
-              </h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(adoption.created_at)}</span>
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+              <div>
+                <h1 className="text-lg font-semibold mb-0.5 text-gray-900">
+                  Application #{adoption.id}
+                </h1>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <span>{formatDate(adoption.created_at)}</span>
+                  </div>
+                  <div className="h-3 w-px bg-gray-300"></div>
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    <span>{adoption.users?.username || 'Unknown User'}</span>
+                  </div>
+                </div>
               </div>
+              <Badge
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${getStatusColor(adoption.status)}`}
+              >
+                {getStatusIcon(adoption.status)}
+                {adoption.status || 'Unknown'}
+              </Badge>
             </div>
-            <Badge
-              className={`flex items-center gap-1 px-2 py-1 text-xs ${getStatusColor(adoption.status)}`}
-            >
-              {getStatusIcon(adoption.status)}
-              {adoption.status || 'Unknown'}
-            </Badge>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-1 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <PawPrint className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <Card className="lg:col-span-1 bg-white border border-gray-200">
+            <CardHeader className="pb-2 border-b border-gray-100">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                <PawPrint className="h-4 w-4 text-gray-600" />
                 Pet Information
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3">
               {adoption.pets || adoption.pet ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {(() => {
                     // Use pets if available, otherwise fallback to pet
                     const petData = adoption.pets || adoption.pet;
@@ -316,8 +334,8 @@ const AdoptionPage = () => {
 
                     return (
                       <>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-12 w-12">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
                             <AvatarImage
                               src={
                                 (petData.photos && petData.photos.length > 0
@@ -327,72 +345,76 @@ const AdoptionPage = () => {
                               alt={petData.name || 'Pet'}
                               className="object-cover"
                             />
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              <PawPrint className="h-4 w-4" />
+                            <AvatarFallback className="bg-gray-100 text-gray-600">
+                              <PawPrint className="h-3 w-3" />
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-semibold text-foreground">
+                            <h3 className="text-xs font-medium text-gray-900">
                               {petData.name || 'Unknown Pet'}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs text-gray-600">
                               {petData.breed || petData.type || 'Unknown Breed'}
                             </p>
                           </div>
                         </div>
 
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-1 text-xs">
                           {petData.type && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Type</span>
-                              <span className="font-medium">{petData.type}</span>
+                              <span className="text-gray-600">Type</span>
+                              <span className="font-medium text-gray-900">{petData.type}</span>
                             </div>
                           )}
                           {petData.breed && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Breed</span>
-                              <span className="font-medium">{petData.breed}</span>
+                              <span className="text-gray-600">Breed</span>
+                              <span className="font-medium text-gray-900">{petData.breed}</span>
                             </div>
                           )}
                           {petData.age && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Age</span>
-                              <span className="font-medium">{petData.age} years old</span>
+                              <span className="text-gray-600">Age</span>
+                              <span className="font-medium text-gray-900">
+                                {petData.age} years old
+                              </span>
                             </div>
                           )}
                           {petData.gender && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Gender</span>
-                              <span className="font-medium capitalize">
+                              <span className="text-gray-600">Gender</span>
+                              <span className="font-medium text-gray-900 capitalize">
                                 {petData.gender.toLowerCase()}
                               </span>
                             </div>
                           )}
                           {petData.size && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Size</span>
-                              <span className="font-medium capitalize">
+                              <span className="text-gray-600">Size</span>
+                              <span className="font-medium text-gray-900 capitalize">
                                 {petData.size.toLowerCase()}
                               </span>
                             </div>
                           )}
                           {petData.weight && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Weight</span>
-                              <span className="font-medium">{petData.weight}</span>
+                              <span className="text-gray-600">Weight</span>
+                              <span className="font-medium text-gray-900">{petData.weight}</span>
                             </div>
                           )}
                           {extendedData?.health_status && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Health Status</span>
-                              <span className="font-medium">{extendedData.health_status}</span>
+                              <span className="text-gray-600">Health Status</span>
+                              <span className="font-medium text-gray-900">
+                                {extendedData.health_status}
+                              </span>
                             </div>
                           )}
                           {extendedData?.is_vaccinated !== null &&
                             extendedData?.is_vaccinated !== undefined && (
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">Vaccinated</span>
-                                <span className="font-medium">
+                                <span className="text-gray-600">Vaccinated</span>
+                                <span className="font-medium text-gray-900">
                                   {extendedData.is_vaccinated ? 'Yes' : 'No'}
                                 </span>
                               </div>
@@ -400,17 +422,17 @@ const AdoptionPage = () => {
                           {extendedData?.is_spayed_or_neutured !== null &&
                             extendedData?.is_spayed_or_neutured !== undefined && (
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">Spayed/Neutered</span>
-                                <span className="font-medium">
+                                <span className="text-gray-600">Spayed/Neutered</span>
+                                <span className="font-medium text-gray-900">
                                   {extendedData.is_spayed_or_neutured ? 'Yes' : 'No'}
                                 </span>
                               </div>
                             )}
                           {extendedData?.rescue_address && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Rescue Location</span>
+                              <span className="text-gray-600">Rescue Location</span>
                               <span
-                                className="font-medium text-right max-w-32 truncate"
+                                className="font-medium text-gray-900 text-right max-w-32 truncate"
                                 title={extendedData.rescue_address}
                               >
                                 {extendedData.rescue_address}
@@ -420,8 +442,8 @@ const AdoptionPage = () => {
                         </div>
 
                         {petData.description && (
-                          <div className="pt-2 border-t">
-                            <p className="text-xs text-muted-foreground leading-relaxed">
+                          <div className="pt-1 border-t border-gray-100">
+                            <p className="text-xs text-gray-600 leading-relaxed">
                               {petData.description}
                             </p>
                           </div>
@@ -443,57 +465,152 @@ const AdoptionPage = () => {
           </Card>
 
           {/* Adopter & Application Details */}
-          <div className="lg:col-span-2 space-y-4">
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <User className="h-4 w-4 text-secondary" />
+          <div className="lg:col-span-2 space-y-3">
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="pb-2 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                  <User className="h-4 w-4 text-gray-600" />
                   Adopter Information
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="">
                 {adoption.users ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <User className="h-3 w-3 text-muted-foreground" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <User className="h-3 w-3 text-gray-500 mt-0.5" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Name</p>
-                          <p className="text-sm font-medium">
+                          <p className="text-xs text-gray-500">Name</p>
+                          <p className="text-xs font-medium text-gray-900">
                             {adoption.users.username || 'Not provided'}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
+                      <div className="flex items-start gap-2">
+                        <Mail className="h-3 w-3 text-gray-500 mt-0.5" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Email</p>
-                          <p className="text-sm font-medium break-all">
+                          <p className="text-xs text-gray-500">Email</p>
+                          <p className="text-xs font-medium text-gray-900 break-all">
                             {adoption.users.email || 'Not provided'}
                           </p>
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
+                    <div className="space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <Phone className="h-3 w-3 text-gray-500 mt-0.5" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Phone</p>
-                          <p className="text-sm font-medium">
+                          <p className="text-xs text-gray-500">Phone</p>
+                          <p className="text-xs font-medium text-gray-900">
                             {adoption.users.phone_number || 'Not provided'}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-3 w-3 text-gray-500 mt-0.5" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Member Since</p>
-                          <p className="text-sm font-medium">
+                          <p className="text-xs text-gray-500">Member Since</p>
+                          <p className="text-xs font-medium text-gray-900">
                             {formatDate(adoption.users.created_at)}
                           </p>
                         </div>
                       </div>
                     </div>
+                    {adoption.users?.user_identification && (
+                      <div className="col-span-full mt-2">
+                        <div className="p-2 rounded-lg border border-gray-200 bg-gray-50">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="h-4 w-4 rounded bg-blue-100 flex items-center justify-center">
+                              <User className="h-3 w-3 text-blue-600" />
+                            </div>
+                            <p className="text-xs font-medium text-gray-900">User Identification</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between items-center p-1.5 rounded bg-white border border-gray-200">
+                              <div>
+                                <p className="text-xs text-gray-500">Document Name</p>
+                                <span className="text-xs font-medium text-gray-900">
+                                  {adoption.users.user_identification.id_name}
+                                </span>
+                              </div>
+                              <Badge
+                                variant={
+                                  adoption.users.user_identification.status === 'ACCEPTED'
+                                    ? 'default'
+                                    : adoption.users.user_identification.status === 'PENDING'
+                                      ? 'secondary'
+                                      : 'destructive'
+                                }
+                                className="text-xs"
+                              >
+                                {adoption.users.user_identification.status || 'Pending'}
+                              </Badge>
+                            </div>
+                            {adoption.users.user_identification.id_attachment_url && (
+                              <div className="relative bg-white rounded p-1.5 border border-gray-200">
+                                <p className="text-xs text-gray-500 mb-0.5">ID Document</p>
+                                <div className="relative group">
+                                  <Image
+                                    src={adoption.users.user_identification.id_attachment_url}
+                                    alt={`${adoption.users.user_identification.id_name} - Valid ID`}
+                                    width={300}
+                                    height={180}
+                                    className="w-full max-w-xs h-auto rounded border border-gray-200 object-cover cursor-pointer hover:border-blue-300 transition-colors"
+                                    onClick={() =>
+                                      window.open(
+                                        adoption.users!.user_identification!.id_attachment_url,
+                                        '_blank',
+                                      )
+                                    }
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <div className="bg-white px-2 py-1 rounded text-xs text-gray-700">
+                                      Click to enlarge
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                              {adoption.users.user_identification.address && (
+                                <div className="p-1.5 rounded bg-white border border-gray-200">
+                                  <p className="text-xs text-gray-500 mb-0.5">Address</p>
+                                  <p className="text-xs text-gray-900 font-medium">
+                                    {adoption.users.user_identification.address}
+                                  </p>
+                                </div>
+                              )}
+                              {adoption.users.user_identification.date_of_birth && (
+                                <div className="p-1.5 rounded bg-white border border-gray-200">
+                                  <p className="text-xs text-gray-500 mb-0.5">Date of Birth</p>
+                                  <p className="text-xs text-gray-900 font-medium">
+                                    {new Date(
+                                      adoption.users.user_identification.date_of_birth,
+                                    ).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                    })}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border-l-2 border-blue-200">
+                              <span className="font-medium">Submitted:</span>{' '}
+                              {new Date(
+                                adoption.users.user_identification.created_at,
+                              ).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">Adopter information not available</p>
@@ -501,114 +618,224 @@ const AdoptionPage = () => {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Home className="h-4 w-4 text-accent" />
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="pb-2 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                  <Home className="h-4 w-4 text-gray-600" />
                   Housing Information
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-3 rounded border bg-muted/50">
-                      <p className="text-xs text-muted-foreground mb-1">Residence</p>
-                      <p className="text-sm font-medium capitalize">
+              <CardContent className="p-3">
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+                    <div className="p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Home className="h-3 w-3 text-gray-500" />
+                        <p className="text-xs text-gray-600 font-medium">Residence</p>
+                      </div>
+                      <p className="text-xs font-medium capitalize text-gray-900">
                         {adoption.type_of_residence || 'Not specified'}
                       </p>
                     </div>
-                    <div className="p-3 rounded border bg-muted/50">
-                      <p className="text-xs text-muted-foreground mb-1">Ownership</p>
+                    <div className="p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Home className="h-3 w-3 text-gray-500" />
+                        <p className="text-xs text-gray-600 font-medium">Ownership</p>
+                      </div>
                       {adoption.is_renting !== null ? (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge
+                          variant={adoption.is_renting ? 'secondary' : 'default'}
+                          className="text-xs h-4 px-2"
+                        >
                           {adoption.is_renting ? 'Renting' : 'Owned'}
                         </Badge>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Not specified</span>
+                        <span className="text-xs text-gray-600">Not specified</span>
                       )}
                     </div>
-                    <div className="p-3 rounded border bg-muted/50">
-                      <p className="text-xs text-muted-foreground mb-1">Household</p>
-                      <p className="text-sm font-medium">
+                    <div className="p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <User className="h-3 w-3 text-gray-500" />
+                        <p className="text-xs text-gray-600 font-medium">Household</p>
+                      </div>
+                      <p className="text-xs font-medium text-gray-900">
                         {adoption.number_of_household_members ?? 'Not specified'}
                         {adoption.number_of_household_members && ' people'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div className="flex items-center justify-between p-2 rounded border text-sm">
-                      <span>Outdoor Space</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                    <div className="flex items-center justify-between p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-4 w-4 rounded flex items-center justify-center ${
+                            adoption.have_outdoor_space
+                              ? 'bg-green-100'
+                              : adoption.have_outdoor_space === false
+                                ? 'bg-gray-100'
+                                : 'bg-gray-100'
+                          }`}
+                        >
+                          <Home
+                            className={`h-3 w-3 ${
+                              adoption.have_outdoor_space ? 'text-green-600' : 'text-gray-500'
+                            }`}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-900">Outdoor Space</span>
+                      </div>
                       <div className="flex items-center gap-1">
                         {adoption.have_outdoor_space ? (
                           <>
                             <Check className="h-3 w-3 text-green-600" />
-                            <span className="text-green-600">Yes</span>
+                            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs h-4 px-2">
+                              Yes
+                            </Badge>
                           </>
                         ) : adoption.have_outdoor_space === false ? (
                           <>
-                            <X className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-muted-foreground">No</span>
+                            <X className="h-3 w-3 text-gray-500" />
+                            <Badge variant="secondary" className="text-xs h-4 px-2">
+                              No
+                            </Badge>
                           </>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Unknown</span>
+                          <Badge variant="outline" className="text-xs h-4 px-2">
+                            Unknown
+                          </Badge>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border text-sm">
-                      <span>Children in Home</span>
+                    <div className="flex items-center justify-between p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-4 w-4 rounded flex items-center justify-center ${
+                            adoption.has_children_in_home
+                              ? 'bg-blue-100'
+                              : adoption.has_children_in_home === false
+                                ? 'bg-gray-100'
+                                : 'bg-gray-100'
+                          }`}
+                        >
+                          <User
+                            className={`h-3 w-3 ${
+                              adoption.has_children_in_home ? 'text-blue-600' : 'text-gray-500'
+                            }`}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-900">Children in Home</span>
+                      </div>
                       <div className="flex items-center gap-1">
                         {adoption.has_children_in_home ? (
                           <>
                             <Check className="h-3 w-3 text-blue-600" />
-                            <span className="text-blue-600">Yes</span>
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs h-4 px-2">
+                              Yes
+                            </Badge>
                           </>
                         ) : adoption.has_children_in_home === false ? (
                           <>
-                            <X className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-muted-foreground">No</span>
+                            <X className="h-3 w-3 text-gray-500" />
+                            <Badge variant="secondary" className="text-xs h-4 px-2">
+                              No
+                            </Badge>
                           </>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Unknown</span>
+                          <Badge variant="outline" className="text-xs h-4 px-2">
+                            Unknown
+                          </Badge>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border text-sm">
-                      <span>Other Pets</span>
+                    <div className="flex items-center justify-between p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-4 w-4 rounded flex items-center justify-center ${
+                            adoption.has_other_pets_in_home
+                              ? 'bg-purple-100'
+                              : adoption.has_other_pets_in_home === false
+                                ? 'bg-gray-100'
+                                : 'bg-gray-100'
+                          }`}
+                        >
+                          <PawPrint
+                            className={`h-3 w-3 ${
+                              adoption.has_other_pets_in_home ? 'text-purple-600' : 'text-gray-500'
+                            }`}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-900">Other Pets</span>
+                      </div>
                       <div className="flex items-center gap-1">
                         {adoption.has_other_pets_in_home ? (
                           <>
-                            <Check className="h-3 w-3 text-blue-600" />
-                            <span className="text-blue-600">Yes</span>
+                            <Check className="h-3 w-3 text-purple-600" />
+                            <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs h-4 px-2">
+                              Yes
+                            </Badge>
                           </>
                         ) : adoption.has_other_pets_in_home === false ? (
                           <>
-                            <X className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-muted-foreground">No</span>
+                            <X className="h-3 w-3 text-gray-500" />
+                            <Badge variant="secondary" className="text-xs h-4 px-2">
+                              No
+                            </Badge>
                           </>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Unknown</span>
+                          <Badge variant="outline" className="text-xs h-4 px-2">
+                            Unknown
+                          </Badge>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border text-sm">
-                      <span>Landlord Permission</span>
+                    <div className="flex items-center justify-between p-1.5 rounded border border-gray-200 bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-4 w-4 rounded flex items-center justify-center ${
+                            adoption.have_permission_from_landlord
+                              ? 'bg-green-100'
+                              : adoption.have_permission_from_landlord === false
+                                ? 'bg-red-100'
+                                : 'bg-gray-100'
+                          }`}
+                        >
+                          <CheckCircle
+                            className={`h-3 w-3 ${
+                              adoption.have_permission_from_landlord
+                                ? 'text-green-600'
+                                : adoption.have_permission_from_landlord === false
+                                  ? 'text-red-600'
+                                  : 'text-gray-500'
+                            }`}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-900">
+                          Landlord Permission
+                        </span>
+                      </div>
                       <div className="flex items-center gap-1">
                         {adoption.have_permission_from_landlord ? (
                           <>
                             <Check className="h-3 w-3 text-green-600" />
-                            <span className="text-green-600">Yes</span>
+                            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs h-4 px-2">
+                              Yes
+                            </Badge>
                           </>
                         ) : adoption.have_permission_from_landlord === false ? (
                           <>
                             <X className="h-3 w-3 text-red-600" />
-                            <span className="text-red-600">No</span>
+                            <Badge className="bg-red-100 text-red-700 border-red-200 text-xs h-4 px-2">
+                              No
+                            </Badge>
                           </>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Unknown</span>
+                          <Badge variant="outline" className="text-xs h-4 px-2">
+                            Unknown
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -618,18 +845,27 @@ const AdoptionPage = () => {
             </Card>
 
             {adoption.status === 'PENDING' && (
-              <Card className="shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Application Actions</CardTitle>
-                  <CardDescription className="text-sm">
-                    Review and take action on this application
-                  </CardDescription>
+              <Card className="bg-white border border-orange-200 border-l-4 border-l-orange-400">
+                <CardHeader className="pb-2 bg-orange-50">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-5 rounded bg-orange-100 flex items-center justify-center">
+                      <Clock className="h-3 w-3 text-orange-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-medium text-gray-900">
+                        Application Actions
+                      </CardTitle>
+                      <CardDescription className="text-xs text-gray-600">
+                        Review and take action on this application
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3">
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-4 h-8"
                       onClick={handleApprove}
                       disabled={actionLoading !== null}
                     >
@@ -647,13 +883,14 @@ const AdoptionPage = () => {
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="outline"
+                      className="border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 text-xs px-4 h-8"
                       onClick={handleReject}
                       disabled={actionLoading !== null}
                     >
                       {actionLoading === 'reject' ? (
                         <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-700 mr-1"></div>
                           Rejecting...
                         </>
                       ) : (
@@ -663,33 +900,6 @@ const AdoptionPage = () => {
                         </>
                       )}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {(adoption.status === 'APPROVED' || adoption.status === 'REJECTED') && (
-              <Card className="shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Application Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    {adoption.status === 'APPROVED' ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-600 font-medium">
-                          This application has been approved
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <span className="text-red-600 font-medium">
-                          This application has been rejected
-                        </span>
-                      </>
-                    )}
                   </div>
                 </CardContent>
               </Card>

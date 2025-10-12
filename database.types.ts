@@ -637,6 +637,35 @@ export type Database = {
           },
         ]
       }
+      global_chat_messages: {
+        Row: {
+          id: number
+          message: string
+          user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          message: string
+          user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          message?: string
+          user_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pets: {
         Row: {
           added_by: string | null
@@ -788,6 +817,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_active_at: string | null
+          onboarded: boolean | null
           password_changed: boolean | null
           payment_method: string | null
           paymongo_id: string | null
@@ -805,6 +835,7 @@ export type Database = {
           id: string
           is_active?: boolean | null
           last_active_at?: string | null
+          onboarded?: boolean | null
           password_changed?: boolean | null
           payment_method?: string | null
           paymongo_id?: string | null
@@ -822,6 +853,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_active_at?: string | null
+          onboarded?: boolean | null
           password_changed?: boolean | null
           payment_method?: string | null
           paymongo_id?: string | null

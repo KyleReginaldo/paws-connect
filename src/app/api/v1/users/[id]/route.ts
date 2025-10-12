@@ -2,6 +2,7 @@ import { supabase } from '@/app/supabase/supabase';
 import { USER_QUERY_WITH_ID } from '@/config/query/query';
 import { updateUserSchema } from '@/config/schema/userChema';
 import { createErrorResponse, createResponse } from '@/lib/db-utils';
+import { sendStatusChangeEmail } from '@/lib/email-utils';
 import { NextRequest } from 'next/server';
 
 async function parseJson(request: NextRequest) {
@@ -64,10 +65,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Only proceed with profile update if there are fields to update
     if (Object.keys(profileUpdateData).length > 0) {
-      // Check if user exists first
+      // Check if user exists first and get current status for comparison
       const { data: existingUser, error: existingUserError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, username, email, status')
         .eq('id', id)
         .single();
 
@@ -126,6 +127,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       if (error) {
         return createErrorResponse('Failed to update user', 400, error.message);
+      }
+
+      // Send email notification if status changed
+      if (profileUpdateData.status && profileUpdateData.status !== existingUser.status) {
+        try {
+          if (existingUser.email) {
+            await sendStatusChangeEmail(
+              existingUser.email,
+              existingUser.username || 'User',
+              profileUpdateData.status
+            );
+          }
+        } catch (emailError) {
+          console.error('Failed to send status change email:', emailError);
+          // Don't fail the entire request if email fails
+        }
       }
 
       return createResponse({

@@ -37,6 +37,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
+import DashboardTour from '@/components/DashboardTour';
 
 const chartConfig = {
   users: {
@@ -935,10 +936,13 @@ const Page = () => {
 
   return (
     <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
+      {/* Onboarding Tour (runs only when appropriate) */}
+      <DashboardTour />
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
         <div className="flex items-center space-x-2 flex-shrink-0">
           <Button
+            id="pc-dash-generate-report"
             onClick={handleGenerateReport}
             variant="outline"
             size="sm"
@@ -950,6 +954,7 @@ const Page = () => {
           <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
             <PopoverTrigger asChild>
               <Button
+                id="pc-dash-date-filter"
                 variant="outline"
                 className="border-orange-200 hover:bg-orange-25 bg-transparent whitespace-nowrap"
               >
@@ -1011,7 +1016,10 @@ const Page = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        id="pc-dash-stats-grid"
+        className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+      >
         {dashboardStats.map((stat, index) => (
           <Card
             key={index}
@@ -1048,6 +1056,7 @@ const Page = () => {
             </p>
           </div>
           <Tabs
+            id="pc-dash-analytics-tabs"
             value={analyticsPeriod}
             onValueChange={setAnalyticsPeriod}
             className="w-auto flex-shrink-0"
@@ -1261,7 +1270,10 @@ const Page = () => {
       </div>
 
       {/* Donation Campaigns */}
-      <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+      <Card
+        id="pc-dash-campaigns"
+        className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm"
+      >
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
             <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />

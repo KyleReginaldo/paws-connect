@@ -1,6 +1,7 @@
 import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from "@/app/supabase/supabase";
 import { createErrorResponse, createResponse } from "@/lib/db-utils";
+import { sendStatusChangeEmail } from "@/lib/email-utils";
 import { NextRequest } from "next/server";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -55,6 +56,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         notificationTitle,
         notificationMessage
       );
+
+      // Send email notification
+      if (userDetails.email) {
+        await sendStatusChangeEmail(
+          userDetails.email,
+          userDetails.username || 'User',
+          'FULLY_VERIFIED'
+        );
+      }
     } catch (notificationError) {
       console.error('Failed to send verification notification:', notificationError);
       // Don't fail the entire request if notification fails

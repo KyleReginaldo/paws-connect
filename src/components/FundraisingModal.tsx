@@ -522,18 +522,33 @@ export function FundraisingModal({
             </div>
 
             {/* Payment Information Section */}
-            <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                  ₱
+            <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
+              {/* Section Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-lg">
+                    Payment Information
+                  </h3>
+                  <p className="text-xs text-blue-600 dark:text-blue-300">
+                    Optional - Set up donation methods for supporters
+                  </p>
                 </div>
-                <h3 className="font-semibold text-blue-900">Payment Information</h3>
-                <p className="text-xs text-blue-600">(Optional - for donations)</p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="gcash_number">GCash Number</Label>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* GCash Number Section */}
+                <div className="space-y-3 p-4 bg-white/80 dark:bg-gray-900/50 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">G</span>
+                    </div>
+                    <Label
+                      htmlFor="gcash_number"
+                      className="font-medium text-gray-900 dark:text-gray-100"
+                    >
+                      GCash Number
+                    </Label>
+                  </div>
                   <Input
                     id="gcash_number"
                     type="tel"
@@ -551,54 +566,84 @@ export function FundraisingModal({
                       }
                     }}
                     placeholder="09123456789 or +639123456789"
-                    className="font-mono"
+                    className="font-mono text-center bg-white/90 dark:bg-gray-800/90"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    📱 Donors can transfer directly to this GCash number
-                  </p>
+                  <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
+                    <span>Donors can transfer directly to this number</span>
+                  </div>
                   {formData.gcash_number && !/^(09|\+639)\d{9}$/.test(formData.gcash_number) && (
-                    <p className="text-xs text-amber-600">
-                      ⚠️ Use format: 09XXXXXXXXX or +639XXXXXXXXX
-                    </p>
+                    <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                      <span className="text-amber-500">⚠️</span>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        Use format: 09XXXXXXXXX or +639XXXXXXXXX
+                      </p>
+                    </div>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="qr_code_upload">
-                      <QrCode />
-                      GCash QR Code Image
-                    </Label>
+                {/* QR Code Section */}
+                <div className="space-y-3 p-4 bg-white/80 dark:bg-gray-900/50 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <Label
+                        htmlFor="qr_code_upload"
+                        className="font-medium text-gray-900 dark:text-gray-100"
+                      >
+                        GCash QR Code
+                      </Label>
+                    </div>
                     {isQrCodeUploading && (
                       <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Uploading QR code...
+                        <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
                       </div>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <input
-                      id="qr_code_upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleQrCodeUpload(e.target.files)}
-                      disabled={isQrCodeUploading}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      📷 Upload your GCash QR code image for easy scanning by donors (Max 10MB)
-                    </p>
 
-                    {/* Current QR Code Display */}
-                    {formData.qr_code && (
-                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs">✓</span>
-                          </div>
-                          <p className="text-sm font-medium text-green-800">QR Code Uploaded</p>
-                        </div>
+                  {!formData.qr_code ? (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          id="qr_code_upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleQrCodeUpload(e.target.files)}
+                          disabled={isQrCodeUploading}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="qr_code_upload"
+                          className={`
+                            flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer transition-all
+                            ${
+                              isQrCodeUploading
+                                ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                : 'border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-950/30 dark:hover:bg-blue-950/50'
+                            }
+                          `}
+                        >
+                          <QrCode
+                            className={`w-8 h-8 mb-2 ${isQrCodeUploading ? 'text-gray-400' : 'text-blue-500'}`}
+                          />
+                          <span
+                            className={`text-sm font-medium ${isQrCodeUploading ? 'text-gray-400' : 'text-blue-700 dark:text-blue-300'}`}
+                          >
+                            {isQrCodeUploading ? 'Uploading...' : 'Upload QR Code'}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            PNG, JPG up to 10MB
+                          </span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+                        <span>Upload your GCash QR code for easy scanning</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-white rounded border border-green-300 flex items-center justify-center overflow-hidden">
+                          <div className="w-16 h-16 bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-600 flex items-center justify-center overflow-hidden shadow-sm">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={formData.qr_code}
@@ -619,32 +664,56 @@ export function FundraisingModal({
                               QR
                             </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-green-700">Ready for donors to scan</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                QR Code Ready
+                              </p>
+                            </div>
+                            <p className="text-xs text-green-700 dark:text-green-300 mb-2">
+                              Donors can scan this code for instant payments
+                            </p>
                             <button
                               type="button"
                               onClick={() => handleInputChange('qr_code', '')}
-                              className="text-xs text-red-600 hover:text-red-800 mt-1"
+                              className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
                             >
                               Remove QR code
                             </button>
                           </div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Payment Info Summary */}
+              {/* Payment Summary */}
               {(formData.gcash_number || formData.qr_code) && (
-                <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-800">
-                  <strong>💡 Payment Options Available:</strong>
-                  <ul className="mt-1 space-y-1">
+                <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <strong className="text-emerald-800 dark:text-emerald-200 text-sm">
+                      Payment Options Available:
+                    </strong>
+                  </div>
+                  <ul className="space-y-1 text-sm text-emerald-700 dark:text-emerald-300">
                     {formData.gcash_number && (
-                      <li>• Manual transfer to GCash number: {formData.gcash_number}</li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                        <span>
+                          Direct GCash transfer to:{' '}
+                          <code className="font-mono bg-emerald-100 dark:bg-emerald-900/50 px-1 rounded text-xs">
+                            {formData.gcash_number}
+                          </code>
+                        </span>
+                      </li>
                     )}
-                    {formData.qr_code && <li>• QR code scanning for instant payment</li>}
+                    {formData.qr_code && (
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                        <span>QR code scanning for instant payment</span>
+                      </li>
+                    )}
                   </ul>
                 </div>
               )}

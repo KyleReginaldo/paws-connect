@@ -29,6 +29,7 @@ type AuthContextType = {
   ) => void;
   user: User | null;
   signOut: () => Promise<void>;
+  markOnboarded: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -252,9 +253,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [router]);
 
+  const markOnboarded = async () => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ onboarded: true })
+        .eq('id', userId)
+        .select('*')
+        .single();
+
+      if (!error && data) {
+        setUser(data as User);
+      }
+    } catch (e) {
+      console.error('Failed to mark onboarded', e);
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ userId, userRole, onLogin, status, errorMessage, onSignup, user, signOut }}
+      value={{
+        userId,
+        userRole,
+        onLogin,
+        status,
+        errorMessage,
+        onSignup,
+        user,
+        signOut,
+        markOnboarded,
+      }}
     >
       {children}
     </AuthContext.Provider>

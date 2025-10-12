@@ -16,3 +16,9 @@ export class AdoptionMailerDto{
         this.adoptedPetImage = adoptedPetImage;
     }
 }
+
+export interface StatusChangeEmailDto {
+    username: string;
+    newStatus: string;
+    adminName?: string;
+}

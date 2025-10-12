@@ -2,47 +2,58 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { EventsProvider } from '@/app/context/EventsContext';
 import RouteGuard from '@/components/RouteGuard';
-import SideBarTile from '@/components/SideBarTile';
-import { Button } from '@/components/ui/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
-  Calendar,
-  Dog,
-  HandCoins,
-  Heart,
-  LayoutDashboard,
-  PanelLeftIcon,
-  UsersRound,
-} from 'lucide-react';
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { Calendar, Dog, HandCoins, Heart, LayoutDashboard, LogOut, UsersRound } from 'lucide-react';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import logoHorizontal from '../../../../public/logo_horizontal.png';
+import playstore from '../../../../public/playstore.png';
 import Pending from './pending/page';
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const pathname = usePathname();
-  const isActive = (path: string) => pathname === path;
-  const router = useRouter();
-  const { signOut, userRole, user } = useAuth();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+const menuItems = [
+  { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { title: 'Adoptions', icon: Heart, path: '/adoptions' },
+  { title: 'Manage Users', icon: UsersRound, path: '/manage-users' },
+  { title: 'Manage Pets', icon: Dog, path: '/manage-pet' },
+  { title: 'Manage Events', icon: Calendar, path: '/manage-events' },
+  { title: 'Fundraising', icon: HandCoins, path: '/fundraising' },
+];
 
-  const handleNavigation = (path: string) => {
-    router.push(path);
-    setIsSheetOpen(false); // Close the sheet after navigation
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const pathname = usePathname();
+  // const router = useRouter();
+  const { signOut, userRole, user } = useAuth();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    setShowLogoutDialog(false);
   };
-  console.log(user?.status);
 
   const getTitle = () => {
     switch (pathname) {
@@ -81,189 +92,141 @@ export default function RootLayout({
         return '';
     }
   };
+
+  // Make the open sidebar a bit narrower while keeping collapsed behavior intact
+  const sidebarVars = {
+    ['--sidebar-width' as string]: '11rem',
+  } as unknown as React.CSSProperties;
+
   return user?.status === 'PENDING' ? (
     <Pending />
   ) : (
     <RouteGuard>
       <EventsProvider>
-        <div className="flex h-screen bg-[#FFFCFB]">
-          <div className="hidden md:flex flex-col justify-between w-[200px] h-full bg-[#333446]">
-            <div>
-              <div className="flex flex-col justify-center items-center my-[32px]">
-                <Image src={logoHorizontal} alt="" height={30} />
-              </div>
-              <ul className="flex flex-col gap-[16px] text-[#3D3C42] w-full">
-                <SideBarTile
-                  title="Dashboard"
-                  icon={LayoutDashboard}
-                  isActive={isActive('/dashboard')}
-                  onButtonClick={() => {
-                    router.push('/dashboard');
-                  }}
-                />
-                <SideBarTile
-                  title="Adoptions"
-                  icon={Heart}
-                  isActive={isActive('/adoptions')}
-                  onButtonClick={() => {
-                    router.push('/adoptions');
-                  }}
-                />
-                <SideBarTile
-                  title="Manage Users"
-                  icon={UsersRound}
-                  isActive={isActive('/manage-users')}
-                  onButtonClick={() => {
-                    router.push('/manage-users');
-                  }}
-                />
-                <SideBarTile
-                  title="Manage Pets"
-                  icon={Dog}
-                  isActive={isActive('/manage-pet')}
-                  onButtonClick={() => {
-                    router.push('/manage-pet');
-                  }}
-                />
-                <SideBarTile
-                  title="Manage Events"
-                  icon={Calendar}
-                  isActive={isActive('/manage-events')}
-                  onButtonClick={() => {
-                    router.push('/manage-events');
-                  }}
-                />
-                <SideBarTile
-                  title="Fundraising"
-                  icon={HandCoins}
-                  isActive={isActive('/fundraising')}
-                  onButtonClick={() => {
-                    router.push('/fundraising');
-                  }}
-                />
-              </ul>
-            </div>
-
-            <div className="w-full p-4">
-              <Button
-                variant="ghost"
-                className="w-full text-left"
-                onClick={async () => {
-                  await signOut();
-                }}
-              >
-                Logout
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 h-full overflow-y-auto p-0">
-            {/* Mobile top bar */}
-            <div className="md:hidden bg-white border-b">
-              <div className="flex items-center justify-between px-3 py-2">
-                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <PanelLeftIcon />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left">
-                    <SheetHeader>
-                      <SheetTitle>Menu</SheetTitle>
-                    </SheetHeader>
-                    <div className="p-2">
-                      <ul className="flex flex-col gap-2">
-                        <li>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-left"
-                            onClick={() => handleNavigation('/dashboard')}
+        <SidebarProvider defaultOpen={true} style={sidebarVars}>
+          <div className="flex h-screen w-full overflow-x-hidden min-w-0">
+            <Sidebar collapsible="icon" className="bg-slate-900 border-r border-slate-700">
+              <SidebarHeader className="p-4 bg-slate-900">
+                <div className="flex justify-center">
+                  <Image
+                    src={logoHorizontal}
+                    alt="Logo"
+                    height={30}
+                    className="group-data-[collapsible=icon]:hidden"
+                  />
+                  <Image
+                    src={playstore}
+                    alt="Playstore Logo"
+                    height={48}
+                    width={48}
+                    className="group-data-[collapsible=icon]:block hidden"
+                  />
+                </div>
+              </SidebarHeader>
+              <SidebarContent className="bg-slate-900">
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.map((item) => (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={pathname === item.path}
+                            className="text-white hover:bg-[#FE5D26] hover:text-white data-[active=true]:bg-[#FE5D26] data-[active=true]:text-white"
+                            tooltip={item.title}
                           >
-                            Dashboard
-                          </Button>
-                        </li>
-                        <li>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-left"
-                            onClick={() => handleNavigation('/adoptions')}
-                          >
-                            Adoptions
-                          </Button>
-                        </li>
-                        <li>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-left"
-                            onClick={() => handleNavigation('/manage-users')}
-                          >
-                            Manage Users
-                          </Button>
-                        </li>
-                        <li>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-left"
-                            onClick={() => handleNavigation('/manage-pet')}
-                          >
-                            Manage Pets
-                          </Button>
-                        </li>
-                        <li>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-left"
-                            onClick={() => handleNavigation('/manage-events')}
-                          >
-                            Manage Events
-                          </Button>
-                        </li>
-                        <li>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-left"
-                            onClick={() => handleNavigation('/fundraising')}
-                          >
-                            Fundraising
-                          </Button>
-                        </li>
-                      </ul>
+                            <Link href={item.path} prefetch>
+                              <item.icon className="h-5 w-5" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+              <SidebarFooter className="p-4 bg-slate-900 border-t border-slate-700">
+                <div className="space-y-2">
+                  <div className="group-data-[collapsible=icon]:hidden">
+                    <div className="flex items-center space-x-3 px-3 py-2 rounded-lg bg-slate-800/50">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-[#FE5D26] rounded-full flex items-center justify-center">
+                          <span className="text-white text-sm font-semibold">
+                            {user?.username?.charAt(0).toUpperCase() || 'A'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {user?.username || 'Admin'}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate">
+                          {userRole === 1 ? 'Administrator' : 'Staff Member'}
+                        </p>
+                      </div>
                     </div>
-                    <SheetFooter>
-                      <Button
-                        className="w-full text-white"
-                        onClick={async () => {
-                          await signOut();
-                          setIsSheetOpen(false);
-                        }}
+                  </div>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => setShowLogoutDialog(true)}
+                        className="text-white hover:bg-red-500/20 hover:text-red-300 border border-slate-700 hover:border-red-500/50 transition-all duration-200 bg-slate-800/30"
+                        tooltip="Logout"
                       >
-                        Logout
-                      </Button>
-                    </SheetFooter>
-                  </SheetContent>
-                </Sheet>
-
-                <div className="font-semibold text-[#FE5D26]">Admin</div>
-                <div />
-              </div>
-            </div>
-
-            <div className="flex flex-col h-full">
-              <div className="flex justify-between mx-[16px] my-[10px] items-start">
-                <div>
-                  <p className="text-2xl font-semibold text-gray-900">{getTitle()}</p>
-                  <p className="text-[14px] font-light text-gray-700">{getSubtitle()}</p>
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
                 </div>
-                <div
-                  className={`${userRole === 1 ? 'bg-orange-500' : 'bg-red-500'} self-start flex gap-[4px] items-center py-[6px] px-[16px] rounded-2xl text-[10px] text-white`}
-                >
-                  <div className="rounded-full h-[5px] w-[5px] bg-white"></div>{' '}
-                  {userRole === 1 ? 'ADMIN' : 'STAFF'}
+              </SidebarFooter>
+            </Sidebar>
+            <SidebarInset className="flex-1 flex flex-col min-w-0">
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+                <SidebarTrigger className="-ml-1" />
+                <div className="flex-1 flex justify-between items-center">
+                  <div>
+                    <h1 className="text-2xl font-semibold text-gray-900">{getTitle()}</h1>
+                    <p className="text-sm font-light text-gray-700">{getSubtitle()}</p>
+                  </div>
+                  <div
+                    className={`${userRole === 1 ? 'bg-orange-500' : 'bg-red-500'} flex gap-1 items-center py-1.5 px-3 rounded-full text-xs text-white`}
+                  >
+                    <div className="rounded-full h-1.5 w-1.5 bg-white"></div>
+                    {userRole === 1 ? 'ADMIN' : 'STAFF'}
+                  </div>
                 </div>
-              </div>
-              <div className="p-4">{children}</div>
-            </div>
+              </header>
+              <main className="flex-1 overflow-auto p-4 bg-gray-50 min-w-0">
+                <Suspense fallback={<div className="text-sm text-gray-500">Loading…</div>}>
+                  {children}
+                </Suspense>
+              </main>
+            </SidebarInset>
           </div>
-        </div>
+        </SidebarProvider>
+
+        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign Out</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to sign out? You&apos;ll need to log in again to access the
+                admin panel.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Sign Out
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </EventsProvider>
     </RouteGuard>
   );
