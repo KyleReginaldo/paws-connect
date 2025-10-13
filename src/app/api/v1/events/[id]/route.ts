@@ -29,7 +29,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
                     profile_image_link
                 ),
                 comments:event_comments(id, content, likes, created_at, user:users(id, username, profile_image_link)),
-                members:event_members(id, user:users(id, username, profile_image_link), joined_at)
+                members:event_members(id, user:users(id, username, profile_image_link), joined_at),
+                fundraising(*),
+                pet:pets(*)
             `)
             .eq('id', Number(id))
             .single();

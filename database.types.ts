@@ -292,8 +292,10 @@ export type Database = {
           created_by: string | null
           description: string | null
           ended_at: string | null
+          fundraising: number | null
           id: number
           images: string[] | null
+          pet: number | null
           starting_date: string | null
           suggestions: string[] | null
           title: string
@@ -303,8 +305,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           ended_at?: string | null
+          fundraising?: number | null
           id?: number
           images?: string[] | null
+          pet?: number | null
           starting_date?: string | null
           suggestions?: string[] | null
           title: string
@@ -314,8 +318,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           ended_at?: string | null
+          fundraising?: number | null
           id?: number
           images?: string[] | null
+          pet?: number | null
           starting_date?: string | null
           suggestions?: string[] | null
           title?: string
@@ -326,6 +332,20 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_fundraising_fkey"
+            columns: ["fundraising"]
+            isOneToOne: false
+            referencedRelation: "fundraising"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_pet_fkey"
+            columns: ["pet"]
+            isOneToOne: false
+            referencedRelation: "pets"
             referencedColumns: ["id"]
           },
         ]

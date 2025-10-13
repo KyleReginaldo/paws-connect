@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { images, title, description, created_by, starting_date } = body;
+        const { images, title, description, created_by, starting_date, fundraising, pet } = body;
 
         if (!title) {
             return createErrorResponse('Title is required', 400);
@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
                 description: description || null,
                 created_by: created_by || null,
                 starting_date: parsedStartingDate,
+                fundraising,
+                pet,
                 
             })
             .select()
@@ -93,7 +95,9 @@ export async function GET(request: NextRequest) {
                     profile_image_link
                 ),
                 comments:event_comments(id, content, likes, created_at, user:users(id, username, profile_image_link)),
-                members:event_members(id, user:users(id, username, profile_image_link), joined_at)
+                members:event_members(id, user:users(id, username, profile_image_link), joined_at),
+                fundraising(*),
+                pet:pets(*)
             `)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
