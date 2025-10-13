@@ -248,11 +248,72 @@ export default function PetManagement() {
       <PetModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        onSubmit={async (petData) => {
-          if (!editingPet) {
-            await addPet(petData);
-          } else {
-            await updatePet(editingPet.id, petData);
+        onSubmit={async (petData, photoFiles) => {
+          try {
+            if (!editingPet) {
+              const result = await addPet(petData, photoFiles);
+              if (result) {
+                success('Pet Added Successfully', `${petData.name} has been added to the system.`);
+              } else {
+                error('Failed to Add Pet', 'Please check the form data and try again.');
+              }
+            } else {
+              // For updates, check if we have new files or just updating existing data
+              if (photoFiles && photoFiles.length > 0) {
+                // Use FormData if there are new files
+                const formData = new FormData();
+
+                // Add all pet data fields
+                Object.entries(petData).forEach(([key, value]) => {
+                  if (key === 'photos') {
+                    // Handle existing photos separately
+                    if (Array.isArray(value) && value.length > 0) {
+                      value.forEach((photoUrl) => {
+                        if (typeof photoUrl === 'string') {
+                          formData.append('existing_photos', photoUrl);
+                        }
+                      });
+                    }
+                  } else if (key === 'good_with') {
+                    // Handle array fields
+                    if (Array.isArray(value)) {
+                      value.forEach((item) => {
+                        if (typeof item === 'string') {
+                          formData.append('good_with[]', item);
+                        }
+                      });
+                    }
+                  } else if (value !== null && value !== undefined) {
+                    formData.append(key, String(value));
+                  }
+                });
+
+                // Add new photo files
+                photoFiles.forEach((file) => {
+                  formData.append('photos', file);
+                });
+
+                const result = await updatePet(editingPet.id, formData);
+                if (result) {
+                  success('Pet Updated Successfully', `${petData.name} has been updated.`);
+                } else {
+                  error('Failed to Update Pet', 'Please check the form data and try again.');
+                }
+              } else {
+                // Use JSON if no new files
+                const result = await updatePet(editingPet.id, petData);
+                if (result) {
+                  success('Pet Updated Successfully', `${petData.name} has been updated.`);
+                } else {
+                  error('Failed to Update Pet', 'Please check the form data and try again.');
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Pet submission error:', err);
+            const errorMessage =
+              err instanceof Error ? err.message : 'An unexpected error occurred';
+            error('Pet Operation Failed', errorMessage);
           }
         }}
         editingPet={editingPet}

@@ -7,14 +7,14 @@ interface FundraisingContextType {
   campaigns: Fundraising[] | null;
   stats: FundraisingStats | null;
   status: 'loading' | 'success' | 'error';
-  addCampaign: (campaignData: CreateFundraisingDto) => Promise<{
+  addCampaign: (campaignData: CreateFundraisingDto | FormData) => Promise<{
     success: boolean;
     data?: Fundraising;
     error?: string;
   }>;
   updateCampaign: (
     campaignId: number,
-    campaignData: UpdateFundraisingDto,
+    campaignData: UpdateFundraisingDto | FormData,
   ) => Promise<{
     success: boolean;
     data?: Fundraising;
@@ -118,40 +118,54 @@ export function FundraisingProvider({ children }: FundraisingProviderProps) {
   };
 
   const addCampaign = async (
-    campaignData: CreateFundraisingDto,
+    campaignData: CreateFundraisingDto | FormData,
   ): Promise<{
     success: boolean;
     data?: Fundraising;
     error?: string;
   }> => {
     try {
-      // Sanitize numeric fields that may be strings from the UI
-      const payload = { ...campaignData } as Record<string, unknown>;
-      if ('target_amount' in payload) {
-        const val = payload['target_amount'];
-        if (typeof val === 'string' && val !== '') {
-          const n = Number(val);
-          if (!Number.isNaN(n)) payload['target_amount'] = n;
-          else delete payload['target_amount'];
-        }
-      }
+      let response: Response;
 
-      if ('raised_amount' in payload) {
-        const val = payload['raised_amount'];
-        if (typeof val === 'string' && val !== '') {
-          const n = Number(val);
-          if (!Number.isNaN(n)) payload['raised_amount'] = n;
-          else delete payload['raised_amount'];
-        }
-      }
+      if (campaignData instanceof FormData) {
+        // Handle FormData for file uploads
+        console.log('🚀 Submitting campaign with files via FormData');
+        response = await fetch('/api/v1/fundraising', {
+          method: 'POST',
+          body: campaignData, // Don't set Content-Type header for FormData
+        });
+      } else {
+        // Handle traditional JSON data (backward compatibility)
+        console.log('🚀 Submitting campaign data via JSON');
 
-      const response = await fetch('/api/v1/fundraising', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        // Sanitize numeric fields that may be strings from the UI
+        const payload = { ...campaignData } as Record<string, unknown>;
+        if ('target_amount' in payload) {
+          const val = payload['target_amount'];
+          if (typeof val === 'string' && val !== '') {
+            const n = Number(val);
+            if (!Number.isNaN(n)) payload['target_amount'] = n;
+            else delete payload['target_amount'];
+          }
+        }
+
+        if ('raised_amount' in payload) {
+          const val = payload['raised_amount'];
+          if (typeof val === 'string' && val !== '') {
+            const n = Number(val);
+            if (!Number.isNaN(n)) payload['raised_amount'] = n;
+            else delete payload['raised_amount'];
+          }
+        }
+
+        response = await fetch('/api/v1/fundraising', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!response.ok) {
         let errorData: unknown = { message: 'Failed to create campaign' };
@@ -195,40 +209,54 @@ export function FundraisingProvider({ children }: FundraisingProviderProps) {
 
   const updateCampaign = async (
     campaignId: number,
-    campaignData: UpdateFundraisingDto,
+    campaignData: UpdateFundraisingDto | FormData,
   ): Promise<{
     success: boolean;
     data?: Fundraising;
     error?: string;
   }> => {
     try {
-      // Sanitize numeric fields that may be strings from the UI
-      const payload = { ...campaignData } as Record<string, unknown>;
-      if ('target_amount' in payload) {
-        const val = payload['target_amount'];
-        if (typeof val === 'string' && val !== '') {
-          const n = Number(val);
-          if (!Number.isNaN(n)) payload['target_amount'] = n;
-          else delete payload['target_amount'];
-        }
-      }
+      let response: Response;
 
-      if ('raised_amount' in payload) {
-        const val = payload['raised_amount'];
-        if (typeof val === 'string' && val !== '') {
-          const n = Number(val);
-          if (!Number.isNaN(n)) payload['raised_amount'] = n;
-          else delete payload['raised_amount'];
-        }
-      }
+      if (campaignData instanceof FormData) {
+        // Handle FormData for file uploads
+        console.log('🚀 Updating campaign with files via FormData');
+        response = await fetch(`/api/v1/fundraising/${campaignId}`, {
+          method: 'PUT',
+          body: campaignData, // Don't set Content-Type header for FormData
+        });
+      } else {
+        // Handle traditional JSON data (backward compatibility)
+        console.log('🚀 Updating campaign data via JSON');
 
-      const response = await fetch(`/api/v1/fundraising/${campaignId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        // Sanitize numeric fields that may be strings from the UI
+        const payload = { ...campaignData } as Record<string, unknown>;
+        if ('target_amount' in payload) {
+          const val = payload['target_amount'];
+          if (typeof val === 'string' && val !== '') {
+            const n = Number(val);
+            if (!Number.isNaN(n)) payload['target_amount'] = n;
+            else delete payload['target_amount'];
+          }
+        }
+
+        if ('raised_amount' in payload) {
+          const val = payload['raised_amount'];
+          if (typeof val === 'string' && val !== '') {
+            const n = Number(val);
+            if (!Number.isNaN(n)) payload['raised_amount'] = n;
+            else delete payload['raised_amount'];
+          }
+        }
+
+        response = await fetch(`/api/v1/fundraising/${campaignId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!response.ok) {
         let errorData: unknown = { message: 'Failed to update campaign' };

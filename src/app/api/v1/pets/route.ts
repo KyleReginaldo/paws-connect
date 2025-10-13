@@ -237,37 +237,69 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const result = createPetSchema.safeParse(body);
-  if (!result.success) {
-    return new Response(JSON.stringify({ error: 'Bad Request', message: result.error.message }), {
-      status: 400,
-    });
-  }
-  const {
-    added_by,
-    age,
-    breed,
-    date_of_birth,
-    description,
-    gender,
-    good_with,
-    health_status,
-    is_spayed_or_neutured,
-    is_trained,
-    is_vaccinated,
-    name,
-    rescue_address,
-    size,
-    special_needs,
-    type,
-    weight,
-    request_status,
-    photos,
-  } = result.data;
-  const { data, error } = await supabase
-    .from('pets')
-    .insert({
+  try {
+    const formData = await request.formData();
+    
+    // Extract pet data from form
+    const petDataString = formData.get('petData') as string;
+    if (!petDataString) {
+      return new Response(JSON.stringify({ error: 'Pet data is required' }), { status: 400 });
+    }
+    
+    let petData;
+    try {
+      petData = JSON.parse(petDataString);
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid pet data format' }), { status: 400 });
+    }
+    
+    // Clean the pet data - remove fields not in schema
+    const cleanedPetData = {
+      name: petData.name,
+      type: petData.type,
+      breed: petData.breed,
+      gender: petData.gender,
+      age: petData.age,
+      date_of_birth: petData.date_of_birth,
+      size: petData.size,
+      weight: petData.weight,
+      is_vaccinated: petData.is_vaccinated,
+      is_spayed_or_neutured: petData.is_spayed_or_neutured,
+      health_status: petData.health_status,
+      good_with: petData.good_with,
+      is_trained: petData.is_trained,
+      rescue_address: petData.rescue_address,
+      description: petData.description,
+      special_needs: petData.special_needs,
+      added_by: petData.added_by,
+      request_status: petData.request_status,
+      photos: [] // Will be filled with uploaded URLs
+    };
+    
+    console.log('Validating pet data:', cleanedPetData);
+    
+    // Create a schema that doesn't require photos for validation
+    const createPetSchemaWithoutPhotos = createPetSchema.omit({ photos: true });
+    const result = createPetSchemaWithoutPhotos.safeParse(cleanedPetData);
+    if (!result.success) {
+      console.error('Schema validation failed:', result.error.issues);
+      
+      // Create user-friendly error messages
+      const fieldErrors = result.error.issues.map(issue => {
+        const field = issue.path.join('.');
+        return `${field}: ${issue.message}`;
+      });
+      
+      return new Response(JSON.stringify({ 
+        error: 'Validation Error', 
+        message: `Please fix the following issues: ${fieldErrors.join(', ')}`,
+        details: result.error.issues 
+      }), {
+        status: 400,
+      });
+    }
+
+    const {
       added_by,
       age,
       breed,
@@ -285,28 +317,123 @@ export async function POST(request: Request) {
       special_needs,
       type,
       weight,
-      request_status: request_status || 'pending',
-      photos,
-    })
-    .select()
-    .single();
-  if (error) {
+      request_status,
+    } = result.data;
+
+    // Handle image uploads
+    const photoUrls: string[] = [];
+    const files = formData.getAll('photos') as File[];
+    
+    if (files && files.length > 0) {
+      for (const file of files) {
+        if (file instanceof File && file.size > 0) {
+          // Validate file
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          if (file.size > maxSize) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            return new Response(JSON.stringify({ 
+              error: 'File Too Large', 
+              message: `Image "${file.name}" is ${sizeMB}MB. Please reduce the image size to under 5MB and try again.`
+            }), { status: 400 });
+          }
+
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            return new Response(JSON.stringify({ 
+              error: 'Invalid File Type', 
+              message: `File "${file.name}" is not supported. Please use JPEG, PNG, or WebP images only.`
+            }), { status: 400 });
+          }
+
+          // Upload to Supabase storage
+          const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+          const filePath = `pets/${fileName}`;
+
+          const arrayBuffer = await file.arrayBuffer();
+          const { error: uploadError } = await supabase.storage
+            .from('files')
+            .upload(filePath, new Uint8Array(arrayBuffer), {
+              contentType: file.type || 'image/jpeg',
+              cacheControl: '3600',
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error('Failed to upload image:', uploadError);
+            return new Response(JSON.stringify({ 
+              error: 'Image Upload Failed', 
+              message: `Could not save image "${file.name}". Please check your internet connection and try again.`
+            }), { status: 500 });
+          }
+
+          // Get public URL
+          const { data: urlData } = supabase.storage.from('files').getPublicUrl(filePath);
+          if (urlData?.publicUrl) {
+            photoUrls.push(urlData.publicUrl);
+          }
+        }
+      }
+    }
+
+    // Create pet record with uploaded image URLs
+    const { data, error } = await supabase
+      .from('pets')
+      .insert({
+        added_by,
+        age,
+        breed,
+        date_of_birth,
+        description,
+        gender,
+        good_with,
+        health_status,
+        is_spayed_or_neutured,
+        is_trained,
+        is_vaccinated,
+        name,
+        rescue_address,
+        size,
+        special_needs,
+        type,
+        weight,
+        request_status: request_status || 'pending',
+        photos: photoUrls,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // If pet creation fails, we should clean up uploaded images
+      // Note: In a production system, you might want to implement a cleanup job
+      console.error('Failed to create pet, uploaded images may need cleanup:', photoUrls);
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to create pet',
+          message: error.message,
+        }),
+        { status: 400 },
+      );
+    }
+
     return new Response(
       JSON.stringify({
-        error: 'Failed to create pet',
-        message: error.message,
+        message: 'Pet created successfully',
+        data: data,
       }),
-      { status: 400 },
+      {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  } catch (error) {
+    console.error('Error creating pet:', error);
+    return new Response(
+      JSON.stringify({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      }),
+      { status: 500 },
     );
   }
-  return new Response(
-    JSON.stringify({
-      message: 'Pet created successfully',
-      data: data,
-    }),
-    {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    },
-  );
 }

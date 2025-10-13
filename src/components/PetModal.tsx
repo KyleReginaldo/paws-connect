@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/app/context/AuthContext';
-import { supabase } from '@/app/supabase/supabase';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -28,12 +27,11 @@ import { Pet } from '@/config/types/pet';
 import { CalendarIcon, HelpCircle, Info, Upload } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface PetModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (petData: Omit<Pet, 'id' | 'dateAdded'>) => void;
+  onSubmit: (petData: Omit<Pet, 'id' | 'created_at'>, photoFiles: File[]) => Promise<void>;
   editingPet?: Pet | null;
 }
 
@@ -84,12 +82,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     photos: [],
   });
 
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photosPreviews, setPhotosPreviews] = useState<string[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [lastFailedFile, setLastFailedFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [catBreeds, setCatBreeds] = useState<{ name: string; image: string }[]>([]);
@@ -144,8 +142,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return null;
   };
 
-  // Change this to your actual Supabase bucket name if not 'files'
-  const SUPABASE_BUCKET = 'files';
+  // Supabase bucket name is 'paws-connect' - no longer needed as variable
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -157,7 +154,10 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     if (!formData.type) {
       errors.type = 'Pet type is required';
     }
-    if (photosPreviews.length === 0 && (!formData.photos || formData.photos.length === 0)) {
+    if (
+      photoFiles.length === 0 &&
+      (!editingPet || !editingPet.photos || editingPet.photos.length === 0)
+    ) {
       errors.photos = 'At least one pet photo is required';
     }
 
@@ -165,158 +165,28 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return Object.keys(errors).length === 0;
   };
 
-  const handleFileUpload = async (file: File, retryCount = 0) => {
+  const handleFileUpload = (file: File) => {
     const validationError = validateFile(file);
     if (validationError) {
       setUploadError(validationError);
-      setLastFailedFile(null);
       return;
     }
 
     setUploadError('');
-    setIsUploading(true);
-    setLastFailedFile(file);
 
-    try {
-      // Method 1: Try using the API route first (better for cross-browser compatibility)
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-        const response = await fetch('/api/v1/pets/upload', {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unknown error');
-          throw new Error(`Upload failed: ${response.status} ${response.statusText}. ${errorText}`);
-        }
-
-        const result = await response.json();
-
-        if (result.url) {
-          console.log('Photo uploaded successfully via API:', result.url);
-          setPhotosPreviews((prev) => [...prev, result.url]);
-          setFormData((prev) => ({
-            ...prev,
-            photos: [...(prev.photos || []), result.url],
-          }));
-          setValidationErrors((prev) => ({ ...prev, photos: '' }));
-          setLastFailedFile(null);
-          setIsUploading(false);
-
-          // Force a small delay to ensure state updates properly
-          setTimeout(() => {
-            console.log('Photo preview state after upload:', result.url);
-          }, 100);
-
-          return;
-        } else {
-          throw new Error('No URL returned from upload API');
-        }
-      } catch (apiError) {
-        console.warn('API upload failed, trying direct Supabase upload:', apiError);
-
-        // Check if it's a network error
-        const isNetworkError =
-          apiError instanceof Error &&
-          (apiError.name === 'AbortError' ||
-            apiError.message.includes('fetch') ||
-            apiError.message.includes('network') ||
-            apiError.message.includes('timeout'));
-
-        if (isNetworkError && retryCount < 2) {
-          // Retry for network errors
-          setUploadError(`Network error, retrying... (${retryCount + 1}/3)`);
-          setTimeout(() => {
-            handleFileUpload(file, retryCount + 1);
-          }, 2000);
-          return;
-        }
-
-        // Method 2: Fallback to direct Supabase upload
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `${Date.now()}-${uuidv4()}.${fileExt}`;
-        const filePath = `pets/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from(SUPABASE_BUCKET)
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false,
-          });
-
-        if (uploadError) {
-          throw new Error(`Supabase upload failed: ${uploadError.message}`);
-        }
-
-        // Get public URL
-        const { data: urlData } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
-        const publicUrl = urlData?.publicUrl;
-
-        if (!publicUrl) {
-          throw new Error('Failed to get public URL from Supabase');
-        }
-
-        console.log('Photo uploaded successfully via Supabase:', publicUrl);
-        setPhotosPreviews((prev) => [...prev, publicUrl]);
-        setFormData((prev) => ({
-          ...prev,
-          photos: [...(prev.photos || []), publicUrl],
-        }));
-        setValidationErrors((prev) => ({ ...prev, photos: '' }));
-        setLastFailedFile(null);
-      }
-    } catch (error) {
-      console.error('Photo upload failed:', error);
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      if (
-        retryCount < 2 &&
-        (errorMessage.includes('network') ||
-          errorMessage.includes('timeout') ||
-          errorMessage.includes('fetch'))
-      ) {
-        setUploadError(`Upload failed, retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => {
-          handleFileUpload(file, retryCount + 1);
-        }, 2000);
-        return;
-      }
-
-      setUploadError(
-        `Upload failed: ${errorMessage}. Please check your internet connection and try again.`,
-      );
-    } finally {
-      if (retryCount === 0) {
-        setIsUploading(false);
-      }
-    }
+    // Store file and create local preview
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoFiles((prev) => [...prev, file]);
+    setPhotosPreviews((prev) => [...prev, previewUrl]);
+    setValidationErrors((prev) => ({ ...prev, photos: '' }));
   };
 
-  const retryUpload = () => {
-    if (lastFailedFile) {
-      handleFileUpload(lastFailedFile);
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('handleFileSelect triggered', e.target.files);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      console.log(`Selected ${files.length} files`);
-      // Upload files one by one
+      // Store files locally
       for (let i = 0; i < files.length; i++) {
-        console.log(`Uploading file ${i + 1}:`, files[i].name);
-        await handleFileUpload(files[i]);
+        handleFileUpload(files[i]);
       }
     }
     // Reset input value to allow selecting the same files again if needed
@@ -325,15 +195,15 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     }
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      // Upload files one by one
+      // Store files locally
       for (let i = 0; i < files.length; i++) {
-        await handleFileUpload(files[i]);
+        handleFileUpload(files[i]);
       }
     }
   };
@@ -349,18 +219,33 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   };
 
   const removePhoto = (photoUrl: string) => {
-    console.log('Removing photo:', photoUrl);
-    setPhotosPreviews((prev) => prev.filter((url) => url !== photoUrl));
-    setFormData((prev) => ({
-      ...prev,
-      photos: (prev.photos || []).filter((url) => url !== photoUrl),
-    }));
-    const updatedPhotos = (formData.photos || []).filter((url) => url !== photoUrl);
-    if (updatedPhotos.length === 0) {
+    // Check if it's a new preview (blob URL or recently added)
+    const previewIndex = photosPreviews.indexOf(photoUrl);
+
+    if (previewIndex !== -1) {
+      // It's a new preview - remove from previews and files
+      setPhotosPreviews((prev) => prev.filter((url) => url !== photoUrl));
+      setPhotoFiles((prev) => prev.filter((_, index) => index !== previewIndex));
+
+      // Clean up blob URL if it's a local preview
+      if (photoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(photoUrl);
+      }
+    } else {
+      // It's an existing photo - remove from formData.photos
+      setFormData((prev) => ({
+        ...prev,
+        photos: (prev.photos || []).filter((url) => url !== photoUrl),
+      }));
+    }
+
+    // Clear validation error if no photos remain
+    const remainingExisting = formData.photos?.filter((url) => url !== photoUrl) || [];
+    const remainingPreviews = photosPreviews.filter((url) => url !== photoUrl);
+    if (remainingExisting.length === 0 && remainingPreviews.length === 0) {
       setValidationErrors((prev) => ({ ...prev, photos: '' }));
     }
     setUploadError('');
-    setLastFailedFile(null);
 
     // Clear the file input
     if (fileInputRef.current) {
@@ -370,9 +255,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
   const resetUploadStates = () => {
     setUploadError('');
-    setIsUploading(false);
-    setLastFailedFile(null);
     setValidationErrors({});
+    setIsSubmitting(false);
   };
 
   // Load breed data
@@ -433,9 +317,10 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         photos: editingPet.photos || [],
       });
       setBirthDate(editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined);
-      const photoUrls = editingPet.photos || [];
-      console.log('Setting photos previews to:', photoUrls);
-      setPhotosPreviews(photoUrls);
+      // Don't set existing photos to photosPreviews - they're handled separately via formData.photos
+      console.log('Existing pet photos will be displayed via formData.photos:', editingPet.photos);
+      setPhotosPreviews([]); // Clear previews for new files only
+      setPhotoFiles([]); // Clear local files when editing existing pet
     } else {
       console.log('Setting up form for new pet');
       // Reset form for new pet
@@ -463,6 +348,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       });
       setBirthDate(undefined);
       setPhotosPreviews([]);
+      setPhotoFiles([]); // Clear local files for new pet
     }
     resetUploadStates();
     // Load draft from session storage if exists (only for new pet)
@@ -488,22 +374,22 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     }
   }, [formData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Prevent submission while uploading
-    if (isUploading) {
-      setUploadError('Please wait for the photo upload to complete before submitting.');
-      return;
-    }
 
     // Validate form before submission
     if (!validateForm()) {
       return;
     }
 
+    if (isSubmitting) {
+      return; // Prevent double submission
+    }
+
+    setIsSubmitting(true);
+    setUploadError(''); // Clear any previous errors
+
     // Ensure all required fields are present and normalized
-    const now = new Date();
     const petData = {
       name: formData.name,
       type: formData.type,
@@ -527,11 +413,19 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       special_needs: formData.special_needs || '',
       added_by: formData.added_by || userId || '',
       request_status: formData.request_status || 'pending',
-      created_at: now.toISOString(),
-      photos: photosPreviews.length > 0 ? photosPreviews : formData.photos || [],
+      photos: editingPet ? formData.photos || [] : [], // For editing, keep existing photos; for new pets, photos will be uploaded
     };
-    onSubmit(petData);
-    onOpenChange(false);
+
+    try {
+      await onSubmit(petData, photoFiles);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Pet submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save pet';
+      setUploadError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
@@ -1108,37 +1002,55 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               multiple
               onChange={handleFileSelect}
               style={{ display: 'none' }}
-              disabled={isUploading}
             />
-            {isUploading ? (
-              <div className="border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-6 text-center">
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <p className="text-sm text-blue-700">Uploading photos...</p>
-                  <p className="text-xs text-blue-600">Please wait, this may take a moment</p>
-                </div>
-              </div>
-            ) : photosPreviews.length > 0 ? (
+            {(formData.photos && formData.photos.length > 0) || photosPreviews.length > 0 ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-0">
+                  {/* Existing pet photos (from editing) */}
+                  {editingPet &&
+                    formData.photos &&
+                    formData.photos.map((photoUrl, index) => (
+                      <div
+                        key={`existing-${photoUrl}-${index}`}
+                        className="relative group w-[128px] h-[128px] m-0 p-0"
+                      >
+                        <Image
+                          src={photoUrl}
+                          alt={`Existing pet photo ${index + 1}`}
+                          width={128}
+                          height={128}
+                          className="w-32 h-32 object-cover rounded-lg border m-0"
+                          onError={(e) => {
+                            console.error('Failed to load existing image:', photoUrl);
+                            e.currentTarget.src = '/empty_pet.png';
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-0 left-0 h-6 w-6 rounded-full p-0 bg-red-500 hover:bg-red-600 text-white shadow-lg border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          onClick={() => removePhoto(photoUrl)}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  {/* New photo previews (from file selection) */}
                   {photosPreviews.map((photoUrl, index) => (
                     <div
-                      key={`${photoUrl}-${index}`}
+                      key={`preview-${photoUrl}-${index}`}
                       className="relative group w-[128px] h-[128px] m-0 p-0"
                     >
                       <Image
                         src={photoUrl}
-                        alt={`Pet preview ${index + 1}`}
+                        alt={`New pet preview ${index + 1}`}
                         width={128}
                         height={128}
-                        className="w-32 h-32 object-cover rounded-lg border m-0"
+                        className="w-32 h-32 object-cover rounded-lg border-2 border-blue-300 m-0"
                         onError={(e) => {
-                          console.error('Failed to load image:', photoUrl);
-                          // Fallback to placeholder if image fails to load
+                          console.error('Failed to load preview image:', photoUrl);
                           e.currentTarget.src = '/empty_pet.png';
-                        }}
-                        onLoad={() => {
-                          console.log('Image loaded successfully:', photoUrl);
                         }}
                       />
                       <Button
@@ -1147,7 +1059,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                         size="sm"
                         className="absolute top-0 left-0 h-6 w-6 rounded-full p-0 bg-red-500 hover:bg-red-600 text-white shadow-lg border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                         onClick={() => removePhoto(photoUrl)}
-                        disabled={isUploading}
                       >
                         ×
                       </Button>
@@ -1162,7 +1073,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                     console.log('Add More Photos clicked');
                     fileInputRef.current?.click();
                   }}
-                  disabled={isUploading}
                 >
                   Add More Photos
                 </Button>
@@ -1193,9 +1103,8 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                     variant="outline"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
                   >
-                    {isUploading ? 'Uploading...' : 'Choose Files'}
+                    Choose Files
                   </Button>
                 </div>
               </div>
@@ -1214,19 +1123,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 <div className="flex-1">
                   <p className="text-sm font-medium text-red-800">Upload Error</p>
                   <p className="text-sm text-red-700">{uploadError}</p>
-                  {lastFailedFile && !isUploading && (
-                    <div className="mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={retryUpload}
-                        className="bg-white hover:bg-gray-50"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -1266,16 +1162,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isUploading}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isUploading}
-              className={isUploading ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              {isUploading ? 'Uploading Photo...' : editingPet ? 'Update Pet' : 'Add Pet'}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : editingPet ? 'Update Pet' : 'Add Pet'}
             </Button>
           </DialogFooter>
         </form>

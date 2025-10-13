@@ -27,7 +27,10 @@ import { useEffect, useState } from 'react';
 interface FundraisingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (campaignData: CreateFundraisingDto | UpdateFundraisingDto) => Promise<{
+  onSubmit: (
+    campaignData: CreateFundraisingDto | UpdateFundraisingDto | FormData,
+    campaignId?: number,
+  ) => Promise<{
     success: boolean;
     error?: string;
   }>;
@@ -54,10 +57,11 @@ export function FundraisingModal({
     qr_code: '',
     gcash_number: '',
   });
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
+  const [qrCodePreview, setQrCodePreview] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isQrCodeUploading, setIsQrCodeUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +85,9 @@ export function FundraisingModal({
         gcash_number: editingCampaign?.gcash_number || '',
       });
       setImagePreviews((editingCampaign?.images as string[]) || []);
+      setImageFiles([]); // Clear local files when editing
+      setQrCodeFile(null);
+      setQrCodePreview(editingCampaign?.qr_code || '');
     } else {
       setFormData({
         title: '',
@@ -95,6 +102,9 @@ export function FundraisingModal({
         gcash_number: '',
       });
       setImagePreviews([]);
+      setImageFiles([]); // Clear local files for new campaign
+      setQrCodeFile(null);
+      setQrCodePreview('');
     }
     // Clear error when modal opens/closes or campaign changes
     setError(null);
@@ -104,18 +114,11 @@ export function FundraisingModal({
     e.preventDefault();
     console.log('=== FORM SUBMISSION START ===');
     console.log('📝 Current formData:', formData);
-    console.log('🖼️ Current image previews:', imagePreviews.length);
-    console.log('⬆️ Is uploading:', isUploading);
+    console.log('🖼️ Current image files:', imageFiles.length);
+    console.log('📱 QR code file:', qrCodeFile ? 'Present' : 'None');
 
     setIsSubmitting(true);
     setError(null);
-
-    if (isUploading || isQrCodeUploading) {
-      console.log('❌ Upload in progress, blocking submission');
-      setError('Please wait for all uploads to finish before submitting.');
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       // Validate required fields before submission
@@ -150,24 +153,38 @@ export function FundraisingModal({
 
       console.log('✅ Form validation passed');
 
+      // Create FormData for multipart upload
+      const formDataToSubmit = new FormData();
+
+      // Add text fields
+      formDataToSubmit.append('title', formData.title);
+      formDataToSubmit.append('description', formData.description);
+      formDataToSubmit.append('target_amount', formData.target_amount.toString());
+      formDataToSubmit.append('created_by', formData.created_by);
+
+      if (formData.gcash_number) {
+        formDataToSubmit.append('gcash_number', formData.gcash_number);
+      }
+
+      // Add image files
+      imageFiles.forEach((file) => {
+        formDataToSubmit.append(`images`, file);
+      });
+
+      // Add QR code file if present
+      if (qrCodeFile) {
+        formDataToSubmit.append('qr_code', qrCodeFile);
+      }
+
+      console.log('📤 FormData prepared with files');
+
       let result;
       if (editingCampaign) {
-        console.log('📝 Updating existing campaign:', editingCampaign.id);
-        // For editing, we don't need created_by
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { created_by, ...updateData } = formData;
-        console.log('📤 Update data:', updateData);
-        result = await onSubmit(updateData);
+        console.log('� Updating existing campaign:', editingCampaign.id);
+        result = await onSubmit(formDataToSubmit, editingCampaign.id);
       } else {
-        // Ensure proper data types for create
-        const submitData = {
-          ...formData,
-          target_amount: Number(formData.target_amount),
-          images: formData.images || [],
-        };
-        console.log('📤 Submitting new campaign data:', submitData);
-        console.log('🖼️ Images being submitted:', submitData.images);
-        result = await onSubmit(submitData);
+        console.log('� Submitting new campaign');
+        result = await onSubmit(formDataToSubmit);
       }
 
       console.log('📨 Submission result:', result);
@@ -195,99 +212,40 @@ export function FundraisingModal({
     }));
   };
 
-  const handleImageUpload = async (files: FileList) => {
-    console.log('=== IMAGE UPLOAD START ===');
-    console.log('📁 Files to upload:', files.length);
-
+  const handleImageUpload = (files: FileList) => {
     if (files.length === 0) {
-      console.log('❌ No files selected');
       return;
     }
 
     setError(null);
-    setIsUploading(true);
-    const uploadedUrls: string[] = [];
-    const localPreviews: string[] = [];
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
 
-    console.log('🔄 Starting upload process...');
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      console.log(`📤 Processing file ${i + 1}/${files.length}:`, {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      });
 
-      // create local preview
-      const localUrl = URL.createObjectURL(file);
-      localPreviews.push(localUrl);
-      console.log('🖼️ Local preview created:', localUrl);
-
-      try {
-        console.log(`⬆️ Uploading file: ${file.name}`);
-        const fd = new FormData();
-        fd.append('file', file);
-
-        const res = await fetch('/api/v1/fundraising/upload', {
-          method: 'POST',
-          body: fd,
-        });
-
-        const json = await res.json();
-        console.log(`📨 Upload response for ${file.name}:`, json);
-
-        if (!res.ok) {
-          const details = json?.details || json?.error || 'Unknown';
-          console.error(
-            '❌ Upload failed for file',
-            file.name,
-            'Status:',
-            res.status,
-            'Details:',
-            details,
-          );
-          setError(`Failed to upload ${file.name}: ${details}`);
-          continue;
-        }
-
-        if (json?.url) {
-          uploadedUrls.push(json.url);
-          console.log(`✅ Successfully uploaded ${file.name}, URL: ${json.url}`);
-        } else {
-          console.error('❌ Upload did not return a url for file', file.name, json);
-          setError(`Upload did not return a url for ${file.name}`);
-        }
-      } catch (err) {
-        console.error('❌ Error uploading file', file.name, err);
-        setError(`Error uploading ${file.name}. See console for details.`);
+      // Validate file
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setError(`File "${file.name}" is too large. Maximum size is 5MB.`);
+        continue;
       }
+
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError(`File "${file.name}" is not supported. Please use JPEG, PNG, or WebP images.`);
+        continue;
+      }
+
+      // Store file and create local preview
+      newFiles.push(file);
+      const localUrl = URL.createObjectURL(file);
+      newPreviews.push(localUrl);
     }
 
-    console.log('🎯 All uploads completed. URLs:', uploadedUrls);
-    console.log('📊 Upload summary:', {
-      totalFiles: files.length,
-      successfulUploads: uploadedUrls.length,
-      failedUploads: files.length - uploadedUrls.length,
-    });
-
-    // Add uploaded URLs to form and show local previews
-    setFormData((prev) => {
-      const newImages = [...(prev.images || []), ...uploadedUrls];
-      console.log('💾 Updated formData.images:', newImages);
-      return {
-        ...prev,
-        images: newImages,
-      };
-    });
-
-    setImagePreviews((prev) => {
-      const newPreviews = [...prev, ...localPreviews];
-      console.log('🖼️ Updated image previews:', newPreviews.length, 'total previews');
-      return newPreviews;
-    });
-
-    setIsUploading(false);
-    console.log('=== IMAGE UPLOAD END ===');
+    // Update state with new files and previews
+    setImageFiles((prev) => [...prev, ...newFiles]);
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
   };
 
   const handleImageFiles = (files: FileList | null) => {
@@ -344,7 +302,13 @@ export function FundraisingModal({
       return;
     }
 
-    // Validate file type
+    // Validate file
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setError('QR code file is too large. Maximum size is 5MB.');
+      return;
+    }
+
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       setError('Invalid QR code file type. Only images (JPG, PNG, GIF, WebP) are allowed.');
@@ -352,43 +316,11 @@ export function FundraisingModal({
     }
 
     setError(null);
-    setIsQrCodeUploading(true);
 
-    try {
-      console.log('⬆️ Uploading QR code file:', file.name);
-      const fd = new FormData();
-      fd.append('file', file);
-
-      const res = await fetch('/api/v1/fundraising/upload', {
-        method: 'POST',
-        body: fd,
-      });
-
-      const json = await res.json();
-      console.log('📨 QR code upload response:', json);
-
-      if (!res.ok) {
-        const details = json?.details || json?.error || 'Unknown error';
-        console.error('❌ QR code upload failed:', res.status, details);
-        setError(`Failed to upload QR code: ${details}`);
-        return;
-      }
-
-      if (json?.url) {
-        console.log('✅ QR code uploaded successfully:', json.url);
-        // Update form data with the uploaded QR code URL
-        handleInputChange('qr_code', json.url);
-      } else {
-        console.error('❌ QR code upload did not return a URL:', json);
-        setError('QR code upload did not return a URL');
-      }
-    } catch (err) {
-      console.error('❌ Error uploading QR code:', err);
-      setError('Error uploading QR code. Please try again.');
-    } finally {
-      setIsQrCodeUploading(false);
-      console.log('=== QR CODE UPLOAD END ===');
-    }
+    // Store file and create local preview
+    setQrCodeFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setQrCodePreview(localUrl);
   };
 
   return (
@@ -448,11 +380,6 @@ export function FundraisingModal({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Images (optional)</Label>
-                {isUploading && (
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
-                  </div>
-                )}
               </div>
               <input
                 type="file"
@@ -593,14 +520,9 @@ export function FundraisingModal({
                         GCash QR Code
                       </Label>
                     </div>
-                    {isQrCodeUploading && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
-                      </div>
-                    )}
                   </div>
 
-                  {!formData.qr_code ? (
+                  {!formData.qr_code && !qrCodePreview ? (
                     <div className="space-y-2">
                       <div className="relative">
                         <input
@@ -608,27 +530,15 @@ export function FundraisingModal({
                           type="file"
                           accept="image/*"
                           onChange={(e) => handleQrCodeUpload(e.target.files)}
-                          disabled={isQrCodeUploading}
                           className="hidden"
                         />
                         <label
                           htmlFor="qr_code_upload"
-                          className={`
-                            flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer transition-all
-                            ${
-                              isQrCodeUploading
-                                ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                                : 'border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-950/30 dark:hover:bg-blue-950/50'
-                            }
-                          `}
+                          className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer transition-all border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-950/30 dark:hover:bg-blue-950/50"
                         >
-                          <QrCode
-                            className={`w-8 h-8 mb-2 ${isQrCodeUploading ? 'text-gray-400' : 'text-blue-500'}`}
-                          />
-                          <span
-                            className={`text-sm font-medium ${isQrCodeUploading ? 'text-gray-400' : 'text-blue-700 dark:text-blue-300'}`}
-                          >
-                            {isQrCodeUploading ? 'Uploading...' : 'Upload QR Code'}
+                          <QrCode className="w-8 h-8 mb-2 text-blue-500" />
+                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            Upload QR Code
                           </span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             PNG, JPG up to 10MB
@@ -646,7 +556,7 @@ export function FundraisingModal({
                           <div className="w-16 h-16 bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-600 flex items-center justify-center overflow-hidden shadow-sm">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={formData.qr_code}
+                              src={qrCodePreview || formData.qr_code || ''}
                               alt="QR Code"
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -675,7 +585,11 @@ export function FundraisingModal({
                             </p>
                             <button
                               type="button"
-                              onClick={() => handleInputChange('qr_code', '')}
+                              onClick={() => {
+                                handleInputChange('qr_code', '');
+                                setQrCodeFile(null);
+                                setQrCodePreview('');
+                              }}
                               className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
                             >
                               Remove QR code
@@ -746,21 +660,15 @@ export function FundraisingModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting || isUploading || isQrCodeUploading}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploading || isQrCodeUploading}>
-              {isSubmitting || isUploading || isQrCodeUploading ? (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isUploading || isQrCodeUploading
-                    ? editingCampaign
-                      ? 'Uploading...'
-                      : 'Uploading...'
-                    : editingCampaign
-                      ? 'Updating...'
-                      : 'Creating...'}
+                  {editingCampaign ? 'Updating...' : 'Creating...'}
                 </>
               ) : editingCampaign ? (
                 'Update Campaign'

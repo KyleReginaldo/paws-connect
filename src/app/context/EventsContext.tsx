@@ -36,8 +36,8 @@ export interface UpdateEventDto {
 interface EventsContextType {
   events: Event[] | null;
   status: 'loading' | 'success' | 'error';
-  addEvent: (eventData: CreateEventDto) => Promise<Event | null>;
-  updateEvent: (eventId: number, eventData: UpdateEventDto) => Promise<Event | null>;
+  addEvent: (eventData: CreateEventDto | FormData) => Promise<Event | null>;
+  updateEvent: (eventId: number, eventData: UpdateEventDto | FormData) => Promise<Event | null>;
   deleteEvent: (eventId: number) => Promise<boolean>;
   endEvent: (eventId: number, endedBy: string) => Promise<Event | null>;
   reopenEvent: (eventId: number, reopenedBy: string) => Promise<Event | null>;
@@ -81,15 +81,28 @@ export function EventsProvider({ children }: EventsProviderProps) {
     }
   };
 
-  const addEvent = async (eventData: CreateEventDto): Promise<Event | null> => {
+  const addEvent = async (eventData: CreateEventDto | FormData): Promise<Event | null> => {
     try {
-      const response = await fetch('/api/v1/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      });
+      let response: Response;
+
+      if (eventData instanceof FormData) {
+        // Handle FormData for file uploads
+        console.log('🚀 Submitting event with files via FormData');
+        response = await fetch('/api/v1/events', {
+          method: 'POST',
+          body: eventData, // Don't set Content-Type header for FormData
+        });
+      } else {
+        // Handle traditional JSON data (backward compatibility)
+        console.log('🚀 Submitting event data via JSON');
+        response = await fetch('/api/v1/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(eventData),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -111,15 +124,31 @@ export function EventsProvider({ children }: EventsProviderProps) {
     }
   };
 
-  const updateEvent = async (eventId: number, eventData: UpdateEventDto): Promise<Event | null> => {
+  const updateEvent = async (
+    eventId: number,
+    eventData: UpdateEventDto | FormData,
+  ): Promise<Event | null> => {
     try {
-      const response = await fetch(`/api/v1/events/${eventId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      });
+      let response: Response;
+
+      if (eventData instanceof FormData) {
+        // Handle FormData for file uploads
+        console.log('🚀 Updating event with files via FormData');
+        response = await fetch(`/api/v1/events/${eventId}`, {
+          method: 'PUT',
+          body: eventData, // Don't set Content-Type header for FormData
+        });
+      } else {
+        // Handle traditional JSON data (backward compatibility)
+        console.log('🚀 Updating event data via JSON');
+        response = await fetch(`/api/v1/events/${eventId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(eventData),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json();

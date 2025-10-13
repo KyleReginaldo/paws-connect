@@ -55,15 +55,119 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
-        const body = await request.json();
+        console.log('=== EVENT UPDATE START ===');
+        console.log('📝 Updating event ID:', id);
 
         if (!id || isNaN(Number(id))) {
             return createErrorResponse('Valid event ID is required', 400);
         }
 
-        const { images, title, description } = body;
+        const contentType = request.headers.get('content-type');
+        const isMultipart = contentType?.includes('multipart/form-data');
+        
+        let eventData: {
+            images?: string[];
+            title?: string;
+            description?: string;
+        };
 
-        if (!title && !images && !description) {
+        if (isMultipart) {
+            console.log('📤 Processing multipart/form-data request');
+            const fd = await request.formData();
+            
+            // Extract text fields
+            const title = fd.get('title') as string;
+            const description = fd.get('description') as string;
+            
+            // Get existing images that should be preserved
+            const existingImages = fd.getAll('existing_images') as string[];
+            console.log(`📷 Preserving ${existingImages.length} existing images`);
+            
+            // Process new image files
+            const imageFiles = fd.getAll('images') as File[];
+            const newImageUrls: string[] = [];
+            
+            console.log(`📁 Processing ${imageFiles.length} new image files`);
+            for (const file of imageFiles) {
+                if (file && file.size > 0) {
+                    console.log(`⬆️ Uploading image: ${file.name}, size: ${file.size} bytes`);
+                    
+                    // Validate file
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (file.size > maxSize) {
+                        return new Response(
+                            JSON.stringify({
+                                error: 'File too large',
+                                message: `Image "${file.name}" exceeds 5MB limit`,
+                            }),
+                            { status: 413, headers: { 'Content-Type': 'application/json' } },
+                        );
+                    }
+                    
+                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                    if (!allowedTypes.includes(file.type)) {
+                        return new Response(
+                            JSON.stringify({
+                                error: 'Invalid file type',
+                                message: `File "${file.name}" must be JPEG, PNG, or WebP`,
+                            }),
+                            { status: 400, headers: { 'Content-Type': 'application/json' } },
+                        );
+                    }
+                    
+                    // Upload to Supabase storage
+                    const fileName = `events/${Date.now()}-${Math.random().toString(36).substring(2)}-${file.name}`;
+                    const fileBuffer = await file.arrayBuffer();
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('files')
+                        .upload(fileName, fileBuffer, {
+                            contentType: file.type,
+                        });
+                    
+                    if (uploadError) {
+                        console.error(`❌ Upload failed for ${file.name}:`, uploadError);
+                        return new Response(
+                            JSON.stringify({
+                                error: 'Upload failed',
+                                message: `Failed to upload image "${file.name}": ${uploadError.message}`,
+                            }),
+                            { status: 500, headers: { 'Content-Type': 'application/json' } },
+                        );
+                    }
+                    
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('files')
+                        .getPublicUrl(uploadData.path);
+                    
+                    newImageUrls.push(urlData.publicUrl);
+                    console.log(`✅ Image uploaded successfully: ${urlData.publicUrl}`);
+                }
+            }
+            
+            // Combine existing images with new uploads
+            const allImages = [...existingImages, ...newImageUrls];
+            console.log(`📷 Final image list: ${existingImages.length} existing + ${newImageUrls.length} new = ${allImages.length} total`);
+            
+            eventData = {
+                images: allImages.length > 0 ? allImages : undefined,
+                title: title || undefined,
+                description: description || undefined,
+            };
+            
+        } else {
+            console.log('📝 Processing JSON request (backward compatibility)');
+            const body = await request.json();
+            eventData = body;
+        }
+
+        console.log('📝 Processed event data:', {
+            ...eventData,
+            images: eventData.images ? `${eventData.images.length} image(s)` : 'no images',
+        });
+
+        if (!eventData.title && !eventData.images && !eventData.description) {
             return createErrorResponse('At least one field (title, description, or images) must be provided for update', 400);
         }
 
@@ -87,30 +191,36 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
         let shouldRegenerateSuggestions = false;
         
-        if (title !== undefined) {
-            updateData.title = title;
-            shouldRegenerateSuggestions = title !== currentEvent.title;
+        if (eventData.title !== undefined) {
+            updateData.title = eventData.title;
+            shouldRegenerateSuggestions = eventData.title !== currentEvent.title;
         }
         
-        if (description !== undefined) {
-            updateData.description = description;
-            shouldRegenerateSuggestions = shouldRegenerateSuggestions || description !== currentEvent.description;
+        if (eventData.description !== undefined) {
+            updateData.description = eventData.description;
+            shouldRegenerateSuggestions = shouldRegenerateSuggestions || eventData.description !== currentEvent.description;
         }
         
-        if (images !== undefined) {
-            if (!Array.isArray(images)) {
+        if (eventData.images !== undefined) {
+            if (!Array.isArray(eventData.images)) {
                 return createErrorResponse('Images must be an array', 400);
             }
-            updateData.images = images;
+            updateData.images = eventData.images;
         }
 
         // Regenerate AI suggestions if title or description changed
         if (shouldRegenerateSuggestions) {
-            const finalTitle = title !== undefined ? title : currentEvent.title;
-            const finalDescription = description !== undefined ? description : currentEvent.description;
+            const finalTitle = eventData.title !== undefined ? eventData.title : currentEvent.title;
+            const finalDescription = eventData.description !== undefined ? eventData.description : currentEvent.description;
+            console.log('🤖 Regenerating AI suggestions for updated event...');
             const aiSuggestions = await regenerateEventSuggestions(Number(id), finalTitle, finalDescription);
             updateData.suggestions = aiSuggestions;
         }
+
+        console.log('💾 Updating database with:', {
+            ...updateData,
+            images: updateData.images ? `${updateData.images.length} image(s)` : 'unchanged',
+        });
 
         const { data, error } = await supabase
             .from('events')
@@ -138,8 +248,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             if (error.code === 'PGRST116') {
                 return createErrorResponse('Event not found', 404);
             }
+            console.log('❌ Database update error:', error.message);
             return createErrorResponse('Failed to update event', 400, error.message);
         }
+
+        console.log('✅ Successfully updated event:', data.id);
+        console.log('📷 Event images updated:', data.images?.length || 0);
+        console.log('=== EVENT UPDATE END ===');
 
         return createResponse({ 
             message: 'Event updated successfully', 
@@ -147,9 +262,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             ai_suggestions_regenerated: shouldRegenerateSuggestions
         }, 200);
     } catch (err) {
+        console.error('❌ Event PUT error:', err);
         return new Response(
-            JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-            { status: 500 },
+            JSON.stringify({ 
+                error: 'Internal Server Error',
+                message: err instanceof Error ? err.message : 'An unexpected error occurred',
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } },
         );
     }
 }

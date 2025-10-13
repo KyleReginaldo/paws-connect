@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface Avatar {
   imageUrl: string;
@@ -17,9 +18,9 @@ export const AvatarCircles = ({ numPeople, className, avatarUrls }: AvatarCircle
     <div className={cn('z-10 flex -space-x-2 rtl:space-x-reverse', className)}>
       {avatarUrls.map((url, index) => (
         <a key={index} href={url.profileUrl} target="_blank" rel="noopener noreferrer">
-          <img
+          <Image
             key={index}
-            className="h-6 w-6 rounded-full border-2 border-orange-400 dark:border-gray-800 object-cover "
+            className="h-6 w-6 rounded-full border-2 border-orange-400 dark:border-gray-800 object-cover"
             src={url.imageUrl}
             width={24}
             height={24}

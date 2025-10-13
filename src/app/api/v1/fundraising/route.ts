@@ -171,17 +171,193 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log('=== FUNDRAISING CREATE START ===');
-    const body = await request.json();
-    console.log('📝 Received fundraising POST body:', body);
+    
+    const contentType = request.headers.get('content-type');
+    const isMultipart = contentType?.includes('multipart/form-data');
+    
+    let formData: {
+      title: string;
+      description: string;
+      created_by: string;
+      target_amount: number;
+      status?: 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED';
+      images?: string[];
+      end_date?: string;
+      facebook_link?: string;
+      qr_code?: string;
+      gcash_number?: string;
+    };
 
-    const result = createFundraisingSchema.safeParse(body);
+    if (isMultipart) {
+      console.log('� Processing multipart/form-data request');
+      const fd = await request.formData();
+      
+      // Extract text fields
+      const title = fd.get('title') as string;
+      const description = fd.get('description') as string;
+      const created_by = fd.get('created_by') as string;
+      const target_amount = Number(fd.get('target_amount'));
+      const status = (fd.get('status') as string) || 'PENDING';
+      const end_date = fd.get('end_date') as string;
+      const facebook_link = fd.get('facebook_link') as string;
+      const gcash_number = fd.get('gcash_number') as string;
+      
+      // Process image files
+      const imageFiles = fd.getAll('images') as File[];
+      const imageUrls: string[] = [];
+      
+      console.log(`📁 Processing ${imageFiles.length} image files`);
+      for (const file of imageFiles) {
+        if (file && file.size > 0) {
+          console.log(`⬆️ Uploading image: ${file.name}, size: ${file.size} bytes`);
+          
+          // Validate file
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          if (file.size > maxSize) {
+            return new Response(
+              JSON.stringify({
+                error: 'File too large',
+                message: `Image "${file.name}" exceeds 5MB limit`,
+              }),
+              { status: 413, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+          
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            return new Response(
+              JSON.stringify({
+                error: 'Invalid file type',
+                message: `File "${file.name}" must be JPEG, PNG, or WebP`,
+              }),
+              { status: 400, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+          
+          // Upload to Supabase storage
+          const fileName = `fundraising/${Date.now()}-${Math.random().toString(36).substring(2)}-${file.name}`;
+          const fileBuffer = await file.arrayBuffer();
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('files')
+            .upload(fileName, fileBuffer, {
+              contentType: file.type,
+            });
+          
+          if (uploadError) {
+            console.error(`❌ Upload failed for ${file.name}:`, uploadError);
+            return new Response(
+              JSON.stringify({
+                error: 'Upload failed',
+                message: `Failed to upload image "${file.name}": ${uploadError.message}`,
+              }),
+              { status: 500, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('files')
+            .getPublicUrl(uploadData.path);
+          
+          imageUrls.push(urlData.publicUrl);
+          console.log(`✅ Image uploaded successfully: ${urlData.publicUrl}`);
+        }
+      }
+      
+      // Process QR code file
+      let qrCodeUrl: string | undefined;
+      const qrCodeFile = fd.get('qr_code') as File;
+      
+      if (qrCodeFile && qrCodeFile.size > 0) {
+        console.log(`⬆️ Uploading QR code: ${qrCodeFile.name}, size: ${qrCodeFile.size} bytes`);
+        
+        // Validate QR code file
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (qrCodeFile.size > maxSize) {
+          return new Response(
+            JSON.stringify({
+              error: 'File too large',
+              message: `QR code file exceeds 5MB limit`,
+            }),
+            { status: 413, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(qrCodeFile.type)) {
+          return new Response(
+            JSON.stringify({
+              error: 'Invalid file type',
+              message: `QR code file must be JPEG, PNG, WebP, or GIF`,
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        
+        // Upload QR code to Supabase storage
+        const qrFileName = `fundraising/qr/${Date.now()}-${Math.random().toString(36).substring(2)}-${qrCodeFile.name}`;
+        const qrFileBuffer = await qrCodeFile.arrayBuffer();
+        
+        const { data: qrUploadData, error: qrUploadError } = await supabase.storage
+          .from('files')
+          .upload(qrFileName, qrFileBuffer, {
+            contentType: qrCodeFile.type,
+          });
+        
+        if (qrUploadError) {
+          console.error(`❌ QR code upload failed:`, qrUploadError);
+          return new Response(
+            JSON.stringify({
+              error: 'Upload failed',
+              message: `Failed to upload QR code: ${qrUploadError.message}`,
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        
+        // Get public URL for QR code
+        const { data: qrUrlData } = supabase.storage
+          .from('files')
+          .getPublicUrl(qrUploadData.path);
+        
+        qrCodeUrl = qrUrlData.publicUrl;
+        console.log(`✅ QR code uploaded successfully: ${qrCodeUrl}`);
+      }
+      
+      formData = {
+        title,
+        description,
+        created_by,
+        target_amount,
+        status: status as 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED',
+        images: imageUrls,
+        end_date,
+        facebook_link,
+        qr_code: qrCodeUrl,
+        gcash_number,
+      };
+      
+    } else {
+      console.log('📝 Processing JSON request (backward compatibility)');
+      const body = await request.json();
+      formData = body;
+    }
+
+    console.log('📝 Processed fundraising data:', {
+      ...formData,
+      images: formData.images ? `${formData.images.length} image(s)` : 'no images',
+    });
+
+    const result = createFundraisingSchema.safeParse(formData);
     if (!result.success) {
       console.log('❌ Validation failed:', result.error.issues);
       return new Response(
         JSON.stringify({
-          error: 'Invalid request data',
+          error: 'Validation failed',
+          message: 'Please check your input data',
           issues: result.error.issues.map((issue) => ({
-            field: issue.path.join('.'),
+            field: issue.path.join('.') || 'unknown',
             message: issue.message,
           })),
         }),
@@ -192,49 +368,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const parsed = result.data as {
-      title: string;
-      description: string;
-      created_by: string;
-      target_amount: number;
-      status?: 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED';
-      images?: string[];
-      end_date: string;
-      facebook_link?: string;
-      qr_code?: string;
-      gcash_number?: string;
-    };
-    const { title, description, created_by, target_amount, status, images, end_date, facebook_link, qr_code, gcash_number } = parsed;
-
-    console.log('✅ Validation successful. Creating fundraising campaign with:', {
-      title,
-      description,
-      created_by,
-      target_amount,
-      status,
-      images: images ? `${images.length} image(s)` : 'no images',
-      imageUrls: images,
-      end_date,
-      facebook_link,
-      qr_code,
-      gcash_number
-    });
-
+    const validated = result.data;
+    
     const insertData = {
-      title,
-      description,
-      target_amount,
-      images: images || [],
+      title: validated.title,
+      description: validated.description,
+      target_amount: validated.target_amount,
+      images: validated.images || [],
       raised_amount: 0, // Initialize with 0
-      status: status || 'PENDING', // Default to PENDING if not provided
-      created_by,
-      end_date,
-      facebook_link,
-      qr_code,
-      gcash_number,
+      status: validated.status || 'PENDING',
+      created_by: validated.created_by,
+      end_date: validated.end_date,
+      facebook_link: validated.facebook_link,
+      qr_code: validated.qr_code,
+      gcash_number: validated.gcash_number,
     };
 
-    console.log('💾 Inserting to database:', insertData);
+    console.log('💾 Inserting to database:', {
+      ...insertData,
+      images: insertData.images ? `${insertData.images.length} image(s)` : 'no images',
+    });
 
     const { data, error } = await supabase
       .from('fundraising')
@@ -248,18 +401,21 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.log('❌ Supabase insert error:', error.message);
+      console.log('❌ Database insert error:', error.message);
       return new Response(
-        JSON.stringify({ error: 'Failed to create fundraising campaign', message: error.message }),
+        JSON.stringify({ 
+          error: 'Database error',
+          message: `Failed to create fundraising campaign: ${error.message}`,
+        }),
         {
-          status: 400,
+          status: 500,
           headers: { 'Content-Type': 'application/json' },
         },
       );
     }
 
-    console.log('✅ Successfully created campaign:', data);
-    console.log('📷 Campaign images saved:', data.images);
+    console.log('✅ Successfully created campaign:', data.id);
+    console.log('📷 Campaign images saved:', data.images?.length || 0);
     console.log('=== FUNDRAISING CREATE END ===');
     
     return new Response(
@@ -273,10 +429,13 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (err) {
-    console.log('POST fundraising error:', err);
+    console.error('❌ Fundraising POST error:', err);
     return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
-      { status: 500 },
+      JSON.stringify({ 
+        error: 'Internal Server Error',
+        message: err instanceof Error ? err.message : 'An unexpected error occurred',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }

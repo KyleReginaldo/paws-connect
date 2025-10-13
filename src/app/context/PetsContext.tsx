@@ -14,8 +14,8 @@ type PetsContextType = {
   status: PetsStatus;
   errorMessage: string | undefined;
   fetchPets: () => Promise<void>;
-  addPet: (petData: Omit<Pet, 'id'>) => Promise<Pet | null>;
-  updatePet: (id: number, petData: Partial<Pet>) => Promise<Pet | null>;
+  addPet: (petData: Omit<Pet, 'id' | 'created_at'>, photoFiles?: File[]) => Promise<Pet | null>;
+  updatePet: (id: number, petData: Partial<Pet> | FormData) => Promise<Pet | null>;
   deletePet: (id: number) => Promise<boolean>;
   refreshPets: () => Promise<void>;
 };
@@ -41,10 +41,47 @@ export const PetsProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const addPet = async (petData: Omit<Pet, 'id'>): Promise<Pet | null> => {
+  const addPet = async (
+    petData: Omit<Pet, 'id' | 'created_at'>,
+    photoFiles?: File[],
+  ): Promise<Pet | null> => {
     try {
-      const response = await axios.post('/api/v1/pets', petData);
-      const newPet = response.data.data;
+      const formData = new FormData();
+
+      // Add pet data as JSON string
+      formData.append('petData', JSON.stringify(petData));
+
+      // Add photo files
+      if (photoFiles && photoFiles.length > 0) {
+        photoFiles.forEach((file) => {
+          formData.append('photos', file);
+        });
+      }
+
+      const response = await fetch('/api/v1/pets', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage =
+          errorData.message || errorData.error || `Failed to create pet (${response.status})`;
+
+        // Provide more specific error messages based on status
+        if (response.status === 400) {
+          throw new Error(`Validation Error: ${errorMessage}`);
+        } else if (response.status === 413) {
+          throw new Error('File too large. Please reduce image sizes and try again.');
+        } else if (response.status === 500) {
+          throw new Error('Server error. Please try again in a moment.');
+        } else {
+          throw new Error(errorMessage);
+        }
+      }
+
+      const result = await response.json();
+      const newPet = result.data;
       setPets((prev) => (prev ? [...prev, newPet] : [newPet]));
       return newPet;
     } catch (error) {
@@ -54,13 +91,23 @@ export const PetsProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const updatePet = async (id: number, petData: Partial<Pet>): Promise<Pet | null> => {
+  const updatePet = async (id: number, petData: Partial<Pet> | FormData): Promise<Pet | null> => {
     try {
       console.log('UpdatePet called with:', {
         id,
-        petData: { ...petData, photos: petData.photos ? 'Photos data present' : 'No photos' },
+        petData:
+          petData instanceof FormData
+            ? 'FormData with files'
+            : {
+                ...petData,
+                photos: (petData as Partial<Pet>).photos ? 'Photos data present' : 'No photos',
+              },
       });
-      const response = await axios.put(`/api/v1/pets/${id}`, petData);
+
+      const isFormData = petData instanceof FormData;
+      const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+
+      const response = await axios.put(`/api/v1/pets/${id}`, petData, config);
       console.log('API response:', response.data);
       const updatedPet = response.data.data;
 

@@ -45,19 +45,64 @@ const ManageEvents = () => {
     setModalOpen(true);
   };
 
-  const handleModalSubmit = async (eventData: {
-    title: string;
-    description?: string | null;
-    images?: string[];
-    created_by?: string | null;
-  }) => {
+  const handleModalSubmit = async (
+    eventData: {
+      title: string;
+      description?: string | null;
+      images?: string[];
+      created_by?: string | null;
+      starting_date?: string | null;
+    },
+    imageFiles?: File[],
+  ) => {
     try {
-      if (editingEvent) {
-        await updateEvent(editingEvent.id, eventData);
-        success('Event updated successfully!');
+      if (imageFiles && imageFiles.length > 0) {
+        // Create FormData for file uploads
+        const formData = new FormData();
+
+        // Add text fields
+        formData.append('title', eventData.title);
+        if (eventData.description) {
+          formData.append('description', eventData.description);
+        }
+        if (eventData.created_by) {
+          formData.append('created_by', eventData.created_by);
+        }
+        if (eventData.starting_date) {
+          formData.append('starting_date', eventData.starting_date);
+        }
+
+        // Add existing images (for updates)
+        if (eventData.images && eventData.images.length > 0) {
+          eventData.images.forEach((imageUrl) => {
+            formData.append('existing_images', imageUrl);
+          });
+        }
+
+        // Add image files
+        imageFiles.forEach((file) => {
+          formData.append('images', file);
+        });
+
+        console.log('🚀 Submitting event with files via FormData');
+
+        if (editingEvent) {
+          await updateEvent(editingEvent.id, formData);
+          success('Event updated successfully!');
+        } else {
+          await addEvent(formData);
+          success('Event created successfully!');
+        }
       } else {
-        await addEvent(eventData);
-        success('Event created successfully!');
+        // Use traditional JSON submission when no files
+        console.log('🚀 Submitting event via JSON (no files)');
+        if (editingEvent) {
+          await updateEvent(editingEvent.id, eventData);
+          success('Event updated successfully!');
+        } else {
+          await addEvent(eventData);
+          success('Event created successfully!');
+        }
       }
     } catch (err) {
       console.error('Error saving event:', err);

@@ -2,7 +2,6 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { Event } from '@/app/context/EventsContext';
-import { supabase } from '@/app/supabase/supabase';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,18 +16,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface EventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (eventData: {
-    title: string;
-    description?: string | null;
-    starting_date?: string | null;
-    images?: string[];
-    created_by?: string | null;
-  }) => void;
+  onSubmit: (
+    eventData: {
+      title: string;
+      description?: string | null;
+      starting_date?: string | null;
+      images?: string[];
+      created_by?: string | null;
+    },
+    imageFiles?: File[],
+  ) => void;
   editingEvent?: Event | null;
 }
 
@@ -46,7 +47,8 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
     images: [],
   });
 
-  const [isUploading, setIsUploading] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploadError, setUploadError] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -64,6 +66,13 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
             : '',
           images: editingEvent.images || [],
         });
+        // Don't set existing images to imagePreviews - they're handled via formData.images
+        console.log(
+          'Existing event images will be displayed via formData.images:',
+          editingEvent.images,
+        );
+        setImagePreviews([]); // Keep previews empty for new files only
+        setImageFiles([]); // Clear files when editing existing event
       } else {
         console.log('Setting up form for new event');
         setFormData({
@@ -72,6 +81,8 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
           starting_date: '',
           images: [],
         });
+        setImagePreviews([]);
+        setImageFiles([]); // Clear files for new event
       }
       setValidationErrors({});
       setUploadError('');
@@ -106,7 +117,7 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
     return null;
   };
 
-  const handleFileUpload = async (file: File, retryCount = 0) => {
+  const handleFileUpload = (file: File) => {
     const validationError = validateFile(file);
     if (validationError) {
       setUploadError(validationError);
@@ -114,102 +125,19 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
     }
 
     setUploadError('');
-    setIsUploading(true);
 
-    try {
-      // Method 1: Direct Supabase upload
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `events/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage.from('files').upload(filePath, file, {
-        contentType: file.type || 'image/jpeg',
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('files').getPublicUrl(filePath);
-
-      if (!publicUrl) {
-        throw new Error('Failed to get public URL from Supabase');
-      }
-
-      console.log('Image uploaded successfully:', publicUrl);
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, publicUrl],
-      }));
-      setValidationErrors((prev) => ({ ...prev, images: '' }));
-    } catch (error) {
-      console.error('Direct upload error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-
-      // Try API endpoint as fallback
-      try {
-        console.log('Trying API endpoint fallback...');
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/v1/events/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'API upload failed');
-        }
-
-        const result = await response.json();
-        console.log('API upload successful:', result.url);
-
-        setFormData((prev) => ({
-          ...prev,
-          images: [...prev.images, result.url],
-        }));
-        setValidationErrors((prev) => ({ ...prev, images: '' }));
-      } catch (apiError) {
-        console.error('API upload error:', apiError);
-
-        // Retry logic for network errors
-        const isNetworkError =
-          errorMessage.includes('network') ||
-          errorMessage.includes('fetch') ||
-          errorMessage.includes('timeout');
-
-        if (isNetworkError && retryCount < 2) {
-          setUploadError(`Network error, retrying... (${retryCount + 1}/3)`);
-          setTimeout(() => {
-            handleFileUpload(file, retryCount + 1);
-          }, 2000);
-          return;
-        }
-
-        // Provide more specific error messages
-        if (errorMessage.includes('bucket') || errorMessage.includes('storage')) {
-          setUploadError('Storage configuration error. Please try again.');
-        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-          setUploadError('Network error. Please check your connection and try again.');
-        } else {
-          setUploadError(`Upload failed: ${errorMessage}`);
-        }
-      }
-    } finally {
-      setIsUploading(false);
-    }
+    // Store file and create local preview
+    const previewUrl = URL.createObjectURL(file);
+    setImageFiles((prev) => [...prev, file]);
+    setImagePreviews((prev) => [...prev, previewUrl]);
+    setValidationErrors((prev) => ({ ...prev, images: '' }));
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
-        await handleFileUpload(files[i]);
+        handleFileUpload(files[i]);
       }
     }
     if (e.target) {
@@ -218,10 +146,25 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
   };
 
   const removeImage = (imageUrl: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((url) => url !== imageUrl),
-    }));
+    // Check if it's a new preview (blob URL or recently added)
+    const previewIndex = imagePreviews.indexOf(imageUrl);
+
+    if (previewIndex !== -1) {
+      // It's a new preview - remove from previews and files
+      setImagePreviews((prev) => prev.filter((url) => url !== imageUrl));
+      setImageFiles((prev) => prev.filter((_, index) => index !== previewIndex));
+
+      // Clean up blob URL if it's a local preview
+      if (imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    } else {
+      // It's an existing image - remove from formData.images
+      setFormData((prev) => ({
+        ...prev,
+        images: prev.images.filter((url) => url !== imageUrl),
+      }));
+    }
   };
 
   const validateForm = (): boolean => {
@@ -254,20 +197,20 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
       title: formData.title.trim(),
       description: formData.description.trim() || null,
       starting_date: formData.starting_date || null,
-      images: formData.images,
+      images: formData.images, // Always send existing images (will be empty array for new events)
       created_by: userId || null,
     };
 
-    onSubmit(eventData);
+    onSubmit(eventData, imageFiles);
     onOpenChange(false);
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
-        await handleFileUpload(files[i]);
+        handleFileUpload(files[i]);
       }
     }
   };
@@ -407,21 +350,14 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
               multiple
               onChange={handleFileSelect}
               style={{ display: 'none' }}
-              disabled={isUploading}
             />
 
-            {isUploading ? (
-              <div className="border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-6 text-center">
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <p className="text-sm text-blue-700">Uploading images...</p>
-                </div>
-              </div>
-            ) : formData.images.length > 0 ? (
+            {formData.images.length > 0 || imagePreviews.length > 0 ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {/* Existing images */}
                   {formData.images.map((imageUrl, index) => (
-                    <div key={`${imageUrl}-${index}`} className="relative group">
+                    <div key={`existing-${imageUrl}-${index}`} className="relative group">
                       <Image
                         src={imageUrl}
                         alt={`Event image ${index + 1}`}
@@ -439,7 +375,31 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
                         size="sm"
                         className="absolute top-0 right-2 h-6 w-6 rounded-full p-0 bg-red-500 hover:bg-red-600 text-white shadow-lg border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                         onClick={() => removeImage(imageUrl)}
-                        disabled={isUploading}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {/* New image previews */}
+                  {imagePreviews.map((previewUrl, index) => (
+                    <div key={`preview-${previewUrl}-${index}`} className="relative group">
+                      <Image
+                        src={previewUrl}
+                        alt={`New image ${index + 1}`}
+                        width={128}
+                        height={128}
+                        className="w-32 h-32 object-cover rounded-lg border border-blue-300"
+                        onError={(e) => {
+                          console.error('Failed to load preview:', previewUrl);
+                          e.currentTarget.src = '/empty.png';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-0 right-2 h-6 w-6 rounded-full p-0 bg-red-500 hover:bg-red-600 text-white shadow-lg border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        onClick={() => removeImage(previewUrl)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -451,7 +411,6 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
                 >
                   Add More Images
                 </Button>
@@ -474,7 +433,6 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
                 >
                   Choose Images
                 </Button>
@@ -488,9 +446,7 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isUploading}>
-              {editingEvent ? 'Update Event' : 'Create Event'}
-            </Button>
+            <Button type="submit">{editingEvent ? 'Update Event' : 'Create Event'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

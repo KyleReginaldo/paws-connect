@@ -83,17 +83,23 @@ const Fundraising = () => {
     }
   };
 
-  const handleModalSubmit = async (campaignData: CreateFundraisingDto | UpdateFundraisingDto) => {
-    if (editingCampaign) {
-      // Update existing campaign
-      const result = await updateCampaign(editingCampaign.id, campaignData as UpdateFundraisingDto);
+  const handleModalSubmit = async (
+    campaignData: CreateFundraisingDto | UpdateFundraisingDto | FormData,
+    campaignId?: number,
+  ) => {
+    if (editingCampaign && campaignId) {
+      // Update existing campaign - now supports FormData
+      const result = await updateCampaign(
+        editingCampaign.id,
+        campaignData as UpdateFundraisingDto | FormData,
+      );
       return {
         success: result.success,
         error: result.error,
       };
     } else {
       // Create new campaign
-      const result = await addCampaign(campaignData as CreateFundraisingDto);
+      const result = await addCampaign(campaignData as CreateFundraisingDto | FormData);
       return {
         success: result.success,
         error: result.error,
