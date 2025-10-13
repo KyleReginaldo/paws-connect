@@ -390,6 +390,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          forum_image_url: string | null
           forum_name: string | null
           id: number
           private: boolean | null
@@ -398,6 +399,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          forum_image_url?: string | null
           forum_name?: string | null
           id?: number
           private?: boolean | null
@@ -406,6 +408,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          forum_image_url?: string | null
           forum_name?: string | null
           id?: number
           private?: boolean | null

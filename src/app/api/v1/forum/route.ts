@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         forum_name: z.string().min(1, 'Forum name is required').max(100, 'Forum name too long'),
         created_by: z.uuid('Invalid user ID'),
         private: z.boolean().optional(),
+        forum_image_url: z.url('Invalid image. please try again later').optional(),
       })
       .strict();
 
