@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, context: any) {
     // Check forum exists and get privacy setting
     const { data: forum, error: forumError } = await supabase
       .from('forum')
-      .select('id, private, created_by')
+      .select('id, private, created_by, forum_name')
       .eq('id', forumId)
       .single();
 
@@ -160,7 +160,10 @@ export async function GET(request: NextRequest, context: any) {
 
     return new Response(
       JSON.stringify({
-        data: reversedData,
+        data: {
+          forum_name: forum.forum_name,
+          chats: reversedData
+        },
         pagination: {
           page,
           limit,
