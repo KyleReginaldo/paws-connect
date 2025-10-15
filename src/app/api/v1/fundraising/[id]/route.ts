@@ -25,6 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           donated_at,
           reference_number,
           screenshot,
+          is_anonymous,
           donor:users(id, username, email)
         )
       `,

@@ -23,8 +23,8 @@ const ManageEvents = () => {
 
   // Permission helpers
   const canManageEvents = () => {
-    // Admins (role 1) and Staff (role 2) can manage events
-    return userRole === 1 || userRole === 2;
+    // Only admins (role 1) can manage events
+    return userRole === 1;
   };
 
   const openEditModal = (event: Event) => {

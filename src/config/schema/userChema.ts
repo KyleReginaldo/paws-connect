@@ -9,7 +9,9 @@ export const createUserSchema = z.object({
     }),
   email: z.email(),
   status: z.string().optional(),
-  role: z.number(),
+  role: z.number().refine((role) => role === 1 || role === 3, {
+    message: 'Role must be either 1 (Admin) or 3 (User)'
+  }),
   phone_number: z.string(),
   password: z.string(),
   created_by: z.uuid().optional(),
@@ -30,7 +32,9 @@ export const updateUserSchema = z.object({
   payment_method: z.string().max(50, 'Payment method name too long').optional(),
   status: z.enum(['PENDING','SEMI_VERIFIED','FULLY_VERIFIED','INDEFINITE']).optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
-  role: z.number().optional(),
+  role: z.number().refine((role) => role === 1 || role === 3, {
+    message: 'Role must be either 1 (Admin) or 3 (User)'
+  }).optional(),
   violations: z.array(z.string()).max(200, 'Too many violations').optional(),
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided for update',

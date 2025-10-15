@@ -255,6 +255,7 @@ export async function POST(request: Request) {
     
     // Clean the pet data - remove fields not in schema
     const cleanedPetData = {
+      color: petData.color,
       name: petData.name,
       type: petData.type,
       breed: petData.breed,
@@ -273,7 +274,7 @@ export async function POST(request: Request) {
       special_needs: petData.special_needs,
       added_by: petData.added_by,
       request_status: petData.request_status,
-      photos: [] // Will be filled with uploaded URLs
+      photos: [],
     };
     
     console.log('Validating pet data:', cleanedPetData);
@@ -318,6 +319,7 @@ export async function POST(request: Request) {
       type,
       weight,
       request_status,
+      color,
     } = result.data;
 
     // Handle image uploads
@@ -399,6 +401,7 @@ export async function POST(request: Request) {
         weight,
         request_status: request_status || 'pending',
         photos: photoUrls,
+        color,
       })
       .select()
       .single();

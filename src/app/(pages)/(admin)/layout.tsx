@@ -47,7 +47,7 @@ const menuItems = [
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   // const router = useRouter();
-  const { signOut, userRole, user } = useAuth();
+  const { signOut, user } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = async () => {
@@ -177,9 +177,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                         <p className="text-sm font-medium text-white truncate">
                           {user?.username || 'Admin'}
                         </p>
-                        <p className="text-xs text-slate-400 truncate">
-                          {userRole === 1 ? 'Administrator' : 'Staff Member'}
-                        </p>
+                        <p className="text-xs text-slate-400 truncate">Administrator</p>
                       </div>
                     </div>
                   </div>

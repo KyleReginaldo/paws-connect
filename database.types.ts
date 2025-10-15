@@ -167,6 +167,7 @@ export type Database = {
           donor: string | null
           fundraising: number | null
           id: number
+          is_anonymous: boolean | null
           message: string | null
           reference_number: string | null
           screenshot: string | null
@@ -177,6 +178,7 @@ export type Database = {
           donor?: string | null
           fundraising?: number | null
           id?: number
+          is_anonymous?: boolean | null
           message?: string | null
           reference_number?: string | null
           screenshot?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           donor?: string | null
           fundraising?: number | null
           id?: number
+          is_anonymous?: boolean | null
           message?: string | null
           reference_number?: string | null
           screenshot?: string | null
@@ -769,9 +772,11 @@ export type Database = {
           address: string | null
           created_at: string
           date_of_birth: string | null
+          first_name: string
           id: number
           id_attachment_url: string
-          id_name: string
+          last_name: string
+          middle_initial: string | null
           status: Database["public"]["Enums"]["id_status"] | null
           user: string | null
         }
@@ -779,9 +784,11 @@ export type Database = {
           address?: string | null
           created_at?: string
           date_of_birth?: string | null
+          first_name: string
           id?: number
           id_attachment_url: string
-          id_name: string
+          last_name: string
+          middle_initial?: string | null
           status?: Database["public"]["Enums"]["id_status"] | null
           user?: string | null
         }
@@ -789,9 +796,11 @@ export type Database = {
           address?: string | null
           created_at?: string
           date_of_birth?: string | null
+          first_name?: string
           id?: number
           id_attachment_url?: string
-          id_name?: string
+          last_name?: string
+          middle_initial?: string | null
           status?: Database["public"]["Enums"]["id_status"] | null
           user?: string | null
         }

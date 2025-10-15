@@ -76,7 +76,7 @@ Message to analyze: "${message}"`
 function fallbackModeration(message: string): ModerationResult {
   const abusiveWords = [
     // English curse words
-    'damn', 'hell', 'stupid', 'idiot', 'moron', 'fool', 'loser', 'hate',
+    'damn', 'stupid', 'idiot', 'moron', 'fool', 'loser', 'hate',
     'kill yourself', 'die', 'worthless', 'pathetic', 'disgusting', 'trash',
     'garbage', 'scum', 'piece of shit', 'bastard', 'bitch', 'asshole',
     'fuck', 'shit', 'crap', 'piss', 'slut', 'whore', 'retard', 'faggot',

@@ -169,22 +169,16 @@ export function UserTableFiltered({
     );
   }
 
-  // Permission helper
-  const canManageUser = (targetUserRole: number) => {
-    // Admins (role 1) can manage everyone
-    if (currentUserRole === 1) return true;
-    // Staff (role 2) cannot manage admins (role 1)
-    if (currentUserRole === 2 && targetUserRole === 1) return false;
-    // Staff can manage other staff and regular users
-    return currentUserRole === 2;
+  // Permission helper - Only admins can manage users
+  const canManageUser = () => {
+    // Only admins (role 1) can manage users
+    return currentUserRole === 1;
   };
 
   const getRoleText = (role: number) => {
     switch (role) {
       case 1:
         return 'Admin';
-      case 2:
-        return 'Staff';
       case 3:
         return 'User';
       default:
@@ -370,13 +364,13 @@ export function UserTableFiltered({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {canManageUser(user.role) && (
+                          {canManageUser() && (
                             <DropdownMenuItem onClick={() => onEdit?.(user)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                           )}
-                          {canManageUser(user.role) && user.status !== 'FULLY_VERIFIED' && (
+                          {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
                             <DropdownMenuItem
                               onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
                             >
@@ -384,7 +378,7 @@ export function UserTableFiltered({
                               Fully Verify
                             </DropdownMenuItem>
                           )}
-                          {canManageUser(user.role) &&
+                          {canManageUser() &&
                             user.role === 3 &&
                             user.status !== 'SEMI_VERIFIED' &&
                             user.status !== 'FULLY_VERIFIED' && (
@@ -395,7 +389,7 @@ export function UserTableFiltered({
                                 Semi Verified
                               </DropdownMenuItem>
                             )}
-                          {canManageUser(user.role) && user.status !== 'INDEFINITE' && (
+                          {canManageUser() && user.status !== 'INDEFINITE' && (
                             <DropdownMenuItem
                               onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}
                             >
@@ -417,7 +411,7 @@ export function UserTableFiltered({
                               Add Violation
                             </DropdownMenuItem>
                           )}
-                          {canManageUser(user.role) &&
+                          {canManageUser() &&
                             (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
                               <DropdownMenuItem
                                 onClick={() => onDelete?.(user.id)}

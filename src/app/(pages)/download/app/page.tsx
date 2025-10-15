@@ -32,7 +32,7 @@ export default function AppDownloadPage() {
               <div className="flex justify-center pt-4">
                 <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-800">
                   <Link
-                    href="https://drive.google.com/drive/folders/1ut3xeCHur6U1067Q8eV4WAzypl3MeBic?usp=sharing"
+                    href="https://github.com/KyleReginaldo/pawsconnect-uploads/releases"
                     target="_blank"
                   >
                     <DownloadCloud className="mr-2 h-5 w-5" />

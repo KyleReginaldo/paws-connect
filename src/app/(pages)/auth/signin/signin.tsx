@@ -7,11 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Quote } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 const Signin = () => {
-  const router = useRouter();
   const { onLogin, status } = useAuth();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -189,24 +187,6 @@ const Signin = () => {
               )}
             </Button>
           </form>
-
-          <div className="mt-4 text-center text-sm">
-            <a href="/forgot-password" className="text-blue-600 hover:underline">
-              Forgot your password?
-            </a>
-          </div>
-
-          <div className="mt-2 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{' '}
-            <a
-              className="text-blue-600 hover:underline cursor-pointer"
-              onClick={() => {
-                router.push('signup');
-              }}
-            >
-              Sign up
-            </a>
-          </div>
         </CardContent>
       </Card>
     </div>

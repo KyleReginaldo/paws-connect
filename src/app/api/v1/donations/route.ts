@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { amount, fundraising, donor, message, reference_number, screenshot } = result.data;
+    const { amount, fundraising, donor, message, reference_number, screenshot, is_anonymous } = result.data;
 
     // Check if fundraising campaign exists and is ongoing
     const { data: fundData, error: fundError } = await supabase
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       donated_at: new Date().toISOString(),
       reference_number,
       screenshot,
+      is_anonymous
     };
 
     // Insert donation record

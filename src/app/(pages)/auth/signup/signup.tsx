@@ -132,7 +132,7 @@ const Signup = () => {
         formData.email,
         formData.password,
         formData.username,
-        2,
+        3,
         '+63' + formData.phone_number,
         'PENDING',
       );

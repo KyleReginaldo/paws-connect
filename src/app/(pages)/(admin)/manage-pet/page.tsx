@@ -263,6 +263,11 @@ export default function PetManagement() {
                 // Use FormData if there are new files
                 const formData = new FormData();
 
+                console.log('🔧 Building FormData with petData:', {
+                  ...petData,
+                  color: `"${petData.color}"`, // Show color explicitly
+                });
+
                 // Add all pet data fields
                 Object.entries(petData).forEach(([key, value]) => {
                   if (key === 'photos') {
@@ -284,6 +289,7 @@ export default function PetManagement() {
                       });
                     }
                   } else if (value !== null && value !== undefined) {
+                    console.log(`📝 Adding to FormData: ${key} = "${value}"`);
                     formData.append(key, String(value));
                   }
                 });
@@ -301,6 +307,10 @@ export default function PetManagement() {
                 }
               } else {
                 // Use JSON if no new files
+                console.log('📄 Sending JSON update with petData:', {
+                  ...petData,
+                  color: `"${petData.color}"`, // Show color explicitly
+                });
                 const result = await updatePet(editingPet.id, petData);
                 if (result) {
                   success('Pet Updated Successfully', `${petData.name} has been updated.`);

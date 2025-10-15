@@ -53,6 +53,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
     special_needs?: string;
     request_status?: string;
     photos?: string[];
+    color?: string;
   };
 
   if (isMultipart) {
@@ -153,6 +154,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
       special_needs: fd.get('special_needs') as string,
       request_status: fd.get('request_status') as string,
       photos: allPhotos.length > 0 ? allPhotos : undefined,
+      color: fd.get('color') as string,
     };
     
     // Remove undefined values

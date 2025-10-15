@@ -17,6 +17,7 @@ export function middleware(request: NextRequest) {
     '/auth/signup',
     '/dashboard',
     '/fundraising',
+    '/manage-events',
     '/manage-pet',
     '/manage-users',
   ];

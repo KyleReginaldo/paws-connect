@@ -31,7 +31,7 @@ async function getOrCreateGlobalForum() {
       .from('forum')
       .insert({
         forum_name: 'Global Chat',
-        forum_description: 'A place for all users, staff, and admins to communicate',
+        forum_description: 'A place for all users and admins to communicate',
         private: false,
         created_at: new Date().toISOString(),
       })

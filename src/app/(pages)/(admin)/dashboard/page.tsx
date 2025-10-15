@@ -22,7 +22,6 @@ import {
   PawPrint,
   Shield,
   TrendingUp,
-  UserCheck,
   User as UserIcon,
   Users,
 } from 'lucide-react';
@@ -230,21 +229,14 @@ function EnhancedPetAnalytics({
   );
 }
 
-function StaffRoleAnalytics({ users }: { users: User[] }) {
-  const staffData = [
+function UserRoleAnalytics({ users }: { users: User[] }) {
+  const roleData = [
     {
       role: 'Admin',
       count: users.filter((u) => u.role === 1).length,
       color: '#FFA726',
       icon: Shield,
       responsibilities: 'System management, user oversight',
-    },
-    {
-      role: 'Staff',
-      count: users.filter((u) => u.role === 2).length,
-      color: '#FFB74D',
-      icon: UserCheck,
-      responsibilities: 'Pet care, adoption coordination',
     },
     {
       role: 'Users',
@@ -257,7 +249,7 @@ function StaffRoleAnalytics({ users }: { users: User[] }) {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {staffData.map((item, index) => (
+      {roleData.map((item, index) => (
         <div
           key={index}
           className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-gradient-to-r from-orange-25 to-orange-50 border border-orange-100 min-w-0"
@@ -532,7 +524,6 @@ const Page = () => {
         user_analytics: {
           by_role: {
             admins: allUsers.filter((u: { role?: number }) => u.role === 1).length,
-            staff: allUsers.filter((u: { role?: number }) => u.role === 2).length,
             customers: allUsers.filter((u: { role?: number }) => u.role === 3).length,
           },
           by_status: {
@@ -784,7 +775,6 @@ const Page = () => {
       const userRoleData = [
         ['Role', 'Count'],
         ['Admins', reportData.user_analytics.by_role.admins.toString()],
-        ['Staff', reportData.user_analytics.by_role.staff.toString()],
         ['Customers', reportData.user_analytics.by_role.customers.toString()],
       ];
 
@@ -1094,7 +1084,7 @@ const Page = () => {
             </CardContent>
           </Card>
 
-          {/* Staff Role Analytics */}
+          {/* User Role Analytics */}
           <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
@@ -1102,11 +1092,11 @@ const Page = () => {
                 <span className="truncate">User Distribution</span>
               </CardTitle>
               <CardDescription className="text-sm">
-                Breakdown by staff roles and responsibilities
+                Breakdown by user roles and responsibilities
               </CardDescription>
             </CardHeader>
             <CardContent className="overflow-hidden">
-              <StaffRoleAnalytics users={users} />
+              <UserRoleAnalytics users={users} />
             </CardContent>
           </Card>
 

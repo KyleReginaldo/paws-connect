@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
           }
         }
       } else {
-        // Regular users (role 2, 3, etc.) can only see ONGOING and COMPLETE
+        // Regular users (role 3, etc.) can only see ONGOING and COMPLETE
         if (status) {
           // If status is specified, validate it's allowed for regular users
           const allowedStatusesForUsers = ['ONGOING', 'COMPLETE'];
@@ -198,10 +198,14 @@ export async function POST(request: NextRequest) {
       const created_by = fd.get('created_by') as string;
       const target_amount = Number(fd.get('target_amount'));
       const status = (fd.get('status') as string) || 'PENDING';
-      const end_date = fd.get('end_date') as string;
-      const facebook_link = fd.get('facebook_link') as string;
+      const end_date_raw = fd.get('end_date') as string | null;
+      const facebook_link_raw = fd.get('facebook_link') as string | null;
       const gcash_number = fd.get('gcash_number') as string;
       
+      // Convert null/empty values to undefined for proper schema validation
+      const end_date = end_date_raw && end_date_raw.trim() !== '' ? end_date_raw : undefined;
+      const facebook_link = facebook_link_raw && facebook_link_raw.trim() !== '' ? facebook_link_raw : undefined;
+
       // Process image files
       const imageFiles = fd.getAll('images') as File[];
       const imageUrls: string[] = [];

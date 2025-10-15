@@ -106,8 +106,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                 return createErrorResponse('User not found', 404);
             }
 
-            // Check if user is creator or admin/staff (roles 1 or 2)
-            const canReopenEvent = event.created_by === reopened_by || user.role === 1 || user.role === 2;
+            // Check if user is creator or admin (role 1)
+            const canReopenEvent = event.created_by === reopened_by || user.role === 1;
             
             if (!canReopenEvent) {
                 return createErrorResponse('You do not have permission to reopen this event', 403);

@@ -41,7 +41,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [formData, setFormData] = useState<{
     name: string;
     type: string;
-    color?: string;
+    color: string;
     breed: string;
     gender: string;
     age: number;
@@ -161,6 +161,14 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       errors.photos = 'At least one pet photo is required';
     }
 
+    // Age and date of birth validation
+    if (formData.date_of_birth && formData.age !== undefined) {
+      const validation = validateAgeAndBirth(formData.age, formData.date_of_birth);
+      if (!validation.isValid && validation.message) {
+        errors.age = validation.message;
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -259,6 +267,121 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     setIsSubmitting(false);
   };
 
+  // Calculate size based on weight and pet type
+  const calculateSizeFromWeight = (weight: string, petType: string): string => {
+    // Extract numeric value from weight string
+    const numericWeight = parseFloat(weight.replace(/[^\d.]/g, ''));
+
+    if (isNaN(numericWeight)) {
+      return ''; // Return empty if weight is not a valid number
+    }
+
+    if (petType === 'Dog') {
+      if (numericWeight >= 5 && numericWeight <= 10) {
+        return 'small';
+      } else if (numericWeight >= 11 && numericWeight <= 25) {
+        return 'medium';
+      } else if (numericWeight >= 26 && numericWeight <= 45) {
+        return 'large';
+      } else if (numericWeight >= 46) {
+        return 'giant';
+      }
+    } else if (petType === 'Cat') {
+      if (numericWeight >= 1.8 && numericWeight <= 4.5) {
+        return 'small';
+      } else if (numericWeight >= 4.6 && numericWeight <= 6.8) {
+        return 'medium';
+      } else if (numericWeight >= 6.9) {
+        // 6.8+ for cats
+        return 'large';
+      }
+    }
+
+    return ''; // Return empty if weight doesn't match any range
+  };
+
+  // Get minimum weight for a size category based on pet type
+  const getMinWeightForSize = (size: string, petType: string): string => {
+    if (petType === 'Dog') {
+      switch (size) {
+        case 'small':
+          return '5';
+        case 'medium':
+          return '11';
+        case 'large':
+          return '26';
+        case 'giant':
+          return '46';
+        default:
+          return '';
+      }
+    } else if (petType === 'Cat') {
+      switch (size) {
+        case 'small':
+          return '1.8';
+        case 'medium':
+          return '4.6';
+        case 'large':
+          return '6.9';
+        default:
+          return '';
+      }
+    }
+    return '';
+  };
+
+  // Calculate age from date of birth
+  const calculateAgeFromBirth = (birthDate: string): number => {
+    if (!birthDate) return 0;
+
+    try {
+      const birth = new Date(birthDate);
+      const today = new Date();
+
+      if (isNaN(birth.getTime())) return 0;
+
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+
+      // If birthday hasn't occurred this year yet, subtract 1
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+
+      return Math.max(0, age);
+    } catch {
+      return 0;
+    }
+  };
+
+  // Validate if age matches date of birth
+  const validateAgeAndBirth = (
+    age: number,
+    birthDate: string,
+  ): { isValid: boolean; message?: string } => {
+    if (!birthDate) {
+      return { isValid: true }; // No validation needed if no birth date
+    }
+
+    const calculatedAge = calculateAgeFromBirth(birthDate);
+
+    if (calculatedAge === 0 && birthDate) {
+      return {
+        isValid: false,
+        message: 'Invalid date of birth',
+      };
+    }
+
+    if (age !== calculatedAge) {
+      return {
+        isValid: false,
+        message: `Age should be ${calculatedAge} based on date of birth`,
+      };
+    }
+
+    return { isValid: true };
+  };
+
   // Load breed data
   const loadBreedData = async () => {
     setBreedsLoading(true);
@@ -295,13 +418,33 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
     if (editingPet) {
       console.log('Setting up form for editing pet, photos:', editingPet.photos);
+      console.log(
+        '🗓️ Editing pet date_of_birth:',
+        editingPet.date_of_birth,
+        typeof editingPet.date_of_birth,
+      );
+
+      // Format the date for HTML date input (YYYY-MM-DD)
+      let formattedDate = '';
+      if (editingPet.date_of_birth) {
+        try {
+          const date = new Date(editingPet.date_of_birth);
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+          }
+        } catch (error) {
+          console.error('🗓️ Error parsing date:', error);
+        }
+      }
+      console.log('🗓️ Formatted date for input:', formattedDate);
+
       setFormData({
         name: editingPet.name || '',
         type: editingPet.type || '',
         breed: editingPet.breed || '',
         gender: editingPet.gender || '',
         age: editingPet.age && editingPet.age > 0 ? editingPet.age : 1,
-        date_of_birth: editingPet.date_of_birth || '',
+        date_of_birth: formattedDate,
         size: editingPet.size || '',
         weight: editingPet.weight || '',
         is_vaccinated: editingPet.is_vaccinated || false,
@@ -315,8 +458,14 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         added_by: editingPet.added_by || userId || '',
         request_status: editingPet.request_status || '',
         photos: editingPet.photos || [],
+        color: editingPet.color || '',
       });
-      setBirthDate(editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined);
+
+      console.log('🗓️ Setting formData.date_of_birth to:', formattedDate);
+
+      const parsedDate = editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined;
+      console.log('🗓️ Parsed birthDate:', parsedDate);
+      setBirthDate(parsedDate);
       // Don't set existing photos to photosPreviews - they're handled separately via formData.photos
       console.log('Existing pet photos will be displayed via formData.photos:', editingPet.photos);
       setPhotosPreviews([]); // Clear previews for new files only
@@ -372,6 +521,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     } catch {
       // ignore storage errors
     }
+
+    // Debug: Log the current formData.date_of_birth value
+    console.log('🗓️ Current formData.date_of_birth:', formData.date_of_birth);
   }, [formData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -413,8 +565,15 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       special_needs: formData.special_needs || '',
       added_by: formData.added_by || userId || '',
       request_status: formData.request_status || 'pending',
+      color: formData.color || '',
       photos: editingPet ? formData.photos || [] : [], // For editing, keep existing photos; for new pets, photos will be uploaded
     };
+
+    console.log('🐾 PetModal - Submitting pet data:', {
+      ...petData,
+      color: `"${petData.color}"`, // Show color value explicitly
+      formDataColor: `"${formData.color}"`, // Show original form color
+    });
 
     try {
       await onSubmit(petData, photoFiles);
@@ -431,6 +590,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
     if (field === 'photo') {
       console.log('Updating photo field:', value);
+    }
+
+    // Debug logging for color field
+    if (field === 'color') {
+      console.log('Updating color field:', value, 'Current color:', formData.color);
     }
 
     // If changing pet type, clear color and breed if they're not valid for the new type
@@ -494,11 +658,21 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         ((newType === 'Dog' && !dogColors.includes(currentColor)) ||
           (newType === 'Cat' && !catColors.includes(currentColor)));
 
+      // Recalculate size based on current weight and new pet type
+      let calculatedSize = formData.size;
+      if (formData.weight) {
+        const newSize = calculateSizeFromWeight(formData.weight, newType);
+        if (newSize) {
+          calculatedSize = newSize;
+        }
+      }
+
       setFormData((prev) => ({
         ...prev,
         type: newType,
         ...(shouldClearColor && { color: '' }),
         ...(shouldClearBreed && { breed: '' }),
+        ...(calculatedSize !== formData.size && { size: calculatedSize }),
       }));
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));
@@ -649,23 +823,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               )}
             </div>
 
-            {/* Age */}
-            <div className="space-y-2">
-              <Label htmlFor="age">Age</Label>
-              <Input
-                id="age"
-                type="number"
-                min={1}
-                step={1}
-                value={formData.age}
-                onChange={(e) => {
-                  const raw = Number(e.target.value);
-                  const val = Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
-                  handleInputChange('age', val);
-                }}
-              />
-            </div>
-
             {/* Gender */}
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
@@ -688,7 +845,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               <Label htmlFor="color">Color</Label>
               {formData.type ? (
                 <Select
-                  value={formData.color}
+                  value={formData.color || ''}
                   onValueChange={(value) => handleInputChange('color', value)}
                 >
                   <SelectTrigger>
@@ -754,18 +911,46 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               <Label htmlFor="size">Size</Label>
               <Select
                 value={formData.size}
-                onValueChange={(value) => handleInputChange('size', value)}
+                onValueChange={(value) => {
+                  handleInputChange('size', value);
+
+                  // Always set default weight based on minimum for selected size category
+                  if (formData.type && value) {
+                    const minWeight = getMinWeightForSize(value, formData.type);
+                    if (minWeight) {
+                      handleInputChange('weight', minWeight);
+                    }
+                  }
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select size" />
+                  <SelectValue placeholder="Select size)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="small">Small</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="large">Large</SelectItem>
-                  <SelectItem value="giant">Giant</SelectItem>
+                  <SelectItem value="small">
+                    Small
+                    {formData.type === 'Dog' && ' (5-10kg)'}
+                    {formData.type === 'Cat' && ' (1.8-4.5kg)'}
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    Medium
+                    {formData.type === 'Dog' && ' (11-25kg)'}
+                    {formData.type === 'Cat' && ' (4.6-6.8kg)'}
+                  </SelectItem>
+                  <SelectItem value="large">
+                    Large
+                    {formData.type === 'Dog' && ' (26-45kg)'}
+                    {formData.type === 'Cat' && ' (6.9kg+)'}
+                  </SelectItem>
+                  {formData.type === 'Dog' && <SelectItem value="giant">Giant (46kg+)</SelectItem>}
                 </SelectContent>
               </Select>
+              {formData.type && (
+                <p className="text-xs text-muted-foreground">
+                  Size is automatically calculated based on weight. Selecting a size manually will
+                  set a default weight.
+                </p>
+              )}
             </div>
 
             {/* Weight */}
@@ -779,6 +964,14 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   onChange={(e) => {
                     const numericValue = e.target.value.replace(/[^\d.]/g, ''); // Only allow numbers and decimal
                     handleInputChange('weight', numericValue);
+
+                    // Automatically calculate and set size based on weight and pet type
+                    if (formData.type && numericValue) {
+                      const calculatedSize = calculateSizeFromWeight(numericValue, formData.type);
+                      if (calculatedSize) {
+                        handleInputChange('size', calculatedSize);
+                      }
+                    }
                   }}
                   className="rounded-r-none"
                 />
@@ -786,6 +979,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   kg
                 </div>
               </div>
+              {formData.type && (
+                <p className="text-xs text-muted-foreground">
+                  Weight automatically determines size category. Size selection sets default weight.
+                </p>
+              )}
             </div>
 
             {/* Birth Date */}
@@ -800,6 +998,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                       handleInputChange('date_of_birth', e.target.value);
                       if (e.target.value) {
                         setBirthDate(new Date(e.target.value));
+
+                        // Auto-calculate and set age based on birth date
+                        const calculatedAge = calculateAgeFromBirth(e.target.value);
+                        handleInputChange('age', calculatedAge);
+
+                        // Clear any age validation errors since we're auto-setting
+                        setValidationErrors((prev) => ({ ...prev, age: '' }));
                       } else {
                         setBirthDate(undefined);
                       }
@@ -807,6 +1012,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                     max={new Date().toISOString().split('T')[0]}
                     min="1900-01-01"
                     placeholder="YYYY-MM-DD"
+                    className={validationErrors.date_of_birth ? 'border-red-500' : ''}
                   />
                 </div>
                 <Popover>
@@ -824,6 +1030,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                         if (date) {
                           const dateString = date.toISOString().split('T')[0];
                           handleInputChange('date_of_birth', dateString);
+
+                          // Auto-calculate and set age based on birth date
+                          const calculatedAge = calculateAgeFromBirth(dateString);
+                          handleInputChange('age', calculatedAge);
+
+                          // Clear any age validation errors since we're auto-setting
+                          setValidationErrors((prev) => ({ ...prev, age: '' }));
                         } else {
                           handleInputChange('date_of_birth', '');
                         }
@@ -834,6 +1047,48 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   </PopoverContent>
                 </Popover>
               </div>
+              {validationErrors.date_of_birth && (
+                <p className="text-sm text-red-500">{validationErrors.date_of_birth}</p>
+              )}
+            </div>
+
+            {/* Age */}
+            <div className="space-y-2">
+              <Label htmlFor="age">Age (Calendar year)</Label>
+              <Input
+                id="age"
+                type="number"
+                min={0}
+                step={1}
+                value={formData.age}
+                onChange={(e) => {
+                  const raw = Number(e.target.value);
+                  const val = Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0;
+                  handleInputChange('age', val);
+
+                  // Validate age against date of birth
+                  if (formData.date_of_birth) {
+                    const validation = validateAgeAndBirth(val, formData.date_of_birth);
+                    if (!validation.isValid && validation.message) {
+                      setValidationErrors((prev) => ({ ...prev, age: validation.message! }));
+                    } else {
+                      setValidationErrors((prev) => ({ ...prev, age: '' }));
+                    }
+                  } else {
+                    // Clear validation error if no birth date
+                    setValidationErrors((prev) => ({ ...prev, age: '' }));
+                  }
+                }}
+                className={validationErrors.age ? 'border-red-500' : ''}
+              />
+              {validationErrors.age && (
+                <p className="text-sm text-red-500">{validationErrors.age}</p>
+              )}
+              {formData.date_of_birth && (
+                <p className="text-xs text-muted-foreground">
+                  Calculated age: {calculateAgeFromBirth(formData.date_of_birth)} years
+                </p>
+              )}
             </div>
 
             {/* Health Status */}

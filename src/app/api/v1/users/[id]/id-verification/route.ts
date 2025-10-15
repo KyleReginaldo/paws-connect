@@ -10,13 +10,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const parsed = body as {
       id_attachment_url?: string;
-      id_name?: string;
+      first_name?: string;
+      last_name?: string;
+      middle_initial?: string;
       address?: string | null;
       date_of_birth?: string | null;
       status?: "PENDING" | "ACCEPTED" | "REJECTED" | null;
+
     };
 
-    if (!parsed.id_attachment_url || !parsed.id_name) {
+    if (!parsed.id_attachment_url || !parsed.first_name || !parsed.last_name) {
       return createErrorResponse('Missing required fields for ID verification', 400);
     }
 
@@ -26,7 +29,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         {
           user: id,
           id_attachment_url: parsed.id_attachment_url,
-          id_name: parsed.id_name,
+          first_name: parsed.first_name,
+          last_name: parsed.last_name,
+          middle_initial: parsed.middle_initial??null,
           address: parsed.address ?? null,
           date_of_birth: parsed.date_of_birth ?? null,
           status: parsed.status ?? 'PENDING',

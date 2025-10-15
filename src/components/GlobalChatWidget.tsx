@@ -80,18 +80,49 @@ export default function GlobalChatWidget() {
 
     const setupSubscription = async () => {
       try {
-        const { data: globalForum } = await supabase
+        let globalForum = await supabase
           .from('forum')
           .select('id')
           .eq('forum_name', 'Global Chat')
           .single();
 
-        if (!globalForum) {
-          console.error('Global chat forum not found');
+        if (!globalForum.data) {
+          console.log('Global chat forum not found, attempting to create it...');
+
+          // Try to create the global chat forum
+          try {
+            const setupResponse = await fetch('/api/v1/setup/global-chat', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (setupResponse.ok) {
+              const setupData = await setupResponse.json();
+              console.log('Global chat forum created successfully:', setupData);
+
+              // Re-fetch the forum data
+              globalForum = await supabase
+                .from('forum')
+                .select('id')
+                .eq('forum_name', 'Global Chat')
+                .single();
+            } else {
+              throw new Error('Failed to create global chat forum');
+            }
+          } catch (setupError) {
+            console.error('Failed to setup global chat forum:', setupError);
+            return;
+          }
+        }
+
+        if (!globalForum.data) {
+          console.error('Global chat forum still not found after setup attempt');
           return;
         }
 
-        console.log('Setting up real-time subscription for forum:', globalForum.id);
+        console.log('Setting up real-time subscription for forum:', globalForum.data.id);
 
         channel = supabase.channel(`global_chat_${Date.now()}`);
 
@@ -102,7 +133,7 @@ export default function GlobalChatWidget() {
               event: 'INSERT',
               schema: 'public',
               table: 'forum_chats',
-              filter: `forum=eq.${globalForum.id}`,
+              filter: `forum=eq.${globalForum.data.id}`,
             },
             async (payload: { new: unknown }) => {
               console.log('New message received via real-time:', payload);
@@ -116,7 +147,7 @@ export default function GlobalChatWidget() {
               event: 'UPDATE',
               schema: 'public',
               table: 'forum_chats',
-              filter: `forum=eq.${globalForum.id}`,
+              filter: `forum=eq.${globalForum.data.id}`,
             },
             async (payload: { old: unknown; new: unknown }) => {
               console.log('Message updated via real-time:', payload);
@@ -130,7 +161,7 @@ export default function GlobalChatWidget() {
               event: 'DELETE',
               schema: 'public',
               table: 'forum_chats',
-              filter: `forum=eq.${globalForum.id}`,
+              filter: `forum=eq.${globalForum.data.id}`,
             },
             async (payload: { old: unknown }) => {
               console.log('Message deleted via real-time:', payload);

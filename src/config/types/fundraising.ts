@@ -33,6 +33,7 @@ export interface FundraisingWithDonations extends Fundraising {
     donated_at: string;
     reference_number: string | null;
     screenshot: string | null;
+    is_anonymous: boolean;
     donor: {
       id: string;
       username: string | null;

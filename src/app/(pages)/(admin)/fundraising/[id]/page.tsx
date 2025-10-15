@@ -404,15 +404,19 @@ const FundraisingPage = () => {
                         <div className="flex items-start gap-3 mb-3">
                           <Avatar className="h-8 w-8 flex-shrink-0">
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {donation.donor?.username
-                                ? donation.donor.username.charAt(0).toUpperCase()
-                                : 'A'}
+                              {donation.is_anonymous
+                                ? 'Anonymous'
+                                : donation.donor?.username
+                                  ? donation.donor.username.charAt(0).toUpperCase()
+                                  : 'A'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-medium text-sm truncate">
-                                {donation.donor?.username || 'Anonymous'}
+                                {donation.is_anonymous
+                                  ? 'Anonymous'
+                                  : donation.donor?.username || 'Anonymous'}
                               </span>
                               <span className="font-bold text-lg text-green-500 flex-shrink-0">
                                 {formatCurrency(donation.amount)}

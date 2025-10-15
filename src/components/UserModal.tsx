@@ -41,14 +41,10 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { userId, userRole } = useAuth();
 
-  // Permission helper
-  const canManageUser = (targetUserRole: number) => {
-    // Admins (role 1) can manage everyone
-    if (userRole === 1) return true;
-    // Staff (role 2) cannot manage admins (role 1)
-    if (userRole === 2 && targetUserRole === 1) return false;
-    // Staff can manage other staff and regular users
-    return userRole === 2;
+  // Permission helper - Only admins can manage users
+  const canManageUser = () => {
+    // Only admins (role 1) can manage users
+    return userRole === 1;
   };
 
   useEffect(() => {
@@ -190,7 +186,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
 
             {editingUser ? (
               // Show role field for editing if user has permission to manage this user
-              canManageUser(editingUser.role) ? (
+              canManageUser() ? (
                 <div className="space-y-2">
                   <Label htmlFor="role">Role *</Label>
                   <Select
@@ -203,7 +199,6 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                     <SelectContent>
                       {/* Only show Admin option to actual admins */}
                       {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
-                      <SelectItem value="2">Staff</SelectItem>
                       <SelectItem value="3">User</SelectItem>
                     </SelectContent>
                   </Select>
@@ -213,9 +208,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
                   <Input
-                    value={
-                      editingUser.role === 1 ? 'Admin' : editingUser.role === 2 ? 'Staff' : 'User'
-                    }
+                    value={editingUser.role === 1 ? 'Admin' : 'User'}
                     disabled
                     className="bg-gray-100"
                   />
@@ -235,7 +228,6 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                   <SelectContent>
                     {/* Only show Admin option to actual admins */}
                     {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
-                    <SelectItem value="2">Staff</SelectItem>
                     <SelectItem value="3">User</SelectItem>
                   </SelectContent>
                 </Select>
