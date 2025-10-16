@@ -18,8 +18,27 @@ export default function HomePage() {
     if (typeof window !== 'undefined') {
       OneSignal.init({
         appId: '323cc2fb-7bab-418b-954e-a578788499bd',
-        safari_web_id: 'web.onesignal.auto.34f3144b-3497-4c5c-a43c-a5d9eb9bdd56',
         autoRegister: true,
+        notifyButton: {
+          enable: true,
+          prenotify: true,
+          showCredit: false,
+          text: {
+            'tip.state.unsubscribed': 'Subscribe to notifications',
+            'tip.state.subscribed': "You're subscribed to notifications",
+            'tip.state.blocked': 'Unblock notifications',
+            'message.prenotify': 'Click to subscribe to notifications',
+            'message.action.subscribing': 'Thanks for subscribing!',
+            'message.action.subscribed': "Thanks! You're subscribed to notifications",
+            'message.action.resubscribed': "You're subscribed to notifications",
+            'message.action.unsubscribed': "You won't receive notifications again",
+            'dialog.main.title': 'Manage Site Notifications',
+            'dialog.main.button.subscribe': 'SUBSCRIBE',
+            'dialog.main.button.unsubscribe': 'UNSUBSCRIBE',
+            'dialog.blocked.title': 'Unblock Notifications',
+            'dialog.blocked.message': 'Follow these instructions to allow notifications:',
+          },
+        },
         welcomeNotification: {
           title: 'Welcome to Paws Connect!',
           message: 'Thank you for enabling notifications.',
