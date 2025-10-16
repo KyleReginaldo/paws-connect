@@ -18,6 +18,12 @@ export default function HomePage() {
     if (typeof window !== 'undefined') {
       OneSignal.init({
         appId: '323cc2fb-7bab-418b-954e-a578788499bd',
+        safari_web_id: 'web.onesignal.auto.34f3144b-3497-4c5c-a43c-a5d9eb9bdd56',
+        autoRegister: true,
+        welcomeNotification: {
+          title: 'Welcome to Paws Connect!',
+          message: 'Thank you for enabling notifications.',
+        },
       });
     }
   }, []);
