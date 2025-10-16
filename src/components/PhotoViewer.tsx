@@ -1,7 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { transformUrlForLocalhost } from '@/lib/url-utils';
 import { Download, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -13,9 +14,11 @@ interface PhotoViewerProps {
 }
 
 export function PhotoViewer({ open, onOpenChange, photoUrl, petName }: PhotoViewerProps) {
+  const transformedPhotoUrl = transformUrlForLocalhost(photoUrl);
+
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = photoUrl;
+    link.href = transformedPhotoUrl;
     link.download = `${petName}-photo.jpg`;
     document.body.appendChild(link);
     link.click();
@@ -25,9 +28,10 @@ export function PhotoViewer({ open, onOpenChange, photoUrl, petName }: PhotoView
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+        <DialogTitle className="sr-only">{petName} photo</DialogTitle>
         <div className="relative">
           <Image
-            src={photoUrl || '/placeholder.svg'}
+            src={transformedPhotoUrl || '/placeholder.svg'}
             alt={`${petName}'s photo`}
             width={800}
             height={600}

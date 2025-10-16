@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../../database.types';
 
-// For client-side operations, use the anonymous key instead of service role
+// Client-side: MUST use the public anon key
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE;
 

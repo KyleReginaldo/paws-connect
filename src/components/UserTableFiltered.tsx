@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableFilter, TableFilters } from '@/components/ui/table-filters';
+import { transformUrlForLocalhost } from '@/lib/url-utils';
 import {
   AlertTriangle,
   Edit,
@@ -31,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { ScrollArea } from './ui/scroll-area';
+import { UserDetailsSheet } from './UserDetailsSheet';
 
 interface UserTableFilteredProps {
   users: User[];
@@ -52,6 +54,7 @@ export function UserTableFiltered({
   currentUserRole,
 }: UserTableFilteredProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
 
@@ -254,9 +257,8 @@ export function UserTableFiltered({
                       <Avatar className="h-10 w-10">
                         <AvatarImage
                           src={
-                            user.profile_image_link
-                              ? user.profile_image_link
-                              : `https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`
+                            transformUrlForLocalhost(user.profile_image_link) ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`
                           }
                           alt={user.username || 'Unknown User'}
                         />
@@ -357,72 +359,93 @@ export function UserTableFiltered({
                   </TableCell>
                   <TableCell className="text-right">
                     {user.role !== 1 ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canManageUser() && (
-                            <DropdownMenuItem onClick={() => onEdit?.(user)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="View details"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setDetailsOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
+                              onSelect={() => {
+                                setSelectedUser(user);
+                                requestAnimationFrame(() => setDetailsOpen(true));
+                              }}
                             >
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Fully Verify
+                              <Eye className="h-4 w-4 mr-2" /> View details
                             </DropdownMenuItem>
-                          )}
-                          {canManageUser() &&
-                            user.role === 3 &&
-                            user.status !== 'SEMI_VERIFIED' &&
-                            user.status !== 'FULLY_VERIFIED' && (
+                            {canManageUser() && (
+                              <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
                               <DropdownMenuItem
-                                onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
+                                onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
                               >
                                 <UserCheck className="h-4 w-4 mr-2" />
-                                Semi Verified
+                                Fully Verify
                               </DropdownMenuItem>
                             )}
-                          {canManageUser() && user.status !== 'INDEFINITE' && (
-                            <DropdownMenuItem
-                              onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}
-                            >
-                              <UserX className="h-4 w-4 mr-2" />
-                              Indefinite
-                            </DropdownMenuItem>
-                          )}
-                          {currentUserRole === 1 && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const violation = prompt('Enter violation description:');
-                                if (violation && violation.trim()) {
-                                  onAddViolation?.(user.id, violation.trim());
-                                }
-                              }}
-                              className="text-orange-600"
-                            >
-                              <AlertTriangle className="h-4 w-4 mr-2" />
-                              Add Violation
-                            </DropdownMenuItem>
-                          )}
-                          {canManageUser() &&
-                            (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
+                            {canManageUser() &&
+                              user.role === 3 &&
+                              user.status !== 'SEMI_VERIFIED' &&
+                              user.status !== 'FULLY_VERIFIED' && (
+                                <DropdownMenuItem
+                                  onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
+                                >
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Semi Verified
+                                </DropdownMenuItem>
+                              )}
+                            {canManageUser() && user.status !== 'INDEFINITE' && (
                               <DropdownMenuItem
-                                onClick={() => onDelete?.(user.id)}
-                                className="text-destructive"
+                                onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                <UserX className="h-4 w-4 mr-2" />
+                                Indefinite
                               </DropdownMenuItem>
                             )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            {currentUserRole === 1 && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const violation = prompt('Enter violation description:');
+                                  if (violation && violation.trim()) {
+                                    onAddViolation?.(user.id, violation.trim());
+                                  }
+                                }}
+                                className="text-orange-600"
+                              >
+                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                Add Violation
+                              </DropdownMenuItem>
+                            )}
+                            {canManageUser() &&
+                              (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
+                                <DropdownMenuItem
+                                  onClick={() => onDelete?.(user.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     ) : null}
                   </TableCell>
                 </TableRow>
@@ -441,6 +464,20 @@ export function UserTableFiltered({
             Clear all filters
           </Button>
         </div>
+      )}
+
+      {selectedUser && (
+        <UserDetailsSheet
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          user={selectedUser}
+          currentUserRole={currentUserRole}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onStatusChange={onStatusChange}
+          onAddViolation={onAddViolation}
+          onRemoveViolation={onRemoveViolation}
+        />
       )}
     </div>
   );

@@ -1,11 +1,11 @@
-import { supabase } from '@/app/supabase/supabase';
+import { supabaseServer as supabase } from '@/app/supabase/supabase-server';
 import { createErrorResponse, createResponse } from '@/lib/db-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/v1/notifications/user/[userId]?page=1&limit=20&since=ISO&include_deleted=false
-export async function GET(request: NextRequest, context: unknown) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = (context as { params: { userId: string } }).params || { userId: '' };
+    const { userId } = await params;
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
     const url = new URL(request.url);
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, context: unknown) {
       query = query.gte('created_at', since);
     }
 
-    const { data, error, count } = await query;
+  const { data, error, count } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({
@@ -50,12 +50,12 @@ export async function GET(request: NextRequest, context: unknown) {
 }
 
 
-export async function POST(request: NextRequest,context: unknown) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const body = await request.json();
-  const params = await (context as { params?: { userId: string } | Promise<{ userId: string }> }).params;
+  const { userId } = await params;
   const { notificationIds } = body;
 
-  if (!params?.userId) {
+  if (!userId) {
     return createErrorResponse('Missing userId', 400);
   }
   if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest,context: unknown) {
   const { error } = await supabase
       .from('notifications')
       .delete()
-      .eq('user', params?.userId)
+      .eq('user', userId)
       .in('id', notificationIds);
   if(error){
     return createErrorResponse('Failed to delete notifications', 500, error.message);

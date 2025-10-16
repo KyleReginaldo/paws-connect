@@ -1,4 +1,4 @@
-import { supabase } from '@/app/supabase/supabase';
+import { supabaseServer as supabase } from '@/app/supabase/supabase-server';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -10,14 +10,14 @@ async function parseJson(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest, context: unknown) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const params = await (context as { params?: { id: string } | Promise<{ id: string }> }).params;
-    const pathId = Number(params?.id ?? NaN);
+    const { id } = await params;
+    const pathId = Number(id ?? NaN);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
-    const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*, user_identification(*))').eq('id', pathId).single();
+  const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*, user_identification(*))').eq('id', pathId).single();
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {
@@ -34,10 +34,10 @@ export async function GET(_request: NextRequest, context: unknown) {
   }
 }
 
-export async function PUT(request: NextRequest, context: unknown) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const params = await (context as { params?: { id: string } | Promise<{ id: string }> }).params;
-    const pathId = Number(params?.id ?? NaN);
+    const { id } = await params;
+    const pathId = Number(id ?? NaN);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 
@@ -104,10 +104,10 @@ export async function PUT(request: NextRequest, context: unknown) {
   }
 }
 
-export async function DELETE(_request: NextRequest, context: unknown) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const params = await (context as { params?: { id: string } | Promise<{ id: string }> }).params;
-    const pathId = Number(params?.id ?? NaN);
+    const { id } = await params;
+    const pathId = Number(id ?? NaN);
     if (Number.isNaN(pathId))
       return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
 

@@ -1,4 +1,4 @@
-import { supabase } from '@/app/supabase/supabase';
+import { supabaseServer as supabase } from '@/app/supabase/supabase-server';
 import { createErrorResponse, createResponse } from '@/lib/db-utils';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';

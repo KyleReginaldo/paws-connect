@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { transformUrlForLocalhost } from '@/lib/url-utils';
 import {
   AlertTriangle,
   Edit,
@@ -30,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { ScrollArea } from './ui/scroll-area';
+import { UserDetailsSheet } from './UserDetailsSheet';
 
 interface UserTableProps {
   users: User[];
@@ -51,6 +53,7 @@ export function UserTable({
   currentUserRole,
 }: UserTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   if (users.length === 0) {
     return (
       <div className="text-center py-12">
@@ -128,9 +131,8 @@ export function UserTable({
                   <Avatar className="h-10 w-10">
                     <AvatarImage
                       src={
-                        user.profile_image_link
-                          ? user.profile_image_link
-                          : `https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`
+                        transformUrlForLocalhost(user.profile_image_link) ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${user.username || 'Unknown'}`
                       }
                       alt={user.username || 'Unknown User'}
                     />
@@ -224,78 +226,107 @@ export function UserTable({
               <TableCell>
                 <div className="text-sm">{formatDate(user.created_at)}</div>
               </TableCell>
-              <TableCell>
-                {user.role !== 1 ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {canManageUser() && (
-                        <DropdownMenuItem onClick={() => onEdit?.(user)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                      )}
-                      {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
+              <TableCell className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title="View details"
+                  onClick={() => {
+                    setSelectedUser(user);
+                    setDetailsOpen(true);
+                  }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setSelectedUser(user);
+                        requestAnimationFrame(() => setDetailsOpen(true));
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-2" /> View details
+                    </DropdownMenuItem>
+                    {canManageUser() && (
+                      <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                    )}
+                    {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
+                      <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}>
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Fully Verify
+                      </DropdownMenuItem>
+                    )}
+                    {canManageUser() &&
+                      user.role === 3 &&
+                      user.status !== 'SEMI_VERIFIED' &&
+                      user.status !== 'FULLY_VERIFIED' && (
                         <DropdownMenuItem
-                          onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
+                          onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
                         >
                           <UserCheck className="h-4 w-4 mr-2" />
-                          Fully Verify
+                          Semi Verified
                         </DropdownMenuItem>
                       )}
-                      {canManageUser() &&
-                        user.role === 3 &&
-                        user.status !== 'SEMI_VERIFIED' &&
-                        user.status !== 'FULLY_VERIFIED' && (
-                          <DropdownMenuItem
-                            onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Semi Verified
-                          </DropdownMenuItem>
-                        )}
-                      {canManageUser() && user.status !== 'INDEFINITE' && (
-                        <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}>
-                          <UserX className="h-4 w-4 mr-2" />
-                          Indefinite
-                        </DropdownMenuItem>
-                      )}
-                      {currentUserRole === 1 && (
+                    {canManageUser() && user.status !== 'INDEFINITE' && (
+                      <DropdownMenuItem onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}>
+                        <UserX className="h-4 w-4 mr-2" />
+                        Indefinite
+                      </DropdownMenuItem>
+                    )}
+                    {currentUserRole === 1 && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const violation = prompt('Enter violation description:');
+                          if (violation && violation.trim()) {
+                            onAddViolation?.(user.id, violation.trim());
+                          }
+                        }}
+                        className="text-orange-600"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Add Violation
+                      </DropdownMenuItem>
+                    )}
+                    {canManageUser() &&
+                      (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
                         <DropdownMenuItem
-                          onClick={() => {
-                            const violation = prompt('Enter violation description:');
-                            if (violation && violation.trim()) {
-                              onAddViolation?.(user.id, violation.trim());
-                            }
-                          }}
-                          className="text-orange-600"
+                          onClick={() => onDelete?.(user.id)}
+                          className="text-destructive"
                         >
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          Add Violation
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
                         </DropdownMenuItem>
                       )}
-                      {canManageUser() &&
-                        (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
-                          <DropdownMenuItem
-                            onClick={() => onDelete?.(user.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {selectedUser && (
+        <UserDetailsSheet
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          user={selectedUser}
+          currentUserRole={currentUserRole}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onStatusChange={onStatusChange}
+          onAddViolation={onAddViolation}
+          onRemoveViolation={onRemoveViolation}
+        />
+      )}
     </div>
   );
 }
