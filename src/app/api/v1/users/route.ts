@@ -99,6 +99,8 @@ async function searchUsers(query: string, role?: string | null): Promise<Respons
   );
 }
 export async function POST(request: NextRequest) {
+  let createdAuthUserId: string | null = null; // Track created auth user for cleanup
+  
   try {
     const body = await request.json();
 
@@ -158,6 +160,9 @@ export async function POST(request: NextRequest) {
         status: 404,
       });
     }
+
+    // Store the created auth user ID for potential cleanup
+    createdAuthUserId = data.user.id;
 
     // Make external API call to create customer
     let externalCustomerId: string | null = null;
@@ -330,6 +335,7 @@ export async function POST(request: NextRequest) {
     } catch (externalApiError) {
       console.error('❌ Error calling external API:', externalApiError);
       // Continue with user creation even if external API fails
+      // Note: We don't cleanup auth user here as PayMongo failure shouldn't prevent user creation
     }
     
     console.log('=== FINAL EXTERNAL CUSTOMER ID CHECK ===');
@@ -359,9 +365,29 @@ export async function POST(request: NextRequest) {
 
     if (userError) {
       console.error('❌ Database insert error:', userError);
-      return new Response(JSON.stringify({ error: 'Bad Request', message: userError.message }), {
-        status: 400,
-      });
+      
+      // Cleanup: Delete the auth user since we couldn't create the user profile
+      if (createdAuthUserId) {
+        try {
+          console.log('🧹 Cleaning up: Deleting auth user due to database error...');
+          const { error: deleteError } = await supabase.auth.admin.deleteUser(createdAuthUserId);
+          if (deleteError) {
+            console.error('❌ Failed to cleanup auth user:', deleteError);
+          } else {
+            console.log('✅ Auth user cleaned up successfully');
+          }
+        } catch (cleanupError) {
+          console.error('❌ Error during auth user cleanup:', cleanupError);
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'User Creation Failed', 
+          message: 'Failed to create user profile. Please try again.' 
+        }), 
+        { status: 500 }
+      );
     }
 
     console.log('✅ User created successfully in database:', user);
@@ -388,8 +414,28 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
+    console.error('❌ Unexpected error during user creation:', err);
+    
+    // If we have a created auth user, try to clean it up
+    if (createdAuthUserId) {
+      try {
+        console.log('🧹 Cleaning up auth user due to unexpected error...');
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(createdAuthUserId);
+        if (deleteError) {
+          console.error('❌ Failed to cleanup auth user:', deleteError);
+        } else {
+          console.log('✅ Auth user cleaned up successfully');
+        }
+      } catch (cleanupError) {
+        console.error('❌ Error during cleanup in catch block:', cleanupError);
+      }
+    }
+    
     return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
+      JSON.stringify({ 
+        error: 'Internal Server Error', 
+        message: 'An unexpected error occurred while creating the user. Please try again.' 
+      }),
       { status: 500 },
     );
   }
