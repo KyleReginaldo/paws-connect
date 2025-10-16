@@ -4,12 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect } from 'react';
+import OneSignal from 'react-onesignal';
 import community from '../../public/community.png';
 import fund from '../../public/fund.png';
 import pawslogo from '../../public/pawsconnectlogo.ico';
 import pet from '../../public/pet_management.png';
 import { useAuth } from './context/AuthContext';
+
 export default function HomePage() {
+  useEffect(() => {
+    // Ensure this code runs only on the client side
+    if (typeof window !== 'undefined') {
+      OneSignal.init({
+        appId: '323cc2fb-7bab-418b-954e-a578788499bd',
+      });
+    }
+  }, []);
   const { userId } = useAuth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
