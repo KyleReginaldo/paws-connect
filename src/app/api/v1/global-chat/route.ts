@@ -94,25 +94,39 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Process messages to fetch viewer details and format for frontend
-    const processedMessages = await Promise.all((messages || []).map(async (msg) => {
-      let viewerDetails: Array<{id: string, username: string, profile_image_link: string | null}> = [];
+    // Optimize: Batch fetch viewer details to avoid N+1 queries
+    const allViewerIds = new Set<string>();
+    (messages || []).forEach(msg => {
+      if (msg.viewers && Array.isArray(msg.viewers)) {
+        msg.viewers.forEach(id => allViewerIds.add(id));
+      }
+    });
+
+    // Batch fetch all viewer details
+    let viewersMap: Record<string, {id: string, username: string, profile_image_link: string | null}> = {};
+    if (allViewerIds.size > 0) {
+      const { data: viewers, error: viewersError } = await supabase
+        .from('users')
+        .select('id, username, profile_image_link')
+        .in('id', Array.from(allViewerIds));
       
-      if (msg.viewers && msg.viewers.length > 0) {
-        // Fetch viewer details
-        const { data: viewers, error: viewersError } = await supabase
-          .from('users')
-          .select('id, username, profile_image_link')
-          .in('id', msg.viewers);
-        
-        if (!viewersError && viewers) {
-          viewerDetails = viewers.map(viewer => ({
+      if (!viewersError && viewers) {
+        viewersMap = viewers.reduce((acc, viewer) => {
+          acc[viewer.id] = {
             id: viewer.id,
             username: viewer.username || 'Unknown User',
             profile_image_link: viewer.profile_image_link
-          }));
-        }
+          };
+          return acc;
+        }, {} as Record<string, {id: string, username: string, profile_image_link: string | null}>);
       }
+    }
+
+    // Process messages using cached viewer details
+    const processedMessages = (messages || []).map(msg => {
+      const viewerDetails = (msg.viewers || []).map((viewerId: string) => 
+        viewersMap[viewerId] || { id: viewerId, username: 'Unknown User', profile_image_link: null }
+      );
 
       return {
         id: msg.id,
@@ -129,7 +143,7 @@ export async function GET(request: NextRequest) {
             }
           : null,
       };
-    }));
+    });
 
     // Reverse to show oldest first for display
     const reversedMessages = processedMessages.reverse();
@@ -147,7 +161,8 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Cache-Control': 'private, max-age=3, stale-while-revalidate=5',
+          'Vary': 'Accept-Encoding',
         },
       },
     );

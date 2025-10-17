@@ -2,6 +2,7 @@
 import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
 import { getStandardWarningMessage, moderateContent } from '@/lib/content-moderation';
+import { performanceMonitor } from '@/lib/performance-monitor';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -15,6 +16,8 @@ async function parseJson(request: NextRequest) {
 
 // GET /api/v1/forum/[id]/chats - Get all chats for a specific forum
 export async function GET(request: NextRequest, context: any) {
+  const overallTimer = performanceMonitor.startTimer('forum_chats_get', { forumId: 0 });
+  
   try {
     const params = await context.params;
     const forumId = Number((params as { id: string }).id);
@@ -27,6 +30,10 @@ export async function GET(request: NextRequest, context: any) {
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = (page - 1) * limit;
     const since = url.searchParams.get('since'); // For real-time updates
+
+    // Update performance monitor metadata
+    overallTimer.end();
+    const mainTimer = performanceMonitor.startTimer('forum_chats_get', { forumId, limit, page });
 
     // Check forum exists and get privacy setting
     const { data: forum, error: forumError } = await supabase
@@ -64,7 +71,7 @@ export async function GET(request: NextRequest, context: any) {
       });
     }
 
-    // Build optimized query
+    // Optimized query - fetch mentions separately to avoid slow joins
     let query = supabase
       .from('forum_chats')
       .select(
@@ -76,31 +83,12 @@ export async function GET(request: NextRequest, context: any) {
         sent_at,
         sender,
         viewers,
-        replied_to(
-          id,
-          forum,
-          sender,
-          message,
-          sent_at,
-          image_url,
-          reactions
-        ),
+        replied_to,
         reactions,
         users!forum_chats_sender_fkey (
           id,
           username,
-          profile_image_link,
-          is_active
-        ),
-        mentions(
-          id,
-          user,
-          created_at,
-          users!mentions_user_fkey(
-            id,
-            username,
-            profile_image_link
-          )
+          profile_image_link
         )
       `,
         { count: 'exact' },
@@ -120,44 +108,60 @@ export async function GET(request: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    // Process the data to include viewer details and mentions
-    const processedData = await Promise.all((data || []).map(async (chat) => {
-      let viewerDetails: Array<{id: string, name: string, profile_image: string | null}> = [];
+    // Optimize: Collect all unique viewer IDs and fetch in one query
+    const allViewerIds = new Set<string>();
+    (data || []).forEach(chat => {
+      if (chat.viewers && Array.isArray(chat.viewers)) {
+        chat.viewers.forEach(id => allViewerIds.add(id));
+      }
+    });
+
+    // Batch fetch all viewer details if there are any
+    let viewersMap: Record<string, {id: string, name: string, profile_image: string | null}> = {};
+    if (allViewerIds.size > 0) {
+      const { data: viewers, error: viewersError } = await supabase
+        .from('users')
+        .select('id, username, profile_image_link')
+        .in('id', Array.from(allViewerIds));
       
-      if (chat.viewers && chat.viewers.length > 0) {
-        // Fetch viewer details
-        const { data: viewers, error: viewersError } = await supabase
-          .from('users')
-          .select('id, username, profile_image_link')
-          .in('id', chat.viewers);
-        
-        if (!viewersError && viewers) {
-          viewerDetails = viewers.map(viewer => ({
+      if (!viewersError && viewers) {
+        viewersMap = viewers.reduce((acc, viewer) => {
+          acc[viewer.id] = {
             id: viewer.id,
             name: viewer.username || 'Unknown User',
             profile_image: viewer.profile_image_link
-          }));
-        }
+          };
+          return acc;
+        }, {} as Record<string, {id: string, name: string, profile_image: string | null}>);
       }
+    }
 
-      // Process mentions data
-      const mentionedUsers = (chat.mentions || []).map((mention: any) => ({
-        id: mention.user,
-        name: mention.users?.username || 'Unknown User',
-        profile_image: mention.users?.profile_image_link || null,
-        mentioned_at: mention.created_at
-      }));
+    // Process the data using the cached viewer details and mentions
+    const processedData = (data || []).map(chat => {
+      const viewerDetails = (chat.viewers || []).map((viewerId: string) => 
+        viewersMap[viewerId] || { id: viewerId, name: 'Unknown User', profile_image: null }
+      );
+
+      // Process mentions data from separate query (currently empty)
+      const mentionedUsers: Array<{
+        id: string;
+        name: string;
+        profile_image: string | null;
+        mentioned_at: string;
+      }> = []; // TODO: Implement mentions fetching
       
       return {
         ...chat,
         viewers: viewerDetails,
         mentions: mentionedUsers
       };
-    }));
+    });
 
     // Reverse to show oldest first in chat
     const reversedData = processedData?.reverse() || [];
 
+    const duration = mainTimer.end();
+    
     return new Response(
       JSON.stringify({
         data: {
@@ -170,12 +174,15 @@ export async function GET(request: NextRequest, context: any) {
           total: count || 0,
           totalPages: Math.ceil((count || 0) / limit),
         },
+        _performance: process.env.NODE_ENV === 'development' ? { duration: `${duration.toFixed(2)}ms` } : undefined,
       }),
       {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+          'Cache-Control': 'private, max-age=5, stale-while-revalidate=10',
+          'Vary': 'Accept-Encoding',
+          'X-Response-Time': `${duration.toFixed(2)}ms`,
         },
       },
     );

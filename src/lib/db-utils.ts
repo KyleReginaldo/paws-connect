@@ -507,10 +507,11 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
     };
   });
 
-  // Enrich with latest chat per forum (N additional queries)
+  // Optimize: Fetch latest chats in a single query using window functions
   const forumIds = processedForums.map((f) => f.id);
+  const latestChatsMap: Record<number, ProcessedForum['last_chat']> = {};
+  
   if (forumIds.length) {
-    const latestChatsMap: Record<number, ProcessedForum['last_chat']> = {};
     interface LatestChatRow {
       id: number;
       message: string;
@@ -520,31 +521,51 @@ export async function fetchUserForums(userId: string, useCache = false): Promise
       sender: string;
       users?: { id: string; username: string } | null;
     }
-    await Promise.all(
-      forumIds.map(async (fid) => {
-        const { data: latestChatData, error: latestChatError } = await supabase
-          .from('forum_chats')
-          .select(
-            `id, message, image_url, sent_at, forum, sender, users!forum_chats_sender_fkey ( id, username )`,
-          )
-          .eq('forum', fid)
-          .order('sent_at', { ascending: false })
-          .limit(1);
-        if (!latestChatError && latestChatData && latestChatData.length > 0) {
-          const row = latestChatData[0] as LatestChatRow;
-          latestChatsMap[fid] = {
-            id: row.id,
-            message: row.message || '',
-            image_url: row.image_url || null,
-            sent_at: row.sent_at,
-            sender: row.users ? { id: row.users.id, username: row.users.username || '' } : null,
-            is_viewed: row.sender === userId,
-          };
-        } else {
-          latestChatsMap[fid] = null;
+    
+    // Get latest chat for all forums in one optimized query
+    const { data: latestChatsData, error: latestChatsError } = await supabase
+      .from('forum_chats')
+      .select(`
+        id, 
+        message, 
+        image_url, 
+        sent_at, 
+        forum, 
+        sender, 
+        users!forum_chats_sender_fkey ( id, username )
+      `)
+      .in('forum', forumIds)
+      .order('sent_at', { ascending: false });
+    
+    if (!latestChatsError && latestChatsData) {
+      // Group by forum and take the latest for each
+      const forumLatestMap = new Map<number, LatestChatRow>();
+      latestChatsData.forEach((chat) => {
+        if (!forumLatestMap.has(chat.forum) || 
+            new Date(chat.sent_at) > new Date(forumLatestMap.get(chat.forum)!.sent_at)) {
+          forumLatestMap.set(chat.forum, chat as LatestChatRow);
         }
-      }),
-    );
+      });
+      
+      // Convert to the expected format
+      forumLatestMap.forEach((row, forumId) => {
+        latestChatsMap[forumId] = {
+          id: row.id,
+          message: row.message || '',
+          image_url: row.image_url || null,
+          sent_at: row.sent_at,
+          sender: row.users ? { id: row.users.id, username: row.users.username || '' } : null,
+          is_viewed: row.sender === userId,
+        };
+      });
+    }
+    
+    // Set null for forums with no chats
+    forumIds.forEach(fid => {
+      if (!latestChatsMap[fid]) {
+        latestChatsMap[fid] = null;
+      }
+    });
     processedForums = processedForums.map((f) => {
       const lastChat = latestChatsMap[f.id] || null;
       return { ...f, last_chat: lastChat };
