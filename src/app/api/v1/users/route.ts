@@ -393,10 +393,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ User created successfully in database:', user);
     console.log('🆔 Saved paymongo_id:', user.paymongo_id);
 
-    // Add user to global forum if they are SEMI_VERIFIED or FULLY_VERIFIED
-    if (user.status === 'SEMI_VERIFIED' || user.status === 'FULLY_VERIFIED') {
-      console.log(`🌍 User status is ${user.status}, adding to global forum...`);
-      try {
+    try {
         const addedToForum = await addUserToGlobalForum(user.id);
         if (addedToForum) {
           console.log('✅ User successfully added to global forum');
@@ -407,7 +404,6 @@ export async function POST(request: NextRequest) {
         console.error('❌ Error adding user to global forum:', forumError);
         // Continue with user creation even if forum addition fails
       }
-    }
 
     return new Response(JSON.stringify({ message: 'User created successfully', data: user }), {
       status: 201,
