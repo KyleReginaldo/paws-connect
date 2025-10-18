@@ -2,16 +2,7 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { EventsProvider } from '@/app/context/EventsContext';
 import RouteGuard from '@/components/RouteGuard';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+// Removed sign-out alert dialog; sign-out now lives on the Settings page
 import {
   Sidebar,
   SidebarContent,
@@ -26,11 +17,19 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Calendar, Dog, HandCoins, Heart, LayoutDashboard, LogOut, UsersRound } from 'lucide-react';
+import {
+  Calendar,
+  Dog,
+  HandCoins,
+  Heart,
+  LayoutDashboard,
+  Settings,
+  UsersRound,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import logoHorizontal from '../../../../public/logo_horizontal.png';
 import playstore from '../../../../public/playstore.png';
 import Pending from './pending/page';
@@ -47,29 +46,7 @@ const menuItems = [
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   // const router = useRouter();
-  const { signOut, user } = useAuth();
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-
-  const handleLogout = async () => {
-    setShowLogoutDialog(false);
-
-    try {
-      console.log('Logout initiated from admin layout');
-
-      // Call the signOut function from AuthContext
-      await signOut();
-
-      console.log('Logout completed from admin layout');
-    } catch (error) {
-      console.error('Error during logout:', error);
-
-      // Force hard redirect if signOut fails
-      if (typeof window !== 'undefined') {
-        console.log('Forcing redirect due to logout error');
-        window.location.href = '/auth/signin';
-      }
-    }
-  };
+  const { user } = useAuth();
 
   const getTitle = () => {
     switch (pathname) {
@@ -85,6 +62,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         return 'Manage Events';
       case '/fundraising':
         return 'Fundraising';
+      case '/settings':
+        return 'Settings';
       default:
         return '';
     }
@@ -104,6 +83,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         return 'Create and manage community events and posts';
       case '/fundraising':
         return 'Oversee fundraising campaigns and donations';
+      case '/settings':
+        return 'Update your profile and password';
       default:
         return '';
     }
@@ -163,37 +144,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 </SidebarGroup>
               </SidebarContent>
               <SidebarFooter className="p-4 bg-slate-900 border-t border-slate-700">
-                <div className="space-y-2">
-                  <div className="group-data-[collapsible=icon]:hidden">
-                    <div className="flex items-center space-x-3 px-3 py-2 rounded-lg bg-slate-800/50">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-[#FE5D26] rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-semibold">
-                            {user?.username?.charAt(0).toUpperCase() || 'A'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
-                          {user?.username || 'Admin'}
-                        </p>
-                        <p className="text-xs text-slate-400 truncate">Administrator</p>
-                      </div>
-                    </div>
-                  </div>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        onClick={() => setShowLogoutDialog(true)}
-                        className="text-white hover:bg-red-500/20 hover:text-red-300 border border-slate-700 hover:border-red-500/50 transition-all duration-200 bg-slate-800/30"
-                        tooltip="Logout"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </div>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className="text-white hover:bg-[#FE5D26] hover:text-white border border-slate-700 hover:border-[#FE5D26] transition-all duration-200 bg-slate-800/30"
+                      tooltip="Settings"
+                    >
+                      <Link href="/settings" prefetch>
+                        <Settings className="h-4 w-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
               </SidebarFooter>
             </Sidebar>
             <SidebarInset className="flex-1 flex flex-col min-w-0">
@@ -221,26 +185,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </div>
         </SidebarProvider>
 
-        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Sign Out</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to sign out? You&apos;ll need to log in again to access the
-                admin panel.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Sign Out
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/** Sign out dialog removed; sign out is available within Settings page */}
       </EventsProvider>
     </RouteGuard>
   );

@@ -20,6 +20,7 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
       pathname?.startsWith('/adoptions') ||
       pathname?.startsWith('/manage-') ||
       pathname?.startsWith('/fundraising') ||
+      pathname?.startsWith('/settings') ||
       false;
 
     // Only redirect if user is trying to access admin pages without authentication

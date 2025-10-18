@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setStatus(AuthStatus.authenticating);
       setError(undefined);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -59,17 +59,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // After successful authentication, check user's role
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        // Fetch user details to check role
+      if (data?.user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', data.user.id)
           .single();
 
         if (userError || !userData) {
@@ -81,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Check if user has admin (1) or staff (2) role
-        if (userData.role !== 1 && userData.role !== 2) {
+        if (userData.role !== 1) {
           console.error('Invalid user role:', userData.role);
           // Sign out users with role 3 or other roles
           await supabase.auth.signOut();
@@ -89,9 +83,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setError('Access denied. Only admin and staff members can sign in.');
           return;
         }
-
         // User has valid role, proceed with authentication
-        setUserId(session.user.id);
+        setUserId(data.user.id);
         setUserRole(userData.role);
         setUser(userData as User);
         setStatus(AuthStatus.authenticated);
@@ -137,13 +130,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Signing out user...');
 
-      // Clear local state first to ensure UI updates immediately
       setUserId(null);
       setUserRole(null);
       setUser(null);
       setStatus(AuthStatus.unauthenticated);
       setError(undefined);
-
       // Sign out from Supabase with scope 'global' to clear all sessions
       const { error } = await supabase.auth.signOut({ scope: 'global' });
 
