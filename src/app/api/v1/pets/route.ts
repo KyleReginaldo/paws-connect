@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     }
 
     if (gender) {
-      query = query.ilike('gender', `%${gender}%`);
+      query = query.eq('gender', gender);
     }
 
     if (size) {
