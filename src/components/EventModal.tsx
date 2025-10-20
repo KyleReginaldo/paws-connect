@@ -3,6 +3,7 @@
 import { useAuth } from '@/app/context/AuthContext';
 import { Event } from '@/app/context/EventsContext';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +13,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X } from 'lucide-react';
+import { CalendarIcon, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
@@ -29,7 +31,7 @@ interface EventModalProps {
       created_by?: string | null;
     },
     imageFiles?: File[],
-  ) => void;
+  ) => Promise<void>;
   editingEvent?: Event | null;
 }
 
@@ -51,19 +53,47 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploadError, setUploadError] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [startingDate, setStartingDate] = useState<Date | undefined>(undefined);
+  const [startingTime, setStartingTime] = useState<string>('');
+
+  // Helper: minimum selectable date is today + 3 days (local)
+  const getMinEventDate = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
+  };
 
   // Reset form when modal opens/closes or when editingEvent changes
   useEffect(() => {
     if (open) {
       if (editingEvent) {
         console.log('Setting up form for editing event:', editingEvent);
+        // Parse and set date/time with local components
+        let nextStartingDate = '';
+        let nextTime = '';
+        let dateObj: Date | undefined = undefined;
+        if (editingEvent.starting_date) {
+          const d = new Date(editingEvent.starting_date);
+          if (!isNaN(d.getTime())) {
+            dateObj = d;
+            const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+            const yyyy = d.getFullYear();
+            const mm = pad(d.getMonth() + 1);
+            const dd = pad(d.getDate());
+            const hh = pad(d.getHours());
+            const mi = pad(d.getMinutes());
+            nextStartingDate = `${yyyy}-${mm}-${dd}`;
+            nextTime = `${hh}:${mi}`;
+          }
+        }
+        setStartingDate(dateObj);
+        setStartingTime(nextTime);
         setFormData({
           title: editingEvent.title || '',
           description: editingEvent.description || '',
-          starting_date: editingEvent.starting_date
-            ? new Date(editingEvent.starting_date).toISOString().slice(0, 16)
-            : '',
+          starting_date: nextStartingDate && nextTime ? `${nextStartingDate}T${nextTime}` : '',
           images: editingEvent.images || [],
         });
         // Don't set existing images to imagePreviews - they're handled via formData.images
@@ -81,6 +111,8 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
           starting_date: '',
           images: [],
         });
+        setStartingDate(undefined);
+        setStartingTime('');
         setImagePreviews([]);
         setImageFiles([]); // Clear files for new event
       }
@@ -186,23 +218,54 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
     return titleLength >= 10 && descriptionLength >= 50;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateForm() || isSubmitting) {
       return;
+    }
+
+    // Normalize starting_date to ISO string (UTC) if provided
+    let startingISO: string | null = null;
+    if (formData.starting_date) {
+      const parsed = new Date(formData.starting_date);
+      if (!isNaN(parsed.getTime())) {
+        startingISO = parsed.toISOString();
+      }
     }
 
     const eventData = {
       title: formData.title.trim(),
       description: formData.description.trim() || null,
-      starting_date: formData.starting_date || null,
+      starting_date: startingISO,
       images: formData.images, // Always send existing images (will be empty array for new events)
       created_by: userId || null,
     };
 
-    onSubmit(eventData, imageFiles);
-    onOpenChange(false);
+    // Validate starting_date against minimum
+    if (eventData.starting_date) {
+      const selected = new Date(eventData.starting_date);
+      const minDate = getMinEventDate();
+      if (!isNaN(selected.getTime()) && selected < minDate) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          starting_date: `Event date must be at least ${minDate.toLocaleDateString()} or later (min 3 days from today)`,
+        }));
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(eventData, imageFiles);
+      onOpenChange(false);
+    } catch (err) {
+      console.error('Failed to submit event:', err);
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save event');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -260,19 +323,86 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
             />
           </div>
 
-          {/* Starting Date */}
+          {/* Starting Date & Time */}
           <div className="space-y-2">
-            <Label htmlFor="starting_date">Event Starting Date</Label>
-            <Input
-              id="starting_date"
-              type="datetime-local"
-              value={formData.starting_date}
-              onChange={(e) => handleInputChange('starting_date', e.target.value)}
-              className="text-sm"
-            />
+            <Label>Event Starting Date & Time</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="default"
+                    type="button"
+                    className="w-full justify-start text-left font-normal bg-transparent"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startingDate ? startingDate.toLocaleDateString() : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startingDate}
+                    onSelect={(date) => {
+                      setStartingDate(date || undefined);
+                      if (date) {
+                        const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+                        const y = date.getFullYear();
+                        const m = pad(date.getMonth() + 1);
+                        const d = pad(date.getDate());
+                        const time = startingTime || '00:00';
+                        handleInputChange('starting_date', `${y}-${m}-${d}T${time}`);
+                        // Clear any previous date validation message
+                        if (validationErrors.starting_date) {
+                          setValidationErrors((prev) => ({ ...prev, starting_date: '' }));
+                        }
+                      } else {
+                        setStartingTime('');
+                        handleInputChange('starting_date', '');
+                      }
+                    }}
+                    disabled={(date) => {
+                      if (!date) return false;
+                      const minDate = getMinEventDate();
+                      // Disable dates before min (today + 3 days)
+                      return date < minDate;
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                value={startingTime}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setStartingTime(val);
+                  if (startingDate && val) {
+                    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+                    const y = startingDate.getFullYear();
+                    const m = pad(startingDate.getMonth() + 1);
+                    const d = pad(startingDate.getDate());
+                    handleInputChange('starting_date', `${y}-${m}-${d}T${val}`);
+                    // Clear any previous date validation message
+                    if (validationErrors.starting_date) {
+                      setValidationErrors((prev) => ({ ...prev, starting_date: '' }));
+                    }
+                  } else if (!val) {
+                    // If time cleared, clear datetime unless we want date-only
+                    handleInputChange('starting_date', '');
+                  }
+                }}
+                className="w-[140px]"
+                disabled={!startingDate}
+              />
+            </div>
             <p className="text-xs text-gray-500">
-              Optional: Set when the event will start. Leave empty if not applicable.
+              Optional: Choose a date and time. Minimum date is{' '}
+              {getMinEventDate().toLocaleDateString()} (3 days from today).
             </p>
+            {validationErrors.starting_date && (
+              <p className="text-xs text-red-600">{validationErrors.starting_date}</p>
+            )}
           </div>
 
           {/* AI Suggestion Reminder */}
@@ -442,11 +572,26 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
             {uploadError && <p className="text-sm text-red-500">{uploadError}</p>}
           </div>
 
+          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit">{editingEvent ? 'Update Event' : 'Create Event'}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? editingEvent
+                  ? 'Updating...'
+                  : 'Creating...'
+                : editingEvent
+                  ? 'Update Event'
+                  : 'Create Event'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

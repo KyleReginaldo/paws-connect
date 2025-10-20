@@ -372,11 +372,11 @@ const AdoptionPage = () => {
                               <span className="font-medium text-gray-900">{petData.breed}</span>
                             </div>
                           )}
-                          {petData.age && (
+                          {typeof petData.age === 'number' && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">Age</span>
                               <span className="font-medium text-gray-900">
-                                {petData.age} years old
+                                {petData.age} year{petData.age === 1 ? '' : 's'} old
                               </span>
                             </div>
                           )}

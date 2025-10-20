@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableFilter, TableFilters } from '@/components/ui/table-filters';
+import { getPetAgeLabel } from '@/lib/pet-age';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Pet } from '../config/types/pet';
@@ -318,7 +319,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                   <TableCell>{pet.type}</TableCell>
                   <TableCell>{pet.breed}</TableCell>
                   <TableCell>{pet.gender}</TableCell>
-                  <TableCell>{pet.age} years old</TableCell>
+                  <TableCell>{getPetAgeLabel(pet.date_of_birth, pet.age)}</TableCell>
                   <TableCell>{pet.size}</TableCell>
                   <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
                   <TableCell>

@@ -1,5 +1,26 @@
 'use client';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+
+// Type guards and helpers for unknown JSON (module-scoped to keep stable identities)
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+
+const extractMessage = (json: unknown, text: string | null, fallback: string): string => {
+  if (isRecord(json)) {
+    const m = json['message'];
+    const e = json['error'];
+    if (typeof m === 'string' && m.trim()) return m;
+    if (typeof e === 'string' && e.trim()) return e;
+  }
+  return text || fallback;
+};
+
+const extractData = <T,>(json: unknown): T | null => {
+  if (isRecord(json) && 'data' in json) {
+    const d = (json as Record<string, unknown>)['data'];
+    return d as T;
+  }
+  return (json as T) ?? null;
+};
 
 export interface Event {
   id: number;
@@ -62,24 +83,57 @@ export function EventsProvider({ children }: EventsProviderProps) {
   const [events, setEvents] = useState<Event[] | null>(null);
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
-  const fetchEvents = async () => {
+  // Safely read a fetch Response as text and try to parse JSON without causing SyntaxError
+  const readResponse = async (
+    response: Response,
+  ): Promise<{ ok: boolean; json: unknown | null; text: string | null }> => {
+    try {
+      const contentType = response.headers.get('content-type') || '';
+      const text = await response.text();
+      let json: unknown | null = null;
+      if (text) {
+        if (contentType.includes('application/json')) {
+          try {
+            json = JSON.parse(text);
+          } catch {
+            json = null;
+          }
+        } else {
+          // Try parsing anyway in case server forgot content-type
+          try {
+            json = JSON.parse(text);
+          } catch {
+            json = null;
+          }
+        }
+      }
+      return { ok: response.ok, json, text: text || null };
+    } catch {
+      return { ok: response.ok, json: null, text: null };
+    }
+  };
+
+  const fetchEvents = useCallback(async () => {
     try {
       setStatus('loading');
       const response = await fetch('/api/v1/events?limit=100');
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch events');
+      const { ok, json, text } = await readResponse(response);
+      if (!ok) {
+        const message = extractMessage(json, text, 'Failed to fetch events');
+        throw new Error(message);
       }
-
-      const result = await response.json();
-      setEvents(result.data || []);
+      if (!isRecord(json)) {
+        throw new Error('Invalid server response');
+      }
+      const data = extractData<Event[]>(json) || [];
+      setEvents(Array.isArray(data) ? data : []);
       setStatus('success');
     } catch (error) {
       console.error('Error fetching events:', error);
       setStatus('error');
       setEvents([]);
     }
-  };
+  }, []);
 
   const addEvent = async (eventData: CreateEventDto | FormData): Promise<Event | null> => {
     try {
@@ -104,13 +158,12 @@ export function EventsProvider({ children }: EventsProviderProps) {
         });
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create event');
+      const { ok, json, text } = await readResponse(response);
+      if (!ok) {
+        const message = extractMessage(json, text, 'Failed to create event');
+        throw new Error(message);
       }
-
-      const result = await response.json();
-      const newEvent = result.data;
+      const newEvent = extractData<Event>(json) as Event;
 
       setEvents((prevEvents) => {
         if (!prevEvents) return [newEvent];
@@ -150,13 +203,12 @@ export function EventsProvider({ children }: EventsProviderProps) {
         });
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update event');
+      const { ok, json, text } = await readResponse(response);
+      if (!ok) {
+        const message = extractMessage(json, text, 'Failed to update event');
+        throw new Error(message);
       }
-
-      const result = await response.json();
-      const updatedEvent = result.data;
+      const updatedEvent = extractData<Event>(json) as Event;
 
       setEvents((prevEvents) => {
         if (!prevEvents) return null;
@@ -177,8 +229,9 @@ export function EventsProvider({ children }: EventsProviderProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete event');
+        const { json, text } = await readResponse(response);
+        const message = extractMessage(json, text, 'Failed to delete event');
+        throw new Error(message);
       }
 
       setEvents((prevEvents) => {
@@ -207,13 +260,12 @@ export function EventsProvider({ children }: EventsProviderProps) {
         body: JSON.stringify({ ended_by: endedBy }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to end event');
+      const { ok, json, text } = await readResponse(response);
+      if (!ok) {
+        const message = extractMessage(json, text, 'Failed to end event');
+        throw new Error(message);
       }
-
-      const result = await response.json();
-      const updatedEvent = result.data;
+      const updatedEvent = extractData<Event>(json) as Event;
 
       setEvents((prevEvents) => {
         if (!prevEvents) return null;
@@ -237,13 +289,12 @@ export function EventsProvider({ children }: EventsProviderProps) {
         body: JSON.stringify({ reopened_by: reopenedBy }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to reopen event');
+      const { ok, json, text } = await readResponse(response);
+      if (!ok) {
+        const message = extractMessage(json, text, 'Failed to reopen event');
+        throw new Error(message);
       }
-
-      const result = await response.json();
-      const updatedEvent = result.data;
+      const updatedEvent = extractData<Event>(json) as Event;
 
       setEvents((prevEvents) => {
         if (!prevEvents) return null;
@@ -259,7 +310,7 @@ export function EventsProvider({ children }: EventsProviderProps) {
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
   const value: EventsContextType = {
     events,

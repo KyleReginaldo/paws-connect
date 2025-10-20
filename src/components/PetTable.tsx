@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { getPetAgeLabel } from '@/lib/pet-age';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import type { Pet } from '../config/types/pet';
 import { HappinessImageDisplay } from './HappinessImageDisplay';
@@ -116,7 +117,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
               <TableCell>{pet.type}</TableCell>
               <TableCell>{pet.breed}</TableCell>
               <TableCell>{pet.gender}</TableCell>
-              <TableCell>{pet.age} years old</TableCell>
+              <TableCell>{getPetAgeLabel(pet.date_of_birth, pet.age)}</TableCell>
               <TableCell>
                 {pet.size}
                 {/* <div className="text-sm text-muted-foreground">

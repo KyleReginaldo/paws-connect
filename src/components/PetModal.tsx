@@ -24,7 +24,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pet } from '@/config/types/pet';
-import { CalendarIcon, HelpCircle, Info, Upload } from 'lucide-react';
+import { HelpCircle, Info, Upload } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
@@ -65,7 +65,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     color: '',
     breed: '',
     gender: '',
-    age: 1,
+    age: 0,
     date_of_birth: '',
     size: '',
     weight: '',
@@ -162,6 +162,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     }
 
     // Age and date of birth validation
+    // Age is derived from date_of_birth; no manual input needed. Keep a soft check for mismatches.
     if (formData.date_of_birth && formData.age !== undefined) {
       const validation = validateAgeAndBirth(formData.age, formData.date_of_birth);
       if (!validation.isValid && validation.message) {
@@ -330,28 +331,52 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return '';
   };
 
-  // Calculate age from date of birth
+  // Calculate age metrics from date of birth
   const calculateAgeFromBirth = (birthDate: string): number => {
     if (!birthDate) return 0;
-
     try {
       const birth = new Date(birthDate);
       const today = new Date();
-
       if (isNaN(birth.getTime())) return 0;
-
       let age = today.getFullYear() - birth.getFullYear();
       const monthDiff = today.getMonth() - birth.getMonth();
-
-      // If birthday hasn't occurred this year yet, subtract 1
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
         age--;
       }
-
       return Math.max(0, age);
     } catch {
       return 0;
     }
+  };
+
+  // Helper: get age in months for display if less than 1 year
+  const getAgeInMonths = (birthDate: string): number => {
+    if (!birthDate) return 0;
+    const birth = new Date(birthDate);
+    const today = new Date();
+    if (isNaN(birth.getTime())) return 0;
+    let months = (today.getFullYear() - birth.getFullYear()) * 12;
+    months += today.getMonth() - birth.getMonth();
+    if (today.getDate() < birth.getDate()) {
+      months -= 1;
+    }
+    return Math.max(0, months);
+  };
+
+  // Helper to format human-readable age label
+  const getAgeLabel = (birthDate: string, fallbackAge?: number): string => {
+    if (birthDate) {
+      const years = calculateAgeFromBirth(birthDate);
+      if (years >= 1) {
+        return `${years} year${years === 1 ? '' : 's'} old`;
+      }
+      const months = getAgeInMonths(birthDate);
+      return `${months} month${months === 1 ? '' : 's'} old`;
+    }
+    if (typeof fallbackAge === 'number') {
+      return `${fallbackAge} year${fallbackAge === 1 ? '' : 's'} old`;
+    }
+    return '';
   };
 
   // Validate if age matches date of birth
@@ -364,13 +389,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     }
 
     const calculatedAge = calculateAgeFromBirth(birthDate);
-
-    if (calculatedAge === 0 && birthDate) {
-      return {
-        isValid: false,
-        message: 'Invalid date of birth',
-      };
-    }
 
     if (age !== calculatedAge) {
       return {
@@ -438,12 +456,18 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       }
       console.log('🗓️ Formatted date for input:', formattedDate);
 
+      // If there is a DOB, compute an age to keep consistency
+      const computedAge = formattedDate
+        ? calculateAgeFromBirth(formattedDate)
+        : typeof editingPet.age === 'number'
+          ? editingPet.age
+          : 0;
       setFormData({
         name: editingPet.name || '',
         type: editingPet.type || '',
         breed: editingPet.breed || '',
         gender: editingPet.gender || '',
-        age: editingPet.age && editingPet.age > 0 ? editingPet.age : 1,
+        age: computedAge,
         date_of_birth: formattedDate,
         size: editingPet.size || '',
         weight: editingPet.weight || '',
@@ -479,7 +503,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         color: '',
         breed: '',
         gender: '',
-        age: 1,
+        age: 0,
         date_of_birth: '',
         size: '',
         weight: '',
@@ -542,12 +566,17 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     setUploadError(''); // Clear any previous errors
 
     // Ensure all required fields are present and normalized
+    // Compute age from DOB to ensure consistency with displayed label
+    const computedAgeForSubmit = formData.date_of_birth
+      ? calculateAgeFromBirth(formData.date_of_birth)
+      : formData.age || 0;
+
     const petData = {
       name: formData.name,
       type: formData.type,
       breed: formData.breed,
       gender: formData.gender,
-      age: formData.age || 1,
+      age: computedAgeForSubmit,
       date_of_birth: birthDate ? birthDate.toISOString().split('T')[0] : formData.date_of_birth,
       size: formData.size,
       weight: formData.weight
@@ -990,35 +1019,14 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
             <div className="space-y-2">
               <Label>Date of Birth</Label>
               <div className="flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    type="date"
-                    value={formData.date_of_birth}
-                    onChange={(e) => {
-                      handleInputChange('date_of_birth', e.target.value);
-                      if (e.target.value) {
-                        setBirthDate(new Date(e.target.value));
-
-                        // Auto-calculate and set age based on birth date
-                        const calculatedAge = calculateAgeFromBirth(e.target.value);
-                        handleInputChange('age', calculatedAge);
-
-                        // Clear any age validation errors since we're auto-setting
-                        setValidationErrors((prev) => ({ ...prev, age: '' }));
-                      } else {
-                        setBirthDate(undefined);
-                      }
-                    }}
-                    max={new Date().toISOString().split('T')[0]}
-                    min="1900-01-01"
-                    placeholder="YYYY-MM-DD"
-                    className={validationErrors.date_of_birth ? 'border-red-500' : ''}
-                  />
-                </div>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="shrink-0" type="button">
-                      <CalendarIcon className="h-4 w-4" />
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="w-full justify-start text-left font-normal bg-transparent"
+                    >
+                      {birthDate ? birthDate.toLocaleDateString() : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1042,52 +1050,30 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                         }
                       }}
                       disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
               </div>
+              <p className="text-xs text-gray-500">Future dates are not allowed.</p>
               {validationErrors.date_of_birth && (
                 <p className="text-sm text-red-500">{validationErrors.date_of_birth}</p>
               )}
             </div>
 
-            {/* Age */}
+            {/* Age - read-only label computed from DOB or fallback */}
             <div className="space-y-2">
-              <Label htmlFor="age">Age (Calendar year)</Label>
+              <Label htmlFor="age">Age</Label>
               <Input
                 id="age"
-                type="number"
-                min={0}
-                step={1}
-                value={formData.age}
-                onChange={(e) => {
-                  const raw = Number(e.target.value);
-                  const val = Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0;
-                  handleInputChange('age', val);
-
-                  // Validate age against date of birth
-                  if (formData.date_of_birth) {
-                    const validation = validateAgeAndBirth(val, formData.date_of_birth);
-                    if (!validation.isValid && validation.message) {
-                      setValidationErrors((prev) => ({ ...prev, age: validation.message! }));
-                    } else {
-                      setValidationErrors((prev) => ({ ...prev, age: '' }));
-                    }
-                  } else {
-                    // Clear validation error if no birth date
-                    setValidationErrors((prev) => ({ ...prev, age: '' }));
-                  }
-                }}
-                className={validationErrors.age ? 'border-red-500' : ''}
+                value={getAgeLabel(formData.date_of_birth, formData.age)}
+                readOnly
+                className="bg-muted"
               />
               {validationErrors.age && (
                 <p className="text-sm text-red-500">{validationErrors.age}</p>
               )}
               {formData.date_of_birth && (
-                <p className="text-xs text-muted-foreground">
-                  Calculated age: {calculateAgeFromBirth(formData.date_of_birth)} years
-                </p>
+                <p className="text-xs text-muted-foreground">Based on the selected date of birth</p>
               )}
             </div>
 
@@ -1110,6 +1096,23 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                   <SelectItem value="Special Care Needed">Special Care Needed</SelectItem>
                   <SelectItem value="Injured">Injured</SelectItem>
                   <SelectItem value="Unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Vaccination Status */}
+            <div className="space-y-2">
+              <Label htmlFor="is_vaccinated">Vaccination Status</Label>
+              <Select
+                value={formData.is_vaccinated ? 'yes' : 'no'}
+                onValueChange={(value) => handleInputChange('is_vaccinated', value === 'yes')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vaccination status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Vaccinated</SelectItem>
+                  <SelectItem value="no">Not Vaccinated</SelectItem>
                 </SelectContent>
               </Select>
             </div>

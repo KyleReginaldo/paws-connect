@@ -69,7 +69,11 @@ const ManageEvents = () => {
           formData.append('created_by', eventData.created_by);
         }
         if (eventData.starting_date) {
-          formData.append('starting_date', eventData.starting_date);
+          const d = new Date(eventData.starting_date);
+          formData.append(
+            'starting_date',
+            !isNaN(d.getTime()) ? d.toISOString() : eventData.starting_date,
+          );
         }
 
         // Add existing images (for updates)
@@ -97,10 +101,22 @@ const ManageEvents = () => {
         // Use traditional JSON submission when no files
         console.log('🚀 Submitting event via JSON (no files)');
         if (editingEvent) {
-          await updateEvent(editingEvent.id, eventData);
+          const normalized = {
+            ...eventData,
+            starting_date: eventData.starting_date
+              ? new Date(eventData.starting_date).toISOString()
+              : null,
+          };
+          await updateEvent(editingEvent.id, normalized);
           success('Event updated successfully!');
         } else {
-          await addEvent(eventData);
+          const normalized = {
+            ...eventData,
+            starting_date: eventData.starting_date
+              ? new Date(eventData.starting_date).toISOString()
+              : null,
+          };
+          await addEvent(normalized);
           success('Event created successfully!');
         }
       }
