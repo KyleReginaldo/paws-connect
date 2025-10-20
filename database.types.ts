@@ -669,7 +669,7 @@ export type Database = {
       pets: {
         Row: {
           added_by: string | null
-          age: number | null
+          age: string | null
           breed: string | null
           color: string | null
           created_at: string
@@ -693,7 +693,7 @@ export type Database = {
         }
         Insert: {
           added_by?: string | null
-          age?: number | null
+          age?: string | null
           breed?: string | null
           color?: string | null
           created_at?: string
@@ -717,7 +717,7 @@ export type Database = {
         }
         Update: {
           added_by?: string | null
-          age?: number | null
+          age?: string | null
           breed?: string | null
           color?: string | null
           created_at?: string

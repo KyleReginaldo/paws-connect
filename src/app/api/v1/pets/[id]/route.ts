@@ -39,7 +39,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
     type?: string;
     breed?: string;
     gender?: string;
-    age?: number;
+  age?: string;
     date_of_birth?: string;
     size?: string;
     weight?: string;
@@ -140,7 +140,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
       type: fd.get('type') as string,
       breed: fd.get('breed') as string,
       gender: fd.get('gender') as string,
-      age: parseInt(fd.get('age') as string) || undefined,
+  age: (fd.get('age') as string) ?? undefined,
       date_of_birth: fd.get('date_of_birth') as string,
       size: fd.get('size') as string,
       weight: fd.get('weight') as string,
@@ -164,7 +164,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
         cleanedData[key] = value;
       }
     });
-    petUpdateData = cleanedData;
+    petUpdateData = cleanedData as unknown as typeof petUpdateData;
     
   } else {
     console.log('📝 Processing JSON request');
