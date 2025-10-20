@@ -108,6 +108,7 @@ export const FORUM_SELECT_FIELDS = `
   created_at,
   updated_at,
   created_by,
+  forum_image_url,
   private,
   users!forum_created_by_fkey (
     id,
@@ -122,6 +123,7 @@ export const FORUM_WITH_MEMBERS_SELECT_FIELDS = `
   updated_at,
   created_by,
   private,
+  forum_image_url,
   users!forum_created_by_fkey (
     id,
     username
@@ -148,6 +150,7 @@ export interface ForumWithMembers {
   updated_at: string;
   created_by: string | null;
   private: boolean | null;
+  forum_image_url: string | null;
   users?: {
     id: string;
     username: string;
@@ -173,6 +176,7 @@ export interface ProcessedForum {
   updated_at: string;
   created_by: string | null;
   private: boolean | null;
+  forum_image_url: string | null;
   users?: {
     id: string;
     username: string;
@@ -212,6 +216,7 @@ export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum
     profile_image_link: member.users?.profile_image_link || null,
     joined_at: member.created_at,
     mute: member.mute,
+
     invitation_status: member.invitation_status,
   }));
 
@@ -226,6 +231,7 @@ export function processForumWithMembers(forum: ForumWithMembers): ProcessedForum
     created_at: forum.created_at,
     updated_at: forum.updated_at,
     created_by: forum.created_by,
+    forum_image_url: forum.forum_image_url,
     private: forum.private,
     users: forum.users,
     members: flattenedMembers,

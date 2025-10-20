@@ -56,6 +56,7 @@ export async function PUT(request: NextRequest, context: any) {
           .max(100, 'Forum name too long')
           .optional(),
         updated_at: z.string().optional(),
+        forum_image_url: z.url('Invalid image. please try again later').optional(),
       })
       .strict();
 
