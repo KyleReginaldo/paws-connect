@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableFilter, TableFilters } from '@/components/ui/table-filters';
-import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Edit, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Pet } from '../config/types/pet';
 import { HappinessImageDisplay } from './HappinessImageDisplay';
@@ -332,26 +332,31 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                   </TableCell>
                   <TableCell>{pet.health_status || 'Unknown'}</TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEdit?.(pet)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => onDelete?.(pet.id)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-[8px] items-center mr-4">
+                      <a href={`/manage-pet/${pet.id}`}>
+                        <Eye size={20} />
+                      </a>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEdit?.(pet)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => onDelete?.(pet.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

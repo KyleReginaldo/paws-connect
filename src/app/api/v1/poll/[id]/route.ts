@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const pollId = Number(id);
-
+    
     if (Number.isNaN(pollId)) {
         return new Response(
             JSON.stringify({ error: "Invalid poll ID" }),

@@ -134,7 +134,6 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                 {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}
               </TableCell>
               <TableCell>{pet.health_status || 'Unknown'}</TableCell>
-
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
