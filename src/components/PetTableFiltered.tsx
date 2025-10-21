@@ -306,7 +306,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                         )}
                       </div>
                       <div>
-                        <div className="font-medium">{pet.name}</div>
+                        <div className="font-medium">{pet.name ? pet.name : 'No name'}</div>
                         {pet.adopted && (
                           <div className="text-xs text-green-600 font-medium">
                             ✨ Adopted & Happy

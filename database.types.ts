@@ -682,7 +682,7 @@ export type Database = {
           is_spayed_or_neutured: boolean | null
           is_trained: boolean | null
           is_vaccinated: boolean | null
-          name: string
+          name: string | null
           photos: string[] | null
           request_status: string | null
           rescue_address: string | null
@@ -706,7 +706,7 @@ export type Database = {
           is_spayed_or_neutured?: boolean | null
           is_trained?: boolean | null
           is_vaccinated?: boolean | null
-          name: string
+          name?: string | null
           photos?: string[] | null
           request_status?: string | null
           rescue_address?: string | null
@@ -730,7 +730,7 @@ export type Database = {
           is_spayed_or_neutured?: boolean | null
           is_trained?: boolean | null
           is_vaccinated?: boolean | null
-          name?: string
+          name?: string | null
           photos?: string[] | null
           request_status?: string | null
           rescue_address?: string | null
@@ -745,6 +745,48 @@ export type Database = {
             columns: ["added_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          pet: number | null
+          suggested_name: string | null
+          votes: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          pet?: number | null
+          suggested_name?: string | null
+          votes?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          pet?: number | null
+          suggested_name?: string | null
+          votes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_pet_fkey"
+            columns: ["pet"]
+            isOneToOne: false
+            referencedRelation: "pets"
             referencedColumns: ["id"]
           },
         ]
@@ -894,6 +936,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_vote_to_poll: {
+        Args: { p_poll_id: number; p_step?: number; p_user_id: string }
+        Returns: undefined
+      }
       toggle_comment_like: {
         Args: { comment_id: number; user_id: string }
         Returns: undefined

@@ -87,13 +87,12 @@ export default function Component() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Pet Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Pet Name *</Label>
+                <Label htmlFor="name">Pet Name</Label>
                 <Input
                   id="name"
                   placeholder="e.g., Buddy"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  required
                 />
               </div>
 

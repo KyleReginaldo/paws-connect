@@ -216,10 +216,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
-    // Required fields validation
-    if (!formData.name.trim()) {
-      errors.name = 'Pet name is required';
-    }
+    // Required fields validation (name no longer validated here)
     if (!formData.type) {
       errors.type = 'Pet type is required';
     }
@@ -733,18 +730,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Important fields first: Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">Pet Name *</Label>
+              <Label htmlFor="name">Pet Name</Label>
               <Input
                 id="name"
                 placeholder="e.g., Buddy"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                required
-                className={validationErrors.name ? 'border-red-500' : ''}
               />
-              {validationErrors.name && (
-                <p className="text-sm text-red-500">{validationErrors.name}</p>
-              )}
             </div>
 
             {/* Type */}
