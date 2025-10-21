@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log(await request.json());
+    console.log(request.body);
     const LIMIT = 10;
 
     const query = supabase

@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     // Fixed config: last 7 days, top 10, sorted by total amount
-    console.log(await request.json());
+    console.log(request.body);
     const RANGE_DAYS = 7;
     const LIMIT = 10;
     const sinceIso = new Date(Date.now() - RANGE_DAYS * 24 * 60 * 60 * 1000).toISOString();
