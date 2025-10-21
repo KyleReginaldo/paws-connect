@@ -18,6 +18,7 @@ import {
   Mail,
   PawPrint,
   Phone,
+  Printer,
   User,
   X,
   XCircle,
@@ -94,6 +95,89 @@ const AdoptionPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null);
+
+  const isAdopted = (status: string | null) => {
+    const s = (status || '').toUpperCase();
+    return s === 'APPROVED' || s === 'COMPLETED';
+  };
+
+  const buildCertificateHTML = (recipientName: string, petName: string) => {
+    const today = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Certificate of Pet Adoption</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@600&family=Open+Sans&display=swap');
+      body { margin: 0; padding: 0; background: #f4f4f4; font-family: 'Open Sans', sans-serif; }
+      .certificate-container { width: 900px; height: 650px; background: #fffaf5; margin: 50px auto; padding: 25px; border: 10px solid #4b9b6a; border-radius: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; background-image: radial-gradient(circle at center, rgba(75,155,106,0.05) 0%, transparent 80%); }
+      .inner-border { border: 3px dashed #d4af37; border-radius: 10px; height: calc(100% - 50px); width: calc(100% - 50px); margin: 25px auto; padding: 40px; box-sizing: border-box; position: relative; background: rgba(255,255,255,0.95); }
+      .certificate-header { text-align: center; }
+      .paw-icon { width: 65px; margin: 10px auto; display: block; border-radius: 100%; }
+      .certificate-title { font-family: 'Playfair Display', serif; font-size: 38px; color: #2f6546; margin-top: 10px; letter-spacing: 1px; text-transform: uppercase; }
+      .certificate-subtitle { font-size: 18px; color: #555; margin-bottom: 35px; }
+      .recipient-name { font-family: 'Great Vibes', cursive; font-size: 40px; color: #222; text-align: center; margin: 0; }
+      .adoption-text { text-align: center; margin-top: 15px; font-size: 18px; color: #444; }
+      .pet-name { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 600; color: #4b9b6a; text-align: center; margin-top: 5px; }
+      .pledge { margin: 25px auto 20px; text-align: center; font-size: 16px; color: #555; max-width: 600px; line-height: 1.6; }
+      .date { text-align: center; font-size: 15px; color: #666; margin-bottom: 40px; }
+      .footer { position: absolute; bottom: 45px; left: 0; width: 100%; display: flex; justify-content: space-evenly; align-items: center; }
+      .signature { text-align: center; }
+      .signature-line { border-top: 2px solid #333; width: 200px; margin: 0 auto 5px; }
+      .signature-name { font-size: 14px; font-weight: 600; color: #333; }
+      @media print { body { background: #fff; } .certificate-container { margin: 0; box-shadow: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="certificate-container">
+      <div class="inner-border">
+        <div class="certificate-header">
+          <img class="paw-icon" src="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/playstore.png" alt="Paw Icon" />
+          <h1 class="certificate-title">Certificate of Pet Adoption</h1>
+          <p class="certificate-subtitle">This certifies that</p>
+        </div>
+        <p class="recipient-name">${recipientName}</p>
+        <p class="adoption-text">has lovingly adopted</p>
+        <p class="pet-name">${petName} 🐾</p>
+        <p class="pledge">and has pledged to provide unconditional love, care, and a forever home. Thank you for giving ${petName} a second chance at happiness.</p>
+        <p class="date">Issued on ${today}</p>
+        <div class="footer">
+          <div class="signature">
+            <div class="signature-line"></div>
+            <div class="signature-name">Shelter Representative</div>
+          </div>
+          <div class="signature">
+            <div class="signature-line"></div>
+            <div class="signature-name">Adopter’s Signature</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.onload = function(){ setTimeout(function(){ window.print(); }, 300); }
+    </script>
+  </body>
+</html>`;
+  };
+
+  const handleGenerateCertificate = () => {
+    if (!adoption) return;
+    const recipient = adoption.users?.username || 'Adopter';
+    const petName = adoption.pets?.name || adoption.pet?.name || 'your new friend';
+    const html = buildCertificateHTML(recipient, petName);
+    const w = window.open('', '_blank', 'width=1000,height=800');
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+  };
 
   useEffect(() => {
     if (id) {
@@ -297,12 +381,25 @@ const AdoptionPage = () => {
                   </div>
                 </div>
               </div>
-              <Badge
-                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${getStatusColor(adoption.status)}`}
-              >
-                {getStatusIcon(adoption.status)}
-                {adoption.status || 'Unknown'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge
+                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${getStatusColor(adoption.status)}`}
+                >
+                  {getStatusIcon(adoption.status)}
+                  {adoption.status || 'Unknown'}
+                </Badge>
+                {isAdopted(adoption.status) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={handleGenerateCertificate}
+                  >
+                    <Printer className="h-3 w-3 mr-1" />
+                    Generate Certificate
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
