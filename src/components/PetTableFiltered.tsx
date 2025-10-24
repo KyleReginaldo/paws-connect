@@ -333,9 +333,6 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                   <TableCell>{pet.health_status || 'Unknown'}</TableCell>
                   <TableCell>
                     <div className="flex gap-[8px] items-center mr-4">
-                      <a href={`/manage-pet/${pet.id}`}>
-                        <Eye size={20} />
-                      </a>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -343,6 +340,14 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              window.location.href = `/manage-pet/${pet.id}`;
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Details
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onEdit?.(pet)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit

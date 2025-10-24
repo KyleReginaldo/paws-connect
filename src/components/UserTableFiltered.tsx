@@ -360,7 +360,7 @@ export function UserTableFiltered({
                   <TableCell className="text-right">
                     {user.role !== 1 ? (
                       <div className="flex items-center justify-end gap-1">
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="sm"
                           title="View details"
@@ -370,7 +370,7 @@ export function UserTableFiltered({
                           }}
                         >
                           <Eye className="h-4 w-4" />
-                        </Button>
+                        </Button> */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">

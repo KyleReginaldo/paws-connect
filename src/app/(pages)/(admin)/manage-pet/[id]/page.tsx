@@ -9,11 +9,28 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {} from '@/components/ui/tabs';
 import { transformUrlsForLocalhost } from '@/lib/url-utils';
+import { Baby, BarChart2, Cat, Dog, FileText, Image as ImageIcon, Info, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+function ext(str: string) {
+  return {
+    isNullOrEmpty: () => str.length === 0,
+    textToIcon: () => {
+      if (str === 'children') {
+        return <Baby className="text-orange-500" size={24} />;
+      } else if (str === 'cats') {
+        return <Cat className="h-[15px] text-orange-500" size={24} />;
+      } else if (str === 'dogs') {
+        return <Dog className="h-[15px] text-orange-500" size={24} />;
+      } else {
+        return <User className="h-[15px] text-orange-500" size={24} />;
+      }
+    },
+  };
+}
 
 export default async function PetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -65,100 +82,110 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
           >
             Back to list
           </Link>
-          <Link
-            className="text-xs underline text-muted-foreground hover:text-foreground"
-            href={`/pets/${pet.id}`}
-          >
-            View public page
-          </Link>
         </div>
       </div>
 
-      {/* Tabbed content: overview, media, about, polls */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="mb-2 sticky top-16 z-10">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="media">Media</TabsTrigger>
-          <TabsTrigger value="about" disabled={!pet.description}>
-            About
-          </TabsTrigger>
-          <TabsTrigger value="polls">Polls</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Quick facts */}
-            <Card className="lg:col-span-7 shadow-sm border-muted/40">
-              <CardHeader className="border-b">
-                <CardTitle className="text-sm font-semibold">Quick Facts</CardTitle>
+      {/* Stacked sections (no tabs) */}
+      <div className="w-full space-y-4">
+        {/* Overview / Quick facts */}
+        <section aria-labelledby="quick-facts">
+          <Card className="shadow-sm border-muted/40">
+            <CardHeader className="border-b flex items-center gap-3">
+              <Info className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle id="quick-facts" className="text-sm font-semibold">
+                  Quick Facts
+                </CardTitle>
                 <CardDescription>At a glance</CardDescription>
-              </CardHeader>
-              <CardContent className="">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {pet.age && <Badge variant="secondary">Age: {pet.age}</Badge>}
-                  {pet.date_of_birth && (
-                    <Badge variant="outline">
-                      DOB:{' '}
-                      {new Date(pet.date_of_birth).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Badge>
-                  )}
-                  {pet.size && <Badge variant="outline">Size: {pet.size}</Badge>}
-                  {pet.weight && <Badge variant="outline">Weight: {pet.weight}</Badge>}
-                  {pet.health_status && (
-                    <Badge variant="outline">Health: {pet.health_status}</Badge>
-                  )}
-                  <Badge variant="outline">Vaccinated: {pet.is_vaccinated ? 'Yes' : 'No'}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                {pet.age && <Badge variant="secondary">Age: {pet.age}</Badge>}
+                {pet.date_of_birth && (
                   <Badge variant="outline">
-                    Spayed/Neutered: {pet.is_spayed_or_neutured ? 'Yes' : 'No'}
+                    DOB:{' '}
+                    {new Date(pet.date_of_birth).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </Badge>
-                  <Badge variant="outline">Potty-Trained: {pet.is_trained ? 'Yes' : 'No'}</Badge>
+                )}
+                {pet.size && <Badge variant="outline">Size: {pet.size}</Badge>}
+                {pet.weight && <Badge variant="outline">Weight: {pet.weight}</Badge>}
+                {pet.health_status && <Badge variant="outline">Health: {pet.health_status}</Badge>}
+                <Badge variant="outline">Vaccinated: {pet.is_vaccinated ? 'Yes' : 'No'}</Badge>
+                <Badge variant="outline">
+                  Spayed/Neutered: {pet.is_spayed_or_neutured ? 'Yes' : 'No'}
+                </Badge>
+                <Badge variant="outline">Potty-Trained: {pet.is_trained ? 'Yes' : 'No'}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Compatibility */}
+        {Array.isArray(pet.good_with) && pet.good_with.length > 0 && (
+          <section aria-labelledby="good-with">
+            <Card className="shadow-sm border-muted/40">
+              <CardHeader className="border-b flex items-center gap-3">
+                <ImageIcon className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle id="good-with" className="text-sm font-semibold">
+                    Good With
+                  </CardTitle>
+                  <CardDescription>Compatibility</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2">
+                  {pet.good_with.map((g: string, i: number) => (
+                    <Badge
+                      key={`${g}-${i}`}
+                      variant="outline"
+                      className="text-[14px] font-normal text-shadow-gray-500"
+                    >
+                      {ext(g).textToIcon()} {g.charAt(0).toUpperCase() + g.slice(1)}
+                    </Badge>
+                  ))}
                 </div>
               </CardContent>
             </Card>
+          </section>
+        )}
 
-            {/* Compatibility */}
-            {Array.isArray(pet.good_with) && pet.good_with.length > 0 && (
-              <Card className="lg:col-span-5 shadow-sm border-muted/40">
-                <CardHeader className="border-b pb-2">
-                  <CardTitle className="text-sm font-semibold">Good With</CardTitle>
-                  <CardDescription>Compatibility</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    {pet.good_with.map((g: string, i: number) => (
-                      <Badge key={`${g}-${i}`} variant="secondary">
-                        {g.charAt(0).toUpperCase() + g.slice(1)}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Rescue address */}
-            {pet.rescue_address && (
-              <Card className="lg:col-span-12 shadow-sm border-muted/40 p-[8px] m-0">
-                <CardContent className="">
-                  <CardTitle className="text-sm font-semibold">Rescue Address</CardTitle>
+        {/* Rescue address */}
+        {pet.rescue_address && (
+          <section aria-labelledby="rescue-address">
+            <Card className="shadow-sm border-muted/40 p-[8px] m-0">
+              <CardHeader className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle id="rescue-address" className="text-sm font-semibold">
+                    Rescue Address
+                  </CardTitle>
                   <CardDescription>Pickup / Shelter location</CardDescription>
-                  <p className="text-sm text-muted-foreground leading-6">{pet.rescue_address}</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
+                </div>
+              </CardHeader>
+              <CardContent className="">
+                <p className="text-sm text-muted-foreground leading-6">{pet.rescue_address}</p>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
-        {/* Media Tab */}
-        <TabsContent value="media">
+        {/* Media / Gallery */}
+        <section aria-labelledby="gallery">
           <Card className="shadow-sm border-muted/40">
-            <CardHeader className="border-b pb-2">
-              <CardTitle className="text-sm font-semibold">Gallery</CardTitle>
-              <CardDescription>Recent photos</CardDescription>
+            <CardHeader className="border-b pb-2 flex items-center gap-3">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle id="gallery" className="text-sm font-semibold">
+                  Gallery
+                </CardTitle>
+                <CardDescription>Recent photos</CardDescription>
+              </div>
             </CardHeader>
             <CardContent className="pt-4">
               {photos.length > 0 ? (
@@ -191,15 +218,20 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-        {/* About Tab */}
-        <TabsContent value="about">
-          {pet.description ? (
+        {/* About */}
+        {pet.description ? (
+          <section aria-labelledby="about">
             <Card className="shadow-sm border-muted/40">
-              <CardHeader className="border-b pb-2">
-                <CardTitle className="text-sm font-semibold">About</CardTitle>
-                <CardDescription>Temperament, story, notes</CardDescription>
+              <CardHeader className="border-b pb-2 flex items-center gap-3">
+                <FileText className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle id="about" className="text-sm font-semibold">
+                    About
+                  </CardTitle>
+                  <CardDescription>Temperament, story, notes</CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-sm leading-7 text-muted-foreground whitespace-pre-wrap">
@@ -207,14 +239,27 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
                 </p>
               </CardContent>
             </Card>
-          ) : null}
-        </TabsContent>
+          </section>
+        ) : null}
 
-        {/* Polls Tab */}
-        <TabsContent value="polls">
-          <PollsCard petId={pet.id} />
-        </TabsContent>
-      </Tabs>
+        {/* Polls */}
+        <section aria-labelledby="polls">
+          <Card className="shadow-sm border-muted/40">
+            <CardHeader className="border-b pb-2 flex items-center gap-3">
+              <BarChart2 className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle id="polls" className="text-sm font-semibold">
+                  Polls
+                </CardTitle>
+                <CardDescription>User suggestions and votes</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <PollsCard petId={pet.id} />
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }

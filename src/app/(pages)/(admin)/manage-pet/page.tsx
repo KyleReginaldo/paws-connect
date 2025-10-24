@@ -7,7 +7,7 @@ import { PetTableFiltered } from '@/components/PetTableFiltered';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/components/ui/notification';
 import { Pet } from '@/config/types/pet';
-import { Download, Plus, Upload } from 'lucide-react';
+import { Dog, Download, Plus, SwatchBook, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -159,13 +159,13 @@ export default function PetManagement() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-wrap gap-3">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
-            <Plus className="h-3.5 w-3.5" />
+            <Dog className="h-3.5 w-3.5" />
             <span className="text-sm font-medium">{pets ? pets.length : 0}</span>
             <span className="text-xs opacity-75">Total Pets</span>
           </div>
 
           <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
-            <Plus className="h-3.5 w-3.5" />
+            <SwatchBook className="h-3.5 w-3.5" />
             <span className="text-sm font-medium">
               {pets ? [...new Set(pets.map((pet) => pet.type))].length : 0}
             </span>
