@@ -60,6 +60,12 @@ export interface FundraisingCampaign {
     email: string | null;
   };
   donations_count?: Array<{ count: number }>;
+  all_donations?: Array<{
+    id: number;
+    donor: string | null;
+    amount: number | null;
+    donated_at: string;
+  }>;
 }
 
 export interface Adoption {
@@ -126,6 +132,7 @@ const useDashboardData = () => {
       const petsData = await petsResponse.json();
       const usersData = await usersResponse.json();
       const campaignsData = await campaignsResponse.json();
+      console.log(campaignsData);
       const adoptionsData = await adoptionsResponse.json();
 
       // Update state with fetched data

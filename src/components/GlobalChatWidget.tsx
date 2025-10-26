@@ -8,7 +8,7 @@ import {
   type ModerationResult,
 } from '@/lib/content-moderation';
 import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { AvatarCircles } from './ui/avatar-circles';
 import { Badge } from './ui/badge';
@@ -41,8 +41,11 @@ type MessageWithModeration = ChatMessage & {
 };
 
 export default function GlobalChatWidget() {
-  const { userId } = useAuth();
+  const { userId, userRole } = useAuth();
   const [open, setOpen] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'error'>(
+    'disconnected',
+  );
   const [messages, setMessages] = useState<MessageWithModeration[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,17 +56,7 @@ export default function GlobalChatWidget() {
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
 
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      fetchMessages();
-    }
-  }, [open]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const response = await fetch('/api/v1/global-chat?limit=50');
       const data = await response.json();
@@ -73,125 +66,73 @@ export default function GlobalChatWidget() {
     } catch (error) {
       console.error('Failed to fetch messages:', error);
     }
-  };
-
-  useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    const setupSubscription = async () => {
-      try {
-        let globalForum = await supabase
-          .from('forum')
-          .select('id')
-          .eq('forum_name', 'Global Chat')
-          .single();
-
-        if (!globalForum.data) {
-          console.log('Global chat forum not found, attempting to create it...');
-
-          // Try to create the global chat forum
-          try {
-            const setupResponse = await fetch('/api/v1/setup/global-chat', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            });
-
-            if (setupResponse.ok) {
-              const setupData = await setupResponse.json();
-              console.log('Global chat forum created successfully:', setupData);
-
-              // Re-fetch the forum data
-              globalForum = await supabase
-                .from('forum')
-                .select('id')
-                .eq('forum_name', 'Global Chat')
-                .single();
-            } else {
-              throw new Error('Failed to create global chat forum');
-            }
-          } catch (setupError) {
-            console.error('Failed to setup global chat forum:', setupError);
-            return;
-          }
-        }
-
-        if (!globalForum.data) {
-          console.error('Global chat forum still not found after setup attempt');
-          return;
-        }
-
-        console.log('Setting up real-time subscription for forum:', globalForum.data.id);
-
-        channel = supabase.channel(`global_chat_${Date.now()}`);
-
-        channel
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'forum_chats',
-              filter: `forum=eq.${globalForum.data.id}`,
-            },
-            async (payload: { new: unknown }) => {
-              console.log('New message received via real-time:', payload);
-
-              await fetchMessages();
-            },
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'forum_chats',
-              filter: `forum=eq.${globalForum.data.id}`,
-            },
-            async (payload: { old: unknown; new: unknown }) => {
-              console.log('Message updated via real-time:', payload);
-
-              await fetchMessages();
-            },
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'DELETE',
-              schema: 'public',
-              table: 'forum_chats',
-              filter: `forum=eq.${globalForum.data.id}`,
-            },
-            async (payload: { old: unknown }) => {
-              console.log('Message deleted via real-time:', payload);
-
-              await fetchMessages();
-            },
-          )
-          .subscribe((status: string) => {
-            console.log('Real-time subscription status:', status);
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ Real-time chat subscription active');
-            } else if (status === 'CHANNEL_ERROR') {
-              console.error('❌ Real-time subscription error');
-            }
-          });
-      } catch (error) {
-        console.error('Failed to setup real-time subscription:', error);
-      }
-    };
-
-    setupSubscription();
-
-    return () => {
-      if (channel) {
-        console.log('Cleaning up real-time subscription');
-        supabase.removeChannel(channel);
-      }
-    };
   }, []);
 
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  useEffect(() => {
+    if (open) {
+      fetchMessages();
+    }
+  }, [open, fetchMessages]);
+
+  // When an admin opens the chat and messages are loaded, mark unseen messages as viewed
+  useEffect(() => {
+    const markViewed = async (ids: number[]) => {
+      try {
+        await fetch('/api/v1/global-chat/viewers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, message_ids: ids }),
+        });
+      } catch (err) {
+        console.error('Failed to mark messages viewed', err);
+      }
+    };
+
+    if (open && userId && userRole === 1 && messages.length > 0) {
+      // Find messages that don't include this user in viewers
+      const unseen = messages
+        .filter((m) => !m.viewers || !m.viewers.some((v) => v.id === userId))
+        .map((m) => m.id);
+
+      if (unseen.length > 0) {
+        void markViewed(unseen);
+      }
+    }
+  }, [open, messages, userId, userRole]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime:forum_chats')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'forum_chats', filter: 'forum_id=eq.1' },
+        async (payload) => {
+          console.log('New message:', payload);
+          await fetchMessages();
+        },
+      )
+      .subscribe((status) => {
+        console.log('Realtime status:', status);
+        try {
+          // Map supabase subscription status to our local status enum
+          // status is typically a string like 'SUBSCRIBED' when connected
+          if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
+          else if (status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('disconnected');
+          else setRealtimeStatus('disconnected');
+        } catch (e) {
+          // swallow any errors from mapping
+          console.error('Failed to set realtime status', e);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchMessages]);
   useEffect(() => {
     if (open) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -322,6 +263,11 @@ export default function GlobalChatWidget() {
     return null;
   }
 
+  const unreadCount = messages.filter((m) => {
+    if (!m.viewers || m.viewers.length === 0) return true;
+    return !m.viewers.some((v) => v.id === userId);
+  }).length;
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {open ? (
@@ -331,12 +277,24 @@ export default function GlobalChatWidget() {
             <div className="flex items-center gap-1.5">
               <Globe2 className="w-4 text-orange-500" />
               <h3 className="text-xs font-semibold text-gray-800">Global Chat</h3>
-              <Badge
-                variant="outline"
-                className="text-xs bg-orange-50 text-orange-600 border-orange-200 px-1.5 py-0.5"
-              >
-                {messages.length}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <span
+                  title={`Realtime: ${realtimeStatus}`}
+                  className={`h-2 w-2 rounded-full inline-block ${
+                    realtimeStatus === 'connected'
+                      ? 'bg-green-500'
+                      : realtimeStatus === 'error'
+                        ? 'bg-red-500'
+                        : 'bg-gray-300'
+                  }`}
+                />
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-orange-50 text-orange-600 border-orange-200 px-1.5 py-0.5"
+                >
+                  {unreadCount}
+                </Badge>
+              </div>
             </div>
             <div className="flex items-center">
               <Button
@@ -522,9 +480,12 @@ export default function GlobalChatWidget() {
           title="Open Global Chat"
         >
           <MessageCircle className="h-6 w-6" />
-          {messages.length > 0 && (
-            <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[1.25rem] h-5 flex items-center justify-center">
-              {messages.length}
+          {unreadCount > 0 && (
+            <Badge
+              className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[1.25rem] h-5 flex items-center justify-center"
+              aria-label={`${unreadCount} unread messages`}
+            >
+              {unreadCount}
             </Badge>
           )}
         </Button>

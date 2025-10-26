@@ -21,7 +21,6 @@ import {
   Heart,
   PawPrint,
   Shield,
-  TrendingUp,
   User as UserIcon,
   Users,
 } from 'lucide-react';
@@ -854,27 +853,24 @@ const Page = () => {
     {
       title: 'Total Pets',
       value: String(stats.totalPets),
-      change: '+12%',
       changeType: 'positive' as const,
       icon: Dog,
-      description: `${stats.availablePets} available for adoption`,
+      description: `${stats.totalPets} available pets`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
-      title: 'Adoptions',
+      title: 'Adoption applications',
       value: String(stats.adoptedPets),
-      change: '+23%',
       changeType: 'positive' as const,
       icon: Heart,
-      description: 'Successfully adopted',
+      description: `${stats.totalAdoptions} total applications`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
       title: 'Total Donations',
       value: `₱${stats.totalDonations.toLocaleString()}`,
-      change: '+8%',
       changeType: 'positive' as const,
       icon: DollarSign,
       description: `${stats.activeCampaigns} active campaigns`,
@@ -884,7 +880,6 @@ const Page = () => {
     {
       title: 'Active Users',
       value: String(stats.totalUsers),
-      change: '+5%',
       changeType: 'positive' as const,
       icon: Users,
       description: 'Registered users',
@@ -895,7 +890,7 @@ const Page = () => {
 
   const recentAdoptions = generateRecentAdoptions();
   const recentActivity = generateRecentActivity();
-
+  console.log('Recent Activity:', campaigns);
   const ongoingCampaigns = campaigns
     .filter((c) => c.status === 'ONGOING' || c.status === 'PENDING')
     .slice(0, 3)
@@ -913,7 +908,7 @@ const Page = () => {
             ),
           )
         : Math.floor(Math.random() * 30) + 1,
-      supporters: Math.floor(Math.random() * 100) + 10, // Placeholder until we have donation counts
+      supporters: new Set(c.all_donations?.map((d) => d.donor)).size || 0,
     }));
 
   return (
@@ -1017,9 +1012,7 @@ const Page = () => {
                 {stat.value}
               </div>
               <div className="flex items-center text-xs mt-2">
-                <TrendingUp className="mr-1 h-3 w-3 text-orange-500 flex-shrink-0" />
-                <span className="text-orange-600 font-medium">{stat.change}</span>
-                <span className="ml-1 text-gray-600 truncate">{stat.description}</span>
+                <span className="text-gray-600 truncate">{stat.description}</span>
               </div>
             </CardContent>
           </Card>
@@ -1069,7 +1062,7 @@ const Page = () => {
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <Users className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">User Growth ({analyticsPeriod})</span>
+                <span className="truncate">User Growth </span>
               </CardTitle>
               <CardDescription className="text-sm">
                 Total users and new registrations over time
@@ -1105,7 +1098,7 @@ const Page = () => {
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">Donation Analytics ({analyticsPeriod})</span>
+                <span className="truncate">Donation Analytics </span>
               </CardTitle>
               <CardDescription className="text-sm">
                 Donation amounts and campaign performance over time
@@ -1125,7 +1118,7 @@ const Page = () => {
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <PawPrint className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">Pet Intake Analytics ({analyticsPeriod})</span>
+                <span className="truncate">Pet Intake Analytics </span>
               </CardTitle>
               <CardDescription className="text-sm">
                 Pet arrivals by type and breed breakdown

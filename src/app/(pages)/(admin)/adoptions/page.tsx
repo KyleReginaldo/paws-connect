@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PawPrint, SearchIcon } from 'lucide-react';
+import { Loader2, PawPrint, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
@@ -74,6 +74,7 @@ const AdoptionsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [petTypeFilter, setPetTypeFilter] = useState('all');
+  const [approving, setApproving] = useState<number | null>(null);
 
   const router = useRouter();
   const fetchAdoptions = useCallback(async () => {
@@ -178,14 +179,16 @@ const AdoptionsPage = () => {
 
   const approveAdoption = async (adoptionId: number) => {
     try {
+      setApproving(adoptionId);
       const response = await fetch(`/api/v1/adoption/${adoptionId}/approve`, {
         method: 'PUT',
       });
       if (!response.ok) throw new Error('Failed to approve adoption');
       console.log('response', response);
 
-      // Refresh the adoptions list after approval
-      fetchAdoptions();
+      fetchAdoptions().then(() => {
+        setApproving(null);
+      });
     } catch (err) {
       console.error('Error approving adoption:', err);
       alert(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -402,7 +405,11 @@ const AdoptionsPage = () => {
                                 className="bg-orange-500 hover:bg-orange-600 text-xs"
                                 onClick={() => approveAdoption(adoption.id)}
                               >
-                                Approve
+                                {approving === adoption.id ? (
+                                  <Loader2 className="animate-spin" />
+                                ) : (
+                                  'Approve'
+                                )}
                               </Button>
                             )}
                           </div>

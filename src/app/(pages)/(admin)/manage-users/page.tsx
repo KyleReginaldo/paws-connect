@@ -17,6 +17,8 @@ const ManageStaff = () => {
   const { users, addUser, updateUser, deleteUser, updateUserStatus, refreshUsers } = useUsers();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userStatusChanging, setUserStatusChanging] = useState<string | null>(null);
+
   const { warning } = useNotifications();
 
   const canManageUser = (targetUserRole: number) => {
@@ -81,18 +83,21 @@ const ManageStaff = () => {
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    setUserStatusChanging(id);
     const userToUpdate = users?.find((u) => u.id === id);
     if (!userToUpdate) {
       warning('User not found.');
+      setUserStatusChanging(null);
       return;
     }
 
     if (!canManageUser(userToUpdate.role)) {
       warning('You do not have permission to change admin user status.');
+      setUserStatusChanging(null);
       return;
     }
 
-    await updateUserStatus(id, newStatus);
+    await updateUserStatus(id, newStatus).then(() => setUserStatusChanging(null));
   };
 
   const handleAddViolation = async (targetUserId: string, violation: string) => {
@@ -219,6 +224,7 @@ const ManageStaff = () => {
           onStatusChange={handleStatusChange}
           onAddViolation={handleAddViolation}
           onRemoveViolation={handleRemoveViolation}
+          userStatusChanging={userStatusChanging}
           currentUserRole={userRole || undefined}
         />
       ) : (

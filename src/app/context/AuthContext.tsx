@@ -16,7 +16,7 @@ export enum AuthStatus {
 type AuthContextType = {
   userId: string | null;
   userRole: number | null;
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string, password: string) => Promise<boolean>;
   status: AuthStatus;
   errorMessage: string | undefined;
   onSignup: (
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [errorMessage, setError] = useState<string | undefined>(undefined);
   const router = useRouter();
 
-  const onLogin = async (email: string, password: string) => {
+  const onLogin = async (email: string, password: string): Promise<boolean> => {
     try {
       setStatus(AuthStatus.authenticating);
       setError(undefined);
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Auth signin error:', error);
         setStatus(AuthStatus.error);
         setError(error.message);
-        return;
+        return false;
       }
 
       if (data?.user) {
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await supabase.auth.signOut();
           setStatus(AuthStatus.error);
           setError('Unable to verify user permissions');
-          return;
+          return false;
         }
 
         // Check if user has admin (1) or staff (2) role
@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await supabase.auth.signOut();
           setStatus(AuthStatus.error);
           setError('Access denied. Only admin and staff members can sign in.');
-          return;
+          return false;
         }
         // User has valid role, proceed with authentication
         setUserId(data.user.id);
@@ -90,6 +90,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setStatus(AuthStatus.authenticated);
         setError(undefined); // Clear any previous errors
         console.log('Login successful for user:', userData.username);
+        return true;
+      } else {
+        return false;
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -97,6 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await supabase.auth.signOut();
       setStatus(AuthStatus.error);
       setError('Unable to verify user permissions');
+      return false;
     }
   };
 

@@ -73,7 +73,13 @@ const Signin = () => {
     }
 
     try {
-      await onLogin(email, password);
+      await onLogin(email, password).then((success) => {
+        if (success) {
+          window.location.href = '/dashboard';
+
+          // Login successful, further actions can be handled here if needed
+        }
+      });
     } catch (error) {
       console.error('Login failed:', error);
     }

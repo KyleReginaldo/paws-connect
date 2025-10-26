@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
         `
         *,
         created_by_user:users!created_by(username, email),
-        donations_count:donations(count)
+        donations_count:donations(count),
+        all_donations:donations(*)
       `,
       )
       .order('created_at', { ascending: false });

@@ -41,7 +41,8 @@ interface UserTableFilteredProps {
   onStatusChange?: (userId: string, status: string) => void;
   onAddViolation?: (userId: string, violation: string) => void;
   onRemoveViolation?: (userId: string, violationIndex: number) => void;
-  currentUserRole?: number; // Add current user role for permission checks
+  userStatusChanging?: string | null;
+  currentUserRole?: number;
 }
 
 export function UserTableFiltered({
@@ -49,12 +50,14 @@ export function UserTableFiltered({
   onEdit,
   onDelete,
   onStatusChange,
+  userStatusChanging,
   onAddViolation,
   onRemoveViolation,
   currentUserRole,
 }: UserTableFilteredProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
 
@@ -207,6 +210,23 @@ export function UserTableFiltered({
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+  const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'fully_verified':
+        return 'Fully Verified';
+      case 'semi_verified':
+        return 'Semi Verified';
+      case 'inactive':
+        return 'Inactive';
+      case 'banned':
+      case 'indefinite':
+        return 'Indefinite';
+      case 'pending':
+        return 'Pending';
+      default:
+        return 'Unknown';
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -218,7 +238,6 @@ export function UserTableFiltered({
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
       <TableFilters
         filters={filters}
         onFiltersChange={setFilterValues}
@@ -226,7 +245,6 @@ export function UserTableFiltered({
         className="w-full"
       />
 
-      {/* Results count */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
           Showing {filteredUsers.length} of {users.length} users
@@ -282,7 +300,15 @@ export function UserTableFiltered({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                    {userStatusChanging === user.id ? (
+                      <Badge className={`font-medium animate-pulse ${getStatusColor(user.status)}`}>
+                        Updating...
+                      </Badge>
+                    ) : (
+                      <Badge className={getStatusColor(user.status)}>
+                        {getStatusText(user.status)}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {user.violations && user.violations.length > 0 ? (
@@ -359,93 +385,92 @@ export function UserTableFiltered({
                   </TableCell>
                   <TableCell className="text-right">
                     {user.role !== 1 ? (
-                      <div className="flex items-center justify-end gap-1">
-                        {/* <Button
-                          variant="ghost"
-                          size="sm"
-                          title="View details"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setDetailsOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button> */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onSelect={() => {
-                                setSelectedUser(user);
-                                requestAnimationFrame(() => setDetailsOpen(true));
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" /> View details
-                            </DropdownMenuItem>
-                            {canManageUser() && (
-                              <DropdownMenuItem onClick={() => onEdit?.(user)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
-                              <DropdownMenuItem
-                                onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
-                              >
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                Fully Verify
-                              </DropdownMenuItem>
-                            )}
-                            {canManageUser() &&
-                              user.role === 3 &&
-                              user.status !== 'SEMI_VERIFIED' &&
-                              user.status !== 'FULLY_VERIFIED' && (
+                      <>
+                        {userStatusChanging === user.id ? (
+                          <div className="flex items-center justify-end gap-[2] mr-[10px]">
+                            <span className="h-[2.5px] w-[2.5px] rounded-full bg-orange-500 animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="h-[2.5px] w-[2.5px] rounded-full bg-orange-500 animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="h-[2.5px] w-[2.5px] rounded-full bg-orange-500 animate-bounce"></span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
+                                  onSelect={() => {
+                                    setSelectedUser(user);
+                                    requestAnimationFrame(() => setDetailsOpen(true));
+                                  }}
                                 >
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Semi Verified
+                                  <Eye className="h-4 w-4 mr-2" /> View details
                                 </DropdownMenuItem>
-                              )}
-                            {canManageUser() && user.status !== 'INDEFINITE' && (
-                              <DropdownMenuItem
-                                onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}
-                              >
-                                <UserX className="h-4 w-4 mr-2" />
-                                Indefinite
-                              </DropdownMenuItem>
-                            )}
-                            {currentUserRole === 1 && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  const violation = prompt('Enter violation description:');
-                                  if (violation && violation.trim()) {
-                                    onAddViolation?.(user.id, violation.trim());
-                                  }
-                                }}
-                                className="text-orange-600"
-                              >
-                                <AlertTriangle className="h-4 w-4 mr-2" />
-                                Add Violation
-                              </DropdownMenuItem>
-                            )}
-                            {canManageUser() &&
-                              (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
-                                <DropdownMenuItem
-                                  onClick={() => onDelete?.(user.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                                {canManageUser() && (
+                                  <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
+                                  <DropdownMenuItem
+                                    onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Fully Verify
+                                  </DropdownMenuItem>
+                                )}
+                                {canManageUser() &&
+                                  user.role === 3 &&
+                                  user.status !== 'SEMI_VERIFIED' &&
+                                  user.status !== 'FULLY_VERIFIED' && (
+                                    <DropdownMenuItem
+                                      onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
+                                    >
+                                      <UserCheck className="h-4 w-4 mr-2" />
+                                      Semi Verified
+                                    </DropdownMenuItem>
+                                  )}
+                                {canManageUser() && user.status !== 'INDEFINITE' && (
+                                  <DropdownMenuItem
+                                    onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}
+                                  >
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Indefinite
+                                  </DropdownMenuItem>
+                                )}
+                                {currentUserRole === 1 && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      const violation = prompt('Enter violation description:');
+                                      if (violation && violation.trim()) {
+                                        onAddViolation?.(user.id, violation.trim());
+                                      }
+                                    }}
+                                    className="text-orange-600"
+                                  >
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    Add Violation
+                                  </DropdownMenuItem>
+                                )}
+                                {canManageUser() &&
+                                  (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
+                                    <DropdownMenuItem
+                                      onClick={() => onDelete?.(user.id)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
+                      </>
                     ) : null}
                   </TableCell>
                 </TableRow>
