@@ -122,7 +122,7 @@ export default function Component() {
 
               {/* Breed */}
               <div className="space-y-2">
-                <Label htmlFor="breed">Breed</Label>
+                <Label htmlFor="breed">Breed/Pattern</Label>
                 <Input
                   id="breed"
                   placeholder="e.g., Golden Retriever"

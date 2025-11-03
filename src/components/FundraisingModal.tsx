@@ -19,9 +19,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { Fundraising } from '@/config/types/fundraising';
-import { AlertCircle, Loader2, QrCode } from 'lucide-react';
+import { AlertCircle, HelpCircle, Loader2, QrCode } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface FundraisingModalProps {
@@ -48,6 +49,7 @@ export function FundraisingModal({
   const [formData, setFormData] = useState<CreateFundraisingDto>({
     title: '',
     description: '',
+    purpose: '',
     target_amount: 1000,
     created_by: currentUserId || '',
     images: [],
@@ -69,6 +71,7 @@ export function FundraisingModal({
       setFormData({
         title: editingCampaign.title || '',
         description: editingCampaign.description || '',
+        purpose: editingCampaign.purpose || '',
         target_amount: editingCampaign.target_amount || 1000,
         created_by: editingCampaign.created_by || currentUserId || '',
         images: (editingCampaign?.images as string[]) || [],
@@ -92,6 +95,7 @@ export function FundraisingModal({
       setFormData({
         title: '',
         description: '',
+        purpose: '',
         target_amount: 1000,
         created_by: currentUserId || '',
         images: [],
@@ -159,6 +163,9 @@ export function FundraisingModal({
       // Add text fields
       formDataToSubmit.append('title', formData.title);
       formDataToSubmit.append('description', formData.description);
+      if (formData.purpose) {
+        formDataToSubmit.append('purpose', formData.purpose);
+      }
       formDataToSubmit.append('target_amount', formData.target_amount.toString());
       formDataToSubmit.append('created_by', formData.created_by);
 
@@ -374,6 +381,35 @@ export function FundraisingModal({
               />
               <p className="text-xs text-muted-foreground">
                 {formData.description.length}/1000 characters
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="purpose">Purpose</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Explain the specific purpose of this fundraising campaign (e.g., medical
+                        care, feeding program, shelter maintenance)
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input
+                id="purpose"
+                value={formData.purpose || ''}
+                onChange={(e) => handleInputChange('purpose', e.target.value)}
+                placeholder="e.g., Medical care for rescued animals, Emergency shelter repairs..."
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground">
+                {(formData.purpose || '').length}/200 characters
               </p>
             </div>
 

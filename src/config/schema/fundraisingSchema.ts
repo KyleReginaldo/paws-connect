@@ -11,6 +11,11 @@ export const createFundraisingSchema = z.object({
     .string()
     .min(10, 'Description must be at least 10 characters')
     .max(1000, 'Description must be less than 1000 characters'),
+  purpose: z
+    .string()
+    .min(5, 'Purpose must be at least 5 characters')
+    .max(200, 'Purpose must be less than 200 characters')
+    .optional(),
   target_amount: z
     .number()
     .min(100, 'Target amount must be at least ₱100')
@@ -55,6 +60,11 @@ export const updateFundraisingSchema = z.object({
     .string()
     .min(10, 'Description must be at least 10 characters')
     .max(1000, 'Description must be less than 1000 characters')
+    .optional(),
+  purpose: z
+    .string()
+    .min(5, 'Purpose must be at least 5 characters')
+    .max(200, 'Purpose must be less than 200 characters')
     .optional(),
   target_amount: z
     .number()

@@ -99,6 +99,7 @@ export default function SettingsPage() {
     }
   };
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -109,17 +110,19 @@ export default function SettingsPage() {
     setMessage(null);
     setError(null);
     try {
-      if (newPassword.length < 6) throw new Error('Password must be at least 6 characters.');
+      if (!currentPassword) throw new Error('Current password is required.');
+      if (newPassword.length < 6) throw new Error('New password must be at least 6 characters.');
       if (newPassword !== confirmPassword) throw new Error("Passwords don't match.");
 
       const res = await fetch('/api/v1/users/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, newPassword }),
+        body: JSON.stringify({ userId: user.id, currentPassword, newPassword }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to change password');
       setMessage('Password updated successfully.');
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (e) {
@@ -230,26 +233,38 @@ export default function SettingsPage() {
 
         <section className="rounded-lg border bg-white p-4 md:p-6">
           <h3 className="text-base font-medium mb-4">Change Password</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label>New Password</Label>
+              <Label>Current Password</Label>
               <Input
                 type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="••••••••"
                 className="mt-2"
               />
             </div>
-            <div>
-              <Label>Confirm New Password</Label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="mt-2"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>New Password</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label>Confirm New Password</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="mt-2"
+                />
+              </div>
             </div>
           </div>
           <div className="mt-4">

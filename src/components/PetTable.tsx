@@ -63,7 +63,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
           <TableRow>
             <TableHead>Pet</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>Breed</TableHead>
+            <TableHead>Breed/Pattern</TableHead>
             <TableHead>Gender</TableHead>
             <TableHead>Age</TableHead>
             <TableHead>Size</TableHead>

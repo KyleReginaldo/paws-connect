@@ -5,6 +5,7 @@ import { z } from 'zod';
 // Schema for password change request
 const changePasswordSchema = z.object({
   userId: z.uuid('Invalid user ID format'),
+  currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -30,9 +31,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { userId, newPassword }: ChangePasswordDto = validation.data;
+    const { userId, currentPassword, newPassword }: ChangePasswordDto = validation.data;
 
-    // First, check if user exists and get their details
+    // First, verify the current password by attempting to sign in
+    const { data: userAuth, error: userAuthError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (userAuthError || !userAuth?.email) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Not Found', 
+          message: 'User not found' 
+        }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Verify current password by attempting to sign in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userAuth.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unauthorized', 
+          message: 'Current password is incorrect' 
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Check if user exists and get their details
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, created_by, password_changed')

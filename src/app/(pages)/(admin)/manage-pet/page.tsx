@@ -213,7 +213,8 @@ export default function PetManagement() {
                 const ws = XLSX.utils.json_to_sheet(exportData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Pets');
-                XLSX.writeFile(wb, 'pets_export.xlsx');
+                const currentDate = new Date().toISOString().split('T')[0];
+                XLSX.writeFile(wb, `pets_export_${currentDate}.xlsx`);
               }}
               className="rounded-full px-3 shadow-sm hover:shadow-md"
               title="Export pets"

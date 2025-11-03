@@ -2,6 +2,7 @@ export interface Fundraising {
   id: number;
   title: string | null;
   description: string | null;
+  purpose?: string | null;
   target_amount: number | null;
   raised_amount: number | null;
   images?: string[] | null;

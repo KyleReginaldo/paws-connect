@@ -239,7 +239,8 @@ const Fundraising = () => {
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'fundraising');
-        XLSX.writeFile(workbook, 'fundraising.xlsx');
+        const currentDate = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(workbook, `fundraising_${currentDate}.xlsx`);
 
         // Inform user about import behavior
         info(
@@ -284,7 +285,8 @@ const Fundraising = () => {
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'fundraising');
-        XLSX.writeFile(workbook, 'fundraising.xlsx');
+        const currentDate = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(workbook, `fundraising_${currentDate}.xlsx`);
 
         // Inform user about import behavior (fallback export)
         info(

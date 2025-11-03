@@ -355,13 +355,15 @@ const AdoptionsPage = () => {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={adoption.status === 'APPROVED' ? 'default' : 'secondary'}
+                            variant="outline"
                             className={
                               adoption.status === 'APPROVED'
-                                ? 'bg-green-50 text-green-700 border-green-200'
-                                : adoption.status === 'PENDING'
-                                  ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                                  : 'bg-red-50 text-red-700 border-red-200'
+                                ? 'bg-green-100 text-green-800 border-green-300 font-medium'
+                                : adoption.status === 'REJECTED'
+                                  ? 'bg-red-100 text-red-800 border-red-300 font-medium'
+                                  : adoption.status === 'PENDING'
+                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300 font-medium'
+                                    : 'bg-gray-100 text-gray-800 border-gray-300 font-medium'
                             }
                           >
                             {adoption.status}

@@ -1175,14 +1175,26 @@ const Page = () => {
                     </div>
                     <div className="flex items-center space-x-2 flex-shrink-0">
                       <Badge
-                        variant={adoption.status === 'completed' ? 'default' : 'secondary'}
+                        variant={
+                          adoption.status === 'APPROVED' || adoption.status === 'COMPLETED'
+                            ? 'default'
+                            : 'secondary'
+                        }
                         className={
-                          adoption.status === 'completed'
-                            ? 'bg-orange-50 text-orange-600 border-orange-100'
-                            : 'bg-amber-50 text-amber-600 border-amber-100'
+                          adoption.status === 'APPROVED' || adoption.status === 'COMPLETED'
+                            ? 'bg-green-50 text-green-600 border-green-100'
+                            : adoption.status === 'REJECTED'
+                              ? 'bg-red-50 text-red-600 border-red-100'
+                              : 'bg-amber-50 text-amber-600 border-amber-100'
                         }
                       >
-                        {adoption.status === 'completed' ? 'Completed' : 'Pending'}
+                        {adoption.status === 'APPROVED'
+                          ? 'Approved'
+                          : adoption.status === 'COMPLETED'
+                            ? 'Completed'
+                            : adoption.status === 'REJECTED'
+                              ? 'Rejected'
+                              : 'Pending'}
                       </Badge>
                       <span className="text-xs text-muted-foreground hidden sm:inline">
                         {adoption.timeAgo}

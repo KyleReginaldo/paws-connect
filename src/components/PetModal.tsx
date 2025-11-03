@@ -762,7 +762,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
             {/* Breed */}
             <div className="space-y-2">
-              <Label htmlFor="breed">Breed</Label>
+              <Label htmlFor="breed">Breed/Pattern</Label>
               {formData.type && !breedsLoading ? (
                 <Select
                   value={formData.breed}

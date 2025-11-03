@@ -59,7 +59,8 @@ const ManageStaff = () => {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'users');
-    XLSX.writeFile(workbook, 'users.xlsx');
+    const currentDate = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `users_${currentDate}.xlsx`);
   };
 
   const handleDeleteUser = async (id: string) => {
