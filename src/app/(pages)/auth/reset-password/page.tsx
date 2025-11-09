@@ -19,23 +19,79 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
-    // Check if we have the required tokens from the URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    // Check if we have the required tokens from the URL hash or search params
+    const handleTokens = async () => {
+      try {
+        // Check URL hash first (Supabase typically puts tokens in hash)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+        const type = hashParams.get('type') || searchParams.get('type');
 
-    if (!accessToken || !refreshToken) {
-      setError('Invalid or expired password reset link. Please request a new one.');
-      return;
+        console.log('Reset password tokens:', {
+          accessToken: accessToken ? 'present' : 'missing',
+          refreshToken: refreshToken ? 'present' : 'missing',
+          type,
+          hash: window.location.hash,
+          searchParamsString: searchParams.toString(),
+        });
+
+        if (!accessToken || !refreshToken) {
+          setError('Invalid or expired password reset link. Please request a new one.');
+          setIsValidating(false);
+          return;
+        }
+
+        if (type && type !== 'recovery') {
+          setError('Invalid reset link type. Please request a new password reset link.');
+          setIsValidating(false);
+          return;
+        }
+
+        // Set the session with the tokens
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setError('Invalid or expired password reset link. Please request a new one.');
+        } else {
+          console.log('Session set successfully:', data);
+          // Clear any previous errors if session is valid
+          setError('');
+        }
+      } catch (err) {
+        console.error('Token handling error:', err);
+        setError('An error occurred while processing the reset link. Please try again.');
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    // Wait for client-side navigation to complete
+    if (typeof window !== 'undefined') {
+      handleTokens();
     }
-
-    // Set the session with the tokens
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
   }, [searchParams]);
+
+  // Show loading while validating tokens
+  if (isValidating) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center pt-6">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-500 mb-4" />
+            <p className="text-center text-gray-600">Validating reset link...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const validateForm = () => {
     if (!password) {
@@ -68,6 +124,16 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
+      // First check if we have a valid session
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        throw new Error('Session expired. Please request a new password reset link.');
+      }
+
       // Update the password using Supabase Auth
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Debug Reset Password Link</title>
+  </head>
+  <body>
+    <h1>Debug Reset Password Link</h1>
+    <div id="debug-info"></div>
+
+    <script>
+      // Get all URL parameters from both search params and hash
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+      const debugInfo = {
+        fullUrl: window.location.href,
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash,
+        searchParams: Object.fromEntries(urlSearchParams),
+        hashParams: Object.fromEntries(hashParams),
+        timestamp: new Date().toISOString(),
+      };
+
+      document.getElementById('debug-info').innerHTML =
+        '<pre>' + JSON.stringify(debugInfo, null, 2) + '</pre>';
+      console.log('Debug info:', debugInfo);
+    </script>
+  </body>
+</html>
