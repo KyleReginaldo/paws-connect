@@ -57,6 +57,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         pet: z.number().nullable().optional(),
         type_of_residence: z.string().nullable().optional(),
         user: z.string().nullable().optional(),
+        // New fields for adoption form
+        reason_for_adopting: z.string().nullable().optional(),
+        willing_to_visit_shelter: z.boolean().nullable().optional(),
+        willing_to_visit_again: z.boolean().nullable().optional(),
+        adopting_for_self: z.boolean().nullable().optional(),
+        how_can_you_give_fur_rever_home: z.string().nullable().optional(),
+        where_did_you_hear_about_us: z.string().nullable().optional(),
       })
       .strict();
 

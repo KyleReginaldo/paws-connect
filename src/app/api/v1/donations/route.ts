@@ -95,11 +95,21 @@ export async function POST(request: NextRequest) {
     const currentRaised = fundData.raised_amount || 0;
     const newRaised = currentRaised + amount;
 
+    // Check if target amount is reached or exceeded for auto-completion
+    const targetAmount = fundData.target_amount || 0;
+    const shouldAutoComplete = newRaised >= targetAmount && targetAmount > 0;
+
+    // Update fundraising with new raised amount and possibly status
+    const updateData: Record<string, unknown> = { raised_amount: newRaised };
+    if (shouldAutoComplete && fundData.status === 'ONGOING') {
+      updateData.status = 'COMPLETE';
+    }
+
     const { data: updatedFund, error: updateError } = await supabase
       .from('fundraising')
-      .update({ raised_amount: newRaised })
+      .update(updateData)
       .eq('id', fundraising)
-      .select('id, title, raised_amount, target_amount')
+      .select('id, title, raised_amount, target_amount, status')
       .single();
 
     if (updateError) {
@@ -115,11 +125,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Prepare response message
+    let responseMessage = 'Donation created successfully';
+    if (shouldAutoComplete && updatedFund.status === 'COMPLETE') {
+      responseMessage += '. Congratulations! The fundraising campaign has reached its target and has been automatically completed!';
+    }
+
     return new Response(
       JSON.stringify({
-        message: 'Donation created successfully',
+        message: responseMessage,
         donation,
         fundraising: updatedFund,
+        auto_completed: shouldAutoComplete && updatedFund.status === 'COMPLETE',
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } },
     );

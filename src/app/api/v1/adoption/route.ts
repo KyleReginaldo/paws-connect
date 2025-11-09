@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const userParam = request.nextUrl.searchParams.get('user');
 
     if (userParam) {
-      const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*)').eq('user', userParam);
+      const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*, user_identification(*))').eq('user', userParam);
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
       return new Response(JSON.stringify({ data }), {
         status: 200,
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*)').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('adoption').select('*, pets(*), users(*, user_identification(*))').order('created_at', { ascending: false });
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     console.log('data: ',data);
     return new Response(JSON.stringify({ data }), {
@@ -58,6 +58,13 @@ export async function POST(request: NextRequest) {
         pet: z.number().nullable().optional(),
         type_of_residence: z.string().nullable().optional(),
         user: z.string().nullable().optional(),
+        // New fields for adoption form
+        reason_for_adopting: z.string().nullable().optional(),
+        willing_to_visit_shelter: z.boolean().nullable().optional(),
+        willing_to_visit_again: z.boolean().nullable().optional(),
+        adopting_for_self: z.boolean().nullable().optional(),
+        how_can_you_give_fur_rever_home: z.string().nullable().optional(),
+        where_did_you_hear_about_us: z.string().nullable().optional(),
       })
       .strict();
 

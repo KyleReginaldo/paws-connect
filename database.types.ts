@@ -538,14 +538,18 @@ export type Database = {
       }
       fundraising: {
         Row: {
+          bank_accounts: Json[] | null
           created_at: string
           created_by: string | null
           description: string | null
+          e_wallets: Json[] | null
           end_date: string | null
           facebook_link: string | null
           gcash_number: string | null
           id: number
           images: string[] | null
+          links: string[] | null
+          purpose: string | null
           qr_code: string | null
           raised_amount: number | null
           status: Database["public"]["Enums"]["fundraising_status"] | null
@@ -553,14 +557,18 @@ export type Database = {
           title: string | null
         }
         Insert: {
+          bank_accounts?: Json[] | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          e_wallets?: Json[] | null
           end_date?: string | null
           facebook_link?: string | null
           gcash_number?: string | null
           id?: number
           images?: string[] | null
+          links?: string[] | null
+          purpose?: string | null
           qr_code?: string | null
           raised_amount?: number | null
           status?: Database["public"]["Enums"]["fundraising_status"] | null
@@ -568,14 +576,18 @@ export type Database = {
           title?: string | null
         }
         Update: {
+          bank_accounts?: Json[] | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          e_wallets?: Json[] | null
           end_date?: string | null
           facebook_link?: string | null
           gcash_number?: string | null
           id?: number
           images?: string[] | null
+          links?: string[] | null
+          purpose?: string | null
           qr_code?: string | null
           raised_amount?: number | null
           status?: Database["public"]["Enums"]["fundraising_status"] | null
@@ -942,6 +954,14 @@ export type Database = {
       }
       toggle_comment_like: {
         Args: { comment_id: number; user_id: string }
+        Returns: undefined
+      }
+      toggle_pet_name_vote: {
+        Args: { p_poll_row_id: number; p_user_id: string }
+        Returns: undefined
+      }
+      toggle_poll_vote: {
+        Args: { p_poll_id: number; p_user_id: string }
         Returns: undefined
       }
     }

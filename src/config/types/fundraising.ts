@@ -12,7 +12,17 @@ export interface Fundraising {
   end_date: string | null;
   facebook_link: string | null;
   qr_code: string | null;
-  gcash_number: string | null;
+  bank_accounts?: Array<{
+    label: string;
+    account_number: string;
+    qr_code?: string | null;
+  }> | null;
+  e_wallets?: Array<{
+    label: string;
+    account_number: string;
+    qr_code?: string | null;
+  }> | null;
+  links?: string[] | null;
 }
 
 export interface FundraisingWithUser extends Fundraising {

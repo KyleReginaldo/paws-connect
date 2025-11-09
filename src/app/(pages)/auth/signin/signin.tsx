@@ -15,6 +15,11 @@ const Signin = () => {
   const [password, setPassword] = useState<string>('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
 
   const testimonials = [
     {
@@ -85,6 +90,50 @@ const Signin = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!forgotPasswordEmail) {
+      setForgotPasswordError('Email is required');
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(forgotPasswordEmail)) {
+      setForgotPasswordError('Please enter a valid email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setForgotPasswordError('');
+    setForgotPasswordMessage('');
+
+    try {
+      const response = await fetch('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: forgotPasswordEmail,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setForgotPasswordMessage(data.message);
+        setForgotPasswordEmail('');
+      } else {
+        setForgotPasswordError(data.message || 'Failed to send reset email');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      setForgotPasswordError('An error occurred. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
   const isLoading = status === AuthStatus.authenticating;
 
   // Show success message if user is logged in
@@ -137,62 +186,136 @@ const Signin = () => {
 
       <Card className="w-full max-w-md bg-[#ffffff] shadow-lg border border-orange-500 relative z-10">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            {showForgotPassword ? 'Reset Password' : 'Sign In'}
+          </CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to access admin and staff account
+            {showForgotPassword
+              ? 'Enter your email to receive a password reset link'
+              : 'Enter your email and password to access admin and staff account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="demo@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={errors.email ? 'border-red-500' : ''}
-                disabled={isLoading}
-              />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-            </div>
+          {!showForgotPassword ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="demo@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={errors.email ? 'border-red-500' : ''}
+                  disabled={isLoading}
+                />
+                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="password123"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={errors.password ? 'border-red-500' : ''}
-                disabled={isLoading}
-              />
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="password123"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={errors.password ? 'border-red-500' : ''}
+                  disabled={isLoading}
+                />
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+              </div>
 
-            {status === AuthStatus.error && (
-              <Alert variant="destructive">
-                <AlertDescription>Invalid email or password. Please try again.</AlertDescription>
-              </Alert>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-white"
-              disabled={isLoading || !email || !password}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
+              {status === AuthStatus.error && (
+                <Alert variant="destructive">
+                  <AlertDescription>Invalid email or password. Please try again.</AlertDescription>
+                </Alert>
               )}
-            </Button>
-          </form>
+
+              <Button
+                type="submit"
+                className="w-full bg-orange-500 hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-white"
+                disabled={isLoading || !email || !password}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-gray-600 hover:text-orange-600"
+                >
+                  Forgot your password?
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgotEmail">Email Address</Label>
+                <Input
+                  id="forgotEmail"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  className={forgotPasswordError ? 'border-red-500' : ''}
+                  disabled={forgotPasswordLoading}
+                />
+                {forgotPasswordError && (
+                  <p className="text-sm text-red-500">{forgotPasswordError}</p>
+                )}
+              </div>
+
+              {forgotPasswordMessage && (
+                <Alert>
+                  <AlertDescription className="text-green-700">
+                    {forgotPasswordMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-orange-500 hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-white"
+                disabled={forgotPasswordLoading || !forgotPasswordEmail}
+              >
+                {forgotPasswordLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending Reset Link...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordEmail('');
+                    setForgotPasswordError('');
+                    setForgotPasswordMessage('');
+                  }}
+                  className="text-sm text-gray-600 hover:text-orange-600"
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

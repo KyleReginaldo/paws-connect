@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
     let formData: {
       title: string;
       description: string;
+      purpose?: string;
       created_by: string;
       target_amount: number;
       status?: 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED';
@@ -186,7 +187,17 @@ export async function POST(request: NextRequest) {
       end_date?: string;
       facebook_link?: string;
       qr_code?: string;
-      gcash_number?: string;
+      bank_accounts?: Array<{
+        label: string;
+        account_number: string;
+        qr_code?: string | null;
+      }>;
+      e_wallets?: Array<{
+        label: string;
+        account_number: string;
+        qr_code?: string | null;
+      }>;
+      links?: string[];
     };
 
     if (isMultipart) {
@@ -196,16 +207,55 @@ export async function POST(request: NextRequest) {
       // Extract text fields
       const title = fd.get('title') as string;
       const description = fd.get('description') as string;
+      const purpose = fd.get('purpose') as string;
       const created_by = fd.get('created_by') as string;
       const target_amount = Number(fd.get('target_amount'));
       const status = (fd.get('status') as string) || 'PENDING';
       const end_date_raw = fd.get('end_date') as string | null;
       const facebook_link_raw = fd.get('facebook_link') as string | null;
-      const gcash_number = fd.get('gcash_number') as string;
+      
+      // Extract new fields
+      const bank_accounts_raw = fd.get('bank_accounts') as string | null;
+      const e_wallets_raw = fd.get('e_wallets') as string | null;
+      const links_raw = fd.get('links') as string | null;
       
       // Convert null/empty values to undefined for proper schema validation
       const end_date = end_date_raw && end_date_raw.trim() !== '' ? end_date_raw : undefined;
       const facebook_link = facebook_link_raw && facebook_link_raw.trim() !== '' ? facebook_link_raw : undefined;
+      
+      // Parse JSON fields
+      let bank_accounts: Array<{
+        label: string;
+        account_number: string;
+        qr_code?: string | null;
+      }> | undefined;
+      let e_wallets: Array<{
+        label: string;
+        account_number: string;
+        qr_code?: string | null;
+      }> | undefined;
+      let links: string[] | undefined;
+      
+      try {
+        bank_accounts = bank_accounts_raw ? JSON.parse(bank_accounts_raw) : undefined;
+      } catch (e) {
+        console.error('Failed to parse bank_accounts:', e);
+        bank_accounts = undefined;
+      }
+      
+      try {
+        e_wallets = e_wallets_raw ? JSON.parse(e_wallets_raw) : undefined;
+      } catch (e) {
+        console.error('Failed to parse e_wallets:', e);
+        e_wallets = undefined;
+      }
+      
+      try {
+        links = links_raw ? JSON.parse(links_raw) : undefined;
+      } catch (e) {
+        console.error('Failed to parse links:', e);
+        links = undefined;
+      }
 
       // Process image files
       const imageFiles = fd.getAll('images') as File[];
@@ -329,10 +379,138 @@ export async function POST(request: NextRequest) {
         qrCodeUrl = qrUrlData.publicUrl;
         console.log(`✅ QR code uploaded successfully: ${qrCodeUrl}`);
       }
+
+      // Process bank account QR codes
+      if (bank_accounts && bank_accounts.length > 0) {
+        console.log(`🏦 Processing ${bank_accounts.length} bank account(s)`);
+        for (let i = 0; i < bank_accounts.length; i++) {
+          const bankQrFile = fd.get(`bank_qr_${i}`) as File;
+          if (bankQrFile && bankQrFile.size > 0) {
+            console.log(`⬆️ Uploading bank QR code ${i}: ${bankQrFile.name}`);
+            
+            // Validate file
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (bankQrFile.size > maxSize) {
+              return new Response(
+                JSON.stringify({
+                  error: 'File too large',
+                  message: `Bank QR code file "${bankQrFile.name}" exceeds 5MB limit`,
+                }),
+                { status: 413, headers: { 'Content-Type': 'application/json' } },
+              );
+            }
+            
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+            if (!allowedTypes.includes(bankQrFile.type)) {
+              return new Response(
+                JSON.stringify({
+                  error: 'Invalid file type',
+                  message: `Bank QR code file "${bankQrFile.name}" must be JPEG, PNG, WebP, or GIF`,
+                }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } },
+              );
+            }
+            
+            // Upload bank QR code
+            const bankQrFileName = `fundraising/bank-qr/${Date.now()}-${Math.random().toString(36).substring(2)}-${bankQrFile.name}`;
+            const bankQrFileBuffer = await bankQrFile.arrayBuffer();
+            
+            const { data: bankQrUploadData, error: bankQrUploadError } = await supabase.storage
+              .from('files')
+              .upload(bankQrFileName, bankQrFileBuffer, {
+                contentType: bankQrFile.type,
+              });
+            
+            if (bankQrUploadError) {
+              console.error(`❌ Bank QR code upload failed:`, bankQrUploadError);
+              return new Response(
+                JSON.stringify({
+                  error: 'Upload failed',
+                  message: `Failed to upload bank QR code: ${bankQrUploadError.message}`,
+                }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } },
+              );
+            }
+            
+            // Get public URL and update bank account
+            const { data: bankQrUrlData } = supabase.storage
+              .from('files')
+              .getPublicUrl(bankQrUploadData.path);
+            
+            bank_accounts[i].qr_code = bankQrUrlData.publicUrl;
+            console.log(`✅ Bank QR code ${i} uploaded successfully: ${bankQrUrlData.publicUrl}`);
+          }
+        }
+      }
+
+      // Process e-wallet QR codes
+      if (e_wallets && e_wallets.length > 0) {
+        console.log(`💳 Processing ${e_wallets.length} e-wallet(s)`);
+        for (let i = 0; i < e_wallets.length; i++) {
+          const walletQrFile = fd.get(`wallet_qr_${i}`) as File;
+          if (walletQrFile && walletQrFile.size > 0) {
+            console.log(`⬆️ Uploading e-wallet QR code ${i}: ${walletQrFile.name}`);
+            
+            // Validate file
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (walletQrFile.size > maxSize) {
+              return new Response(
+                JSON.stringify({
+                  error: 'File too large',
+                  message: `E-wallet QR code file "${walletQrFile.name}" exceeds 5MB limit`,
+                }),
+                { status: 413, headers: { 'Content-Type': 'application/json' } },
+              );
+            }
+            
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+            if (!walletQrFile.type || !allowedTypes.includes(walletQrFile.type)) {
+              return new Response(
+                JSON.stringify({
+                  error: 'Invalid file type',
+                  message: `E-wallet QR code file "${walletQrFile.name}" must be JPEG, PNG, WebP, or GIF`,
+                }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } },
+              );
+            }
+            
+            // Upload e-wallet QR code
+            const walletQrFileName = `fundraising/wallet-qr/${Date.now()}-${Math.random().toString(36).substring(2)}-${walletQrFile.name}`;
+            const walletQrFileBuffer = await walletQrFile.arrayBuffer();
+            
+            const { data: walletQrUploadData, error: walletQrUploadError } = await supabase.storage
+              .from('files')
+              .upload(walletQrFileName, walletQrFileBuffer, {
+                contentType: walletQrFile.type,
+              });
+            
+            if (walletQrUploadError) {
+              console.error(`❌ E-wallet QR code upload failed:`, walletQrUploadError);
+              return new Response(
+                JSON.stringify({
+                  error: 'Upload failed',
+                  message: `Failed to upload e-wallet QR code: ${walletQrUploadError.message}`,
+                }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } },
+              );
+            }
+            
+            // Get public URL and update e-wallet
+            const { data: walletQrUrlData } = supabase.storage
+              .from('files')
+              .getPublicUrl(walletQrUploadData.path);
+            
+            e_wallets[i].qr_code = walletQrUrlData.publicUrl;
+            console.log(`✅ E-wallet QR code ${i} uploaded successfully: ${walletQrUrlData.publicUrl}`);
+          }
+        }
+      }
+      
       
       formData = {
         title,
         description,
+        purpose,
         created_by,
         target_amount,
         status: status as 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED',
@@ -340,7 +518,9 @@ export async function POST(request: NextRequest) {
         end_date,
         facebook_link,
         qr_code: qrCodeUrl,
-        gcash_number,
+        bank_accounts,
+        e_wallets,
+        links,
       };
       
     } else {
@@ -378,6 +558,7 @@ export async function POST(request: NextRequest) {
     const insertData = {
       title: validated.title,
       description: validated.description,
+      purpose: validated.purpose,
       target_amount: validated.target_amount,
       images: validated.images || [],
       raised_amount: 0, // Initialize with 0
@@ -386,7 +567,9 @@ export async function POST(request: NextRequest) {
       end_date: validated.end_date,
       facebook_link: validated.facebook_link,
       qr_code: validated.qr_code,
-      gcash_number: validated.gcash_number,
+      bank_accounts: validated.bank_accounts || null,
+      e_wallets: validated.e_wallets || null,
+      links: validated.links || null,
     };
 
     console.log('💾 Inserting to database:', {

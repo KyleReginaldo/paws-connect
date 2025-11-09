@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon, Upload, X } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { CalendarIcon, Info, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
@@ -292,7 +293,9 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Event Title *</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="title">Event Title *</Label>
+            </div>
             <Input
               id="title"
               value={formData.title}
@@ -308,7 +311,21 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
           {/* Description */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="description">Description</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p>
+                      Provide a clear description with the event&apos;s purpose, activities, target
+                      audience, location, and timing. This helps generate better AI suggestions for
+                      planning and promotion.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <span className="text-xs text-gray-500">
                 {formData.description.length}/50+ characters{' '}
                 {formData.description.length >= 50 ? '✅' : ''}
@@ -325,7 +342,20 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
 
           {/* Starting Date & Time */}
           <div className="space-y-2">
-            <Label>Event Starting Date & Time</Label>
+            <div className="flex items-center gap-2">
+              <Label>Event Starting Date & Time</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p>
+                    Schedule your event at least 3 days in advance to allow proper planning and
+                    promotion. Choose a date and time that works best for your target audience.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <div className="flex gap-2">
               <Popover>
                 <PopoverTrigger asChild>

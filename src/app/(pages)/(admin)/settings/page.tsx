@@ -1,5 +1,6 @@
 'use client';
 import { useAuth } from '@/app/context/AuthContext';
+import { AdminImageSelector } from '@/components/AdminImageSelector';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [pwdSaving, setPwdSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const initials = useMemo(() => user?.username?.[0]?.toUpperCase() ?? 'U', [user?.username]);
 
@@ -135,13 +136,13 @@ export default function SettingsPage() {
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8">
       <div className="flex items-center gap-4 mb-6">
-        <Avatar className="size-14">
-          {user?.profile_image_link ? (
-            <AvatarImage src={user.profile_image_link} alt={user?.username ?? 'User'} />
-          ) : (
-            <AvatarFallback>{initials}</AvatarFallback>
-          )}
-        </Avatar>
+        <AdminImageSelector
+          currentImage={selectedImage || user?.profile_image_link || ''}
+          onImageSelect={(imageUrl) => {
+            setSelectedImage(imageUrl);
+          }}
+          userInitials={initials}
+        />
         <div>
           <h2 className="text-xl font-semibold">Account Settings</h2>
           <p className="text-sm text-gray-500">Manage your profile information and password.</p>
@@ -193,20 +194,6 @@ export default function SettingsPage() {
                   )}
                 />
               </div>
-
-              <FormField
-                control={form.control}
-                name="profile_image_link"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Profile Image URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com/avatar.jpg" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <div>
                 <Label>Email</Label>

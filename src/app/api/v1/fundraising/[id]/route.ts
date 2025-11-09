@@ -73,13 +73,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     let updateData: {
       title?: string;
       description?: string;
+      purpose?: string;
       target_amount?: number;
       status?: 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED';
       images?: string[];
       end_date?: string;
       facebook_link?: string;
       qr_code?: string;
-      gcash_number?: string;
     };
 
     if (isMultipart) {
@@ -89,11 +89,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       // Extract text fields
       const title = fd.get('title') as string;
       const description = fd.get('description') as string;
+      const purpose = fd.get('purpose') as string;
       const target_amount = fd.get('target_amount') ? Number(fd.get('target_amount')) : undefined;
       const status = fd.get('status') as string;
       const end_date = fd.get('end_date') as string;
       const facebook_link = fd.get('facebook_link') as string;
-      const gcash_number = fd.get('gcash_number') as string;
       
       // Process image files
       const imageFiles = fd.getAll('images') as File[];
@@ -221,13 +221,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData = {
         title: title || undefined,
         description: description || undefined,
+        purpose: purpose || undefined,
         target_amount,
-        status: status as 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED' || undefined,
+        status: status as 'PENDING' | 'ONGOING' | 'COMPLETE' | 'REJECTED' | 'CANCELLED',
         images: imageUrls.length > 0 ? imageUrls : undefined,
         end_date: end_date || undefined,
         facebook_link: facebook_link || undefined,
         qr_code: qrCodeUrl,
-        gcash_number: gcash_number || undefined,
       };
       
     } else {

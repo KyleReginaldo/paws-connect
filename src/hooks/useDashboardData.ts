@@ -55,6 +55,17 @@ export interface FundraisingCampaign {
   created_at: string;
   end_date: string | null;
   facebook_link: string | null;
+  bank_accounts?: Array<{
+    label: string;
+    account_number: string;
+    qr_code?: string | null;
+  }> | null;
+  e_wallets?: Array<{
+    label: string;
+    account_number: string;
+    qr_code?: string | null;
+  }> | null;
+  links?: string[] | null;
   created_by_user?: {
     username: string | null;
     email: string | null;
@@ -80,6 +91,7 @@ export interface Adoption {
   is_renting: boolean | null;
   number_of_household_members: number | null;
   type_of_residence: string | null;
+  status: string | null;
 }
 
 export interface DashboardStats {
@@ -358,13 +370,22 @@ const useDashboardData = () => {
         const pet = pets.find(p => p.id === adoption.pet);
         const user = users.find(u => u.id === adoption.user);
         
+        // Map the actual adoption status to display format
+        const getDisplayStatus = (status: string | null) => {
+          if (!status) return 'pending';
+          const upperStatus = status.toUpperCase();
+          if (upperStatus === 'APPROVED' || upperStatus === 'COMPLETED') return 'completed';
+          if (upperStatus === 'REJECTED' || upperStatus === 'CANCELLED') return 'rejected';
+          return 'pending'; // For PENDING and any other status
+        };
+        
         return {
           id: adoption.id,
           petName: pet?.name || 'Unknown Pet',
           petType: pet?.breed || pet?.type || 'Unknown Type',
           adopter: user?.username || user?.email || 'Unknown User',
           timeAgo: formatTimeAgo(adoption.created_at),
-          status: Math.random() > 0.5 ? 'completed' : 'pending', // Placeholder logic
+          status: getDisplayStatus(adoption.status), // Use actual adoption status
           image: (pet?.photos && pet.photos.length > 0 ? pet.photos[0] : null) || '/empty_pet.png',
         };
       });

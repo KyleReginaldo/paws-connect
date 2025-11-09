@@ -22,8 +22,38 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { Fundraising } from '@/config/types/fundraising';
-import { AlertCircle, HelpCircle, Loader2, QrCode } from 'lucide-react';
+import { AlertCircle, HelpCircle, Loader2, Plus, QrCode, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+// Extended interface for form data with file properties
+interface FundraisingFormData {
+  id?: number;
+  title: string;
+  description: string;
+  purpose: string;
+  target_amount: number;
+  raised_amount?: number | null;
+  images: string[];
+  status: string;
+  created_by: string;
+  created_at?: string;
+  end_date: string;
+  facebook_link: string;
+  qr_code: string;
+  bank_accounts: Array<{
+    label: string;
+    account_number: string;
+    qr_code?: string | null;
+    qr_code_file?: File;
+  }>;
+  e_wallets: Array<{
+    label: string;
+    account_number: string;
+    qr_code?: string | null;
+    qr_code_file?: File;
+  }>;
+  links: string[];
+}
 
 interface FundraisingModalProps {
   open: boolean;
@@ -46,7 +76,7 @@ export function FundraisingModal({
   editingCampaign,
   currentUserId,
 }: FundraisingModalProps) {
-  const [formData, setFormData] = useState<CreateFundraisingDto>({
+  const [formData, setFormData] = useState<FundraisingFormData>({
     title: '',
     description: '',
     purpose: '',
@@ -57,14 +87,14 @@ export function FundraisingModal({
     end_date: '',
     facebook_link: '',
     qr_code: '',
-    gcash_number: '',
+    bank_accounts: [],
+    e_wallets: [],
+    links: [],
   });
+  const [error, setError] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [qrCodeFile, setQrCodeFile] = useState<File | null>(null);
-  const [qrCodePreview, setQrCodePreview] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingCampaign) {
@@ -85,12 +115,12 @@ export function FundraisingModal({
         end_date: editingCampaign.end_date || '',
         facebook_link: editingCampaign.facebook_link || '',
         qr_code: editingCampaign?.qr_code || '',
-        gcash_number: editingCampaign?.gcash_number || '',
+        bank_accounts: editingCampaign?.bank_accounts || [],
+        e_wallets: editingCampaign?.e_wallets || [],
+        links: editingCampaign?.links || [],
       });
       setImagePreviews((editingCampaign?.images as string[]) || []);
       setImageFiles([]); // Clear local files when editing
-      setQrCodeFile(null);
-      setQrCodePreview(editingCampaign?.qr_code || '');
     } else {
       setFormData({
         title: '',
@@ -103,12 +133,12 @@ export function FundraisingModal({
         end_date: '',
         facebook_link: '',
         qr_code: '',
-        gcash_number: '',
+        bank_accounts: [],
+        e_wallets: [],
+        links: [],
       });
       setImagePreviews([]);
       setImageFiles([]); // Clear local files for new campaign
-      setQrCodeFile(null);
-      setQrCodePreview('');
     }
     // Clear error when modal opens/closes or campaign changes
     setError(null);
@@ -119,7 +149,6 @@ export function FundraisingModal({
     console.log('=== FORM SUBMISSION START ===');
     console.log('📝 Current formData:', formData);
     console.log('🖼️ Current image files:', imageFiles.length);
-    console.log('📱 QR code file:', qrCodeFile ? 'Present' : 'None');
 
     setIsSubmitting(true);
     setError(null);
@@ -148,13 +177,6 @@ export function FundraisingModal({
         return;
       }
 
-      // Validate GCash number format if provided
-      if (formData.gcash_number && !/^(09|\+639)\d{9}$/.test(formData.gcash_number)) {
-        console.log('❌ GCash number validation failed');
-        setError('Invalid GCash number format. Use: 09XXXXXXXXX or +639XXXXXXXXX');
-        return;
-      }
-
       console.log('✅ Form validation passed');
 
       // Create FormData for multipart upload
@@ -169,19 +191,58 @@ export function FundraisingModal({
       formDataToSubmit.append('target_amount', formData.target_amount.toString());
       formDataToSubmit.append('created_by', formData.created_by);
 
-      if (formData.gcash_number) {
-        formDataToSubmit.append('gcash_number', formData.gcash_number);
+      // Add new fields as JSON strings (without qr_code_file properties)
+      if (formData.bank_accounts && formData.bank_accounts.length > 0) {
+        // Create clean bank accounts without qr_code_file for JSON
+        const cleanBankAccounts = formData.bank_accounts.map((account) => ({
+          label: account.label,
+          account_number: account.account_number,
+          qr_code: account.qr_code,
+        }));
+        formDataToSubmit.append('bank_accounts', JSON.stringify(cleanBankAccounts));
+
+        // Add bank account QR code files separately
+        formData.bank_accounts.forEach((account, index) => {
+          if (account.qr_code_file) {
+            formDataToSubmit.append(`bank_qr_${index}`, account.qr_code_file);
+          }
+        });
+      }
+
+      if (formData.e_wallets && formData.e_wallets.length > 0) {
+        // Create clean e-wallets without qr_code_file for JSON
+        const cleanEWallets = formData.e_wallets.map((wallet) => ({
+          label: wallet.label,
+          account_number: wallet.account_number,
+          qr_code: wallet.qr_code,
+        }));
+        formDataToSubmit.append('e_wallets', JSON.stringify(cleanEWallets));
+
+        // Add e-wallet QR code files separately
+        formData.e_wallets.forEach((wallet, index) => {
+          if (wallet.qr_code_file) {
+            formDataToSubmit.append(`wallet_qr_${index}`, wallet.qr_code_file);
+          }
+        });
+      }
+
+      if (formData.links && formData.links.length > 0) {
+        formDataToSubmit.append('links', JSON.stringify(formData.links));
+      }
+
+      // Add optional fields
+      if (formData.end_date) {
+        formDataToSubmit.append('end_date', formData.end_date);
+      }
+
+      if (formData.facebook_link) {
+        formDataToSubmit.append('facebook_link', formData.facebook_link);
       }
 
       // Add image files
       imageFiles.forEach((file) => {
         formDataToSubmit.append(`images`, file);
       });
-
-      // Add QR code file if present
-      if (qrCodeFile) {
-        formDataToSubmit.append('qr_code', qrCodeFile);
-      }
 
       console.log('📤 FormData prepared with files');
 
@@ -216,6 +277,148 @@ export function FundraisingModal({
     setFormData((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  // Helper functions for managing dynamic arrays
+  const addBankAccount = () => {
+    const currentAccounts = formData.bank_accounts || [];
+    if (currentAccounts.length < 10) {
+      setFormData((prev) => ({
+        ...prev,
+        bank_accounts: [...currentAccounts, { label: '', account_number: '', qr_code: null }],
+      }));
+    }
+  };
+
+  const updateBankAccount = (
+    index: number,
+    field: 'label' | 'account_number' | 'qr_code',
+    value: string,
+  ) => {
+    const currentAccounts = formData.bank_accounts || [];
+    const updatedAccounts = currentAccounts.map((account, i) =>
+      i === index ? { ...account, [field]: value } : account,
+    );
+    setFormData((prev) => ({
+      ...prev,
+      bank_accounts: updatedAccounts,
+    }));
+  };
+
+  const handleBankAccountQrCodeUpload = (index: number, files: FileList | null) => {
+    if (files && files.length > 0) {
+      const file = files[0];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+      if (file.size > maxSize) {
+        setError(`QR code file is too large. Maximum size is 10MB.`);
+        return;
+      }
+
+      if (!allowedTypes.includes(file.type)) {
+        setError(`QR code file format not supported. Please use JPEG, PNG, or WebP.`);
+        return;
+      }
+
+      // Store file for bank account
+      const currentAccounts = formData.bank_accounts || [];
+      const updatedAccounts = currentAccounts.map((account, i) =>
+        i === index ? { ...account, qr_code_file: file } : account,
+      );
+      setFormData((prev) => ({
+        ...prev,
+        bank_accounts: updatedAccounts,
+      }));
+    }
+  };
+  const removeBankAccount = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      bank_accounts: prev.bank_accounts?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
+  // Helper functions for managing e-wallets
+  const addEWallet = () => {
+    if ((formData.e_wallets?.length || 0) < 10) {
+      setFormData((prev) => ({
+        ...prev,
+        e_wallets: [...(prev.e_wallets || []), { label: '', account_number: '', qr_code: null }],
+      }));
+    }
+  };
+
+  const updateEWallet = (
+    index: number,
+    field: 'label' | 'account_number' | 'qr_code',
+    value: string,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      e_wallets:
+        prev.e_wallets?.map((wallet, i) =>
+          i === index ? { ...wallet, [field]: value || null } : wallet,
+        ) || [],
+    }));
+  };
+
+  const handleEWalletQrCodeUpload = (index: number, files: FileList | null) => {
+    if (files && files.length > 0) {
+      const file = files[0];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+      if (file.size > maxSize) {
+        setError(`QR code file is too large. Maximum size is 10MB.`);
+        return;
+      }
+
+      if (!allowedTypes.includes(file.type)) {
+        setError(`QR code file format not supported. Please use JPEG, PNG, or WebP.`);
+        return;
+      }
+
+      // Store file for e-wallet
+      const updatedWallets = (formData.e_wallets || []).map((wallet, i) =>
+        i === index ? { ...wallet, qr_code_file: file } : wallet,
+      );
+      setFormData((prev) => ({
+        ...prev,
+        e_wallets: updatedWallets,
+      }));
+    }
+  };
+
+  const removeEWallet = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      e_wallets: prev.e_wallets?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
+  // Helper functions for managing links
+  const addLink = () => {
+    if ((formData.links?.length || 0) < 10) {
+      setFormData((prev) => ({
+        ...prev,
+        links: [...(prev.links || []), ''],
+      }));
+    }
+  };
+
+  const updateLink = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      links: prev.links?.map((link, i) => (i === index ? value : link)) || [],
+    }));
+  };
+
+  const removeLink = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      links: prev.links?.filter((_, i) => i !== index) || [],
     }));
   };
 
@@ -285,49 +488,6 @@ export function FundraisingModal({
         handleImageUpload(fileList.files);
       }
     }
-  };
-
-  const handleQrCodeUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) {
-      console.log('❌ No QR code file selected');
-      return;
-    }
-
-    const file = files[0]; // Only take the first file for QR code
-    console.log('=== QR CODE UPLOAD START ===');
-    console.log('📱 QR Code file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
-
-    // Validate file size (10MB limit)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    if (file.size > MAX_FILE_SIZE) {
-      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      setError(`QR code file too large: ${fileSizeMB}MB. Maximum size is 10MB.`);
-      return;
-    }
-
-    // Validate file
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setError('QR code file is too large. Maximum size is 5MB.');
-      return;
-    }
-
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      setError('Invalid QR code file type. Only images (JPG, PNG, GIF, WebP) are allowed.');
-      return;
-    }
-
-    setError(null);
-
-    // Store file and create local preview
-    setQrCodeFile(file);
-    const localUrl = URL.createObjectURL(file);
-    setQrCodePreview(localUrl);
   };
 
   return (
@@ -484,188 +644,230 @@ export function FundraisingModal({
               </p>
             </div>
 
-            {/* Payment Information Section */}
-            <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
-              {/* Section Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-lg">
-                    Payment Information
-                  </h3>
-                  <p className="text-xs text-blue-600 dark:text-blue-300">
-                    Optional - Set up donation methods for supporters
-                  </p>
+            {/* Bank Accounts Section */}
+            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Bank Accounts</h4>
+                  <span className="text-xs text-gray-500">
+                    ({formData.bank_accounts?.length || 0}/10)
+                  </span>
                 </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addBankAccount}
+                  disabled={(formData.bank_accounts?.length || 0) >= 10}
+                  className="h-8"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Bank
+                </Button>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* GCash Number Section */}
-                <div className="space-y-3 p-4 bg-white/80 dark:bg-gray-900/50 rounded-lg border border-blue-100 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">G</span>
-                    </div>
-                    <Label
-                      htmlFor="gcash_number"
-                      className="font-medium text-gray-900 dark:text-gray-100"
+              {formData.bank_accounts && formData.bank_accounts.length > 0 ? (
+                <div className="space-y-3">
+                  {formData.bank_accounts.map((account, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-white dark:bg-gray-800 rounded border space-y-2"
                     >
-                      GCash Number
-                    </Label>
-                  </div>
-                  <Input
-                    id="gcash_number"
-                    type="tel"
-                    value={formData.gcash_number || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      handleInputChange('gcash_number', value || '');
-
-                      // Real-time validation
-                      if (value && !/^(09|\+639)\d{9}$/.test(value)) {
-                        // Show validation hint
-                        e.target.style.borderColor = '#f59e0b';
-                      } else {
-                        e.target.style.borderColor = '';
-                      }
-                    }}
-                    placeholder="09123456789 or +639123456789"
-                    className="font-mono text-center bg-white/90 dark:bg-gray-800/90"
-                  />
-                  <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
-                    <span>Donors can transfer directly to this number</span>
-                  </div>
-                  {formData.gcash_number && !/^(09|\+639)\d{9}$/.test(formData.gcash_number) && (
-                    <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
-                      <span className="text-amber-500">⚠️</span>
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
-                        Use format: 09XXXXXXXXX or +639XXXXXXXXX
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* QR Code Section */}
-                <div className="space-y-3 p-4 bg-white/80 dark:bg-gray-900/50 rounded-lg border border-blue-100 dark:border-blue-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <QrCode className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <Label
-                        htmlFor="qr_code_upload"
-                        className="font-medium text-gray-900 dark:text-gray-100"
-                      >
-                        GCash QR Code
-                      </Label>
-                    </div>
-                  </div>
-
-                  {!formData.qr_code && !qrCodePreview ? (
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <input
-                          id="qr_code_upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleQrCodeUpload(e.target.files)}
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="qr_code_upload"
-                          className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer transition-all border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-950/30 dark:hover:bg-blue-950/50"
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Bank Account {index + 1}</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeBankAccount(index)}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                         >
-                          <QrCode className="w-8 h-8 mb-2 text-blue-500" />
-                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                            Upload QR Code
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            PNG, JPG up to 10MB
-                          </span>
-                        </label>
+                          <X className="w-3 h-3" />
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
-                        <span>Upload your GCash QR code for easy scanning</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="e.g. BPI Savings"
+                          value={account.label}
+                          onChange={(e) => updateBankAccount(index, 'label', e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          placeholder="Account number"
+                          value={account.account_number}
+                          onChange={(e) =>
+                            updateBankAccount(index, 'account_number', e.target.value)
+                          }
+                          className="text-sm"
+                        />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-16 h-16 bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-600 flex items-center justify-center overflow-hidden shadow-sm">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={qrCodePreview || formData.qr_code || ''}
-                              alt="QR Code"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.setAttribute(
-                                  'style',
-                                  'display: flex',
-                                );
-                              }}
-                            />
-                            <div
-                              className="w-full h-full flex items-center justify-center text-xs text-gray-400"
-                              style={{ display: 'none' }}
-                            >
-                              QR
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                                QR Code Ready
-                              </p>
-                            </div>
-                            <p className="text-xs text-green-700 dark:text-green-300 mb-2">
-                              Donors can scan this code for instant payments
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleInputChange('qr_code', '');
-                                setQrCodeFile(null);
-                                setQrCodePreview('');
-                              }}
-                              className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
-                            >
-                              Remove QR code
-                            </button>
-                          </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          QR Code (optional)
+                        </Label>
+                        <div className="relative">
+                          <input
+                            id={`bank-qr-${index}`}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleBankAccountQrCodeUpload(index, e.target.files)}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor={`bank-qr-${index}`}
+                            className="flex items-center justify-center p-2 border-2 border-dashed rounded-lg cursor-pointer transition-all border-gray-300 bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+                          >
+                            <QrCode className="w-4 h-4 mr-2 text-gray-500" />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              {account.qr_code_file ? account.qr_code_file.name : 'Upload QR Code'}
+                            </span>
+                          </label>
                         </div>
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No bank accounts added. Click &quot;Add Bank&quot; to add payment options.
+                </p>
+              )}
+            </div>
+
+            {/* E-Wallets Section */}
+            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">E-Wallets</h4>
+                  <span className="text-xs text-gray-500">
+                    ({formData.e_wallets?.length || 0}/10)
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addEWallet}
+                  disabled={(formData.e_wallets?.length || 0) >= 10}
+                  className="h-8"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add E-Wallet
+                </Button>
               </div>
 
-              {/* Payment Summary */}
-              {(formData.gcash_number || formData.qr_code) && (
-                <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <strong className="text-emerald-800 dark:text-emerald-200 text-sm">
-                      Payment Options Available:
-                    </strong>
-                  </div>
-                  <ul className="space-y-1 text-sm text-emerald-700 dark:text-emerald-300">
-                    {formData.gcash_number && (
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                        <span>
-                          Direct GCash transfer to:{' '}
-                          <code className="font-mono bg-emerald-100 dark:bg-emerald-900/50 px-1 rounded text-xs">
-                            {formData.gcash_number}
-                          </code>
-                        </span>
-                      </li>
-                    )}
-                    {formData.qr_code && (
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                        <span>QR code scanning for instant payment</span>
-                      </li>
-                    )}
-                  </ul>
+              {formData.e_wallets && formData.e_wallets.length > 0 ? (
+                <div className="space-y-3">
+                  {formData.e_wallets.map((wallet, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-white dark:bg-gray-800 rounded border space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">E-Wallet {index + 1}</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeEWallet(index)}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="e.g. Maya, GCash"
+                          value={wallet.label}
+                          onChange={(e) => updateEWallet(index, 'label', e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          placeholder="Account number/mobile"
+                          value={wallet.account_number}
+                          onChange={(e) => updateEWallet(index, 'account_number', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          QR Code (optional)
+                        </Label>
+                        <div className="relative">
+                          <input
+                            id={`ewallet-qr-${index}`}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleEWalletQrCodeUpload(index, e.target.files)}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor={`ewallet-qr-${index}`}
+                            className="flex items-center justify-center p-2 border-2 border-dashed rounded-lg cursor-pointer transition-all border-gray-300 bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+                          >
+                            <QrCode className="w-4 h-4 mr-2 text-gray-500" />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              {wallet.qr_code_file ? wallet.qr_code_file.name : 'Upload QR Code'}
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No e-wallets added. Click &quot;Add E-Wallet&quot; to add payment options.
+                </p>
+              )}
+            </div>
+
+            {/* Links Section */}
+            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Campaign Links</h4>
+                  <span className="text-xs text-gray-500">({formData.links?.length || 0}/10)</span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addLink}
+                  disabled={(formData.links?.length || 0) >= 10}
+                  className="h-8"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Link
+                </Button>
+              </div>
+
+              {formData.links && formData.links.length > 0 ? (
+                <div className="space-y-2">
+                  {formData.links.map((link, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="https://example.com/campaign"
+                        value={link}
+                        onChange={(e) => updateLink(index, e.target.value)}
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeLink(index)}
+                        className="h-9 w-9 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No links added. Click &quot;Add Link&quot; to add related campaign URLs.
+                </p>
               )}
             </div>
 

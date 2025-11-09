@@ -2,6 +2,13 @@ import z from 'zod';
 
 const statusEnum = z.enum(['PENDING', 'ONGOING', 'COMPLETE', 'REJECTED', 'CANCELLED']);
 
+// Schema for bank account and e-wallet objects
+const paymentAccountSchema = z.object({
+  label: z.string().min(1, 'Label is required').max(50, 'Label must be less than 50 characters'),
+  account_number: z.string().min(1, 'Account number is required').max(100, 'Account number must be less than 100 characters'),
+  qr_code: z.string().url('QR code must be a valid URL').optional().nullable(),
+});
+
 export const createFundraisingSchema = z.object({
   title: z
     .string()
@@ -39,14 +46,9 @@ export const createFundraisingSchema = z.object({
     .string()
     .optional()
     .transform((val) => (val === '' ? null : val)),
-  gcash_number: z
-    .string()
-    .optional()
-    .transform((val) => (val === '' ? null : val))
-    .refine(
-      (val) => val === null || val === undefined || /^(09|\+639)\d{9}$/.test(val),
-      'Invalid GCash number format. Use format: 09XXXXXXXXX or +639XXXXXXXXX',
-    ),
+  bank_accounts: z.array(paymentAccountSchema).max(10, 'Maximum 10 bank accounts allowed').optional(),
+  e_wallets: z.array(paymentAccountSchema).max(10, 'Maximum 10 e-wallets allowed').optional(),
+  links: z.array(z.string().url('Each link must be a valid URL')).max(10, 'Maximum 10 links allowed').optional(),
   // Note: raised_amount is NOT included in create schema - it starts at 0 and is updated via donations
 });
 
@@ -90,15 +92,11 @@ export const updateFundraisingSchema = z.object({
     .string()
     .transform((val) => (val === '' ? null : val))
     .optional(),
-  gcash_number: z
-    .string()
-    .transform((val) => (val === '' ? null : val))
-    .refine(
-      (val) => val === null || val === undefined || /^(09|\+639)\d{9}$/.test(val),
-      'Invalid GCash number format. Use format: 09XXXXXXXXX or +639XXXXXXXXX',
-    )
-    .optional(),
+  bank_accounts: z.array(paymentAccountSchema).max(10, 'Maximum 10 bank accounts allowed').optional(),
+  e_wallets: z.array(paymentAccountSchema).max(10, 'Maximum 10 e-wallets allowed').optional(),
+  links: z.array(z.string().url('Each link must be a valid URL')).max(10, 'Maximum 10 links allowed').optional(),
 });
 
 export type CreateFundraisingDto = z.infer<typeof createFundraisingSchema>;
 export type UpdateFundraisingDto = z.infer<typeof updateFundraisingSchema>;
+export type PaymentAccount = z.infer<typeof paymentAccountSchema>;

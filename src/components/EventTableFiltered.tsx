@@ -14,13 +14,26 @@ import {
   Bot,
   Calendar,
   Edit,
+  Eye,
+  Heart,
   Image as ImageIcon,
+  MessageCircle,
   MoreHorizontal,
   Trash2,
   User,
+  Users,
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
+
+interface EventWithStats extends Event {
+  members?: Array<Record<string, unknown>>;
+  comments?: Array<{
+    likes?: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  }>;
+}
 
 interface EventTableFilteredProps {
   events: Event[];
@@ -43,23 +56,23 @@ export function EventTableFiltered({
   // Generate filter options based on available data
   const filterOptions = useMemo(() => {
     const creatorOptions = [
-      ...new Set(events.map((event) => event.users?.username).filter(Boolean)),
+      ...new Set(events.map((event: Event) => event.users?.username).filter(Boolean)),
     ].map((username) => ({
-      label: username!,
-      value: username!.toLowerCase(),
-      count: events.filter((event) => event.users?.username === username).length,
+      label: username as string,
+      value: (username as string).toLowerCase(),
+      count: events.filter((event: Event) => event.users?.username === username).length,
     }));
 
     const statusOptions = [
       {
         label: 'Active',
         value: 'active',
-        count: events.filter((event) => !event.ended_at).length,
+        count: events.filter((event: Event) => !event.ended_at).length,
       },
       {
         label: 'Ended',
         value: 'ended',
-        count: events.filter((event) => event.ended_at).length,
+        count: events.filter((event: Event) => event.ended_at).length,
       },
     ];
 
@@ -110,7 +123,7 @@ export function EventTableFiltered({
 
   // Apply filters
   const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
+    return events.filter((event: Event) => {
       // Search filter
       if (filterValues.search) {
         const searchTerm = filterValues.search.toLowerCase();
@@ -216,7 +229,7 @@ export function EventTableFiltered({
       {/* Events Grid */}
       {filteredEvents.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEvents.map((event) => (
+          {filteredEvents.map((event: Event) => (
             <div
               key={event.id}
               className="group hover:shadow-lg transition-all duration-200 rounded-lg overflow-hidden bg-white border border-gray-200 hover:border-gray-300"
@@ -263,6 +276,13 @@ export function EventTableFiltered({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-44">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/manage-events/${event.id}`} className="cursor-pointer">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Link>
+                      </DropdownMenuItem>
+
                       <DropdownMenuItem onClick={() => onEdit(event)} className="cursor-pointer">
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Event
@@ -346,7 +366,7 @@ export function EventTableFiltered({
                 </div>
 
                 {/* AI Suggestions */}
-                <div className="flex justify-center">
+                <div className="flex justify-center mb-4">
                   {event.suggestions && event.suggestions.length > 0 ? (
                     <Badge variant="outline" className="text-xs font-medium">
                       <Bot className="h-3 w-3 mr-1" />
@@ -358,6 +378,40 @@ export function EventTableFiltered({
                       No AI suggestions
                     </Badge>
                   )}
+                </div>
+
+                {/* Event Stats */}
+                <div className="flex items-center justify-center gap-4 pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-1 text-blue-600">
+                    <Users className="h-3 w-3" />
+                    <span className="text-xs font-medium">
+                      {(event as EventWithStats).members?.length || 0} member
+                      {((event as EventWithStats).members?.length || 0) === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-green-600">
+                    <MessageCircle className="h-3 w-3" />
+                    <span className="text-xs font-medium">
+                      {(event as EventWithStats).comments?.length || 0} comment
+                      {((event as EventWithStats).comments?.length || 0) === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-red-600">
+                    <Heart className="h-3 w-3" />
+                    <span className="text-xs font-medium">
+                      {(event as EventWithStats).comments?.reduce(
+                        (total: number, comment) => total + (comment.likes?.length || 0),
+                        0,
+                      ) || 0}{' '}
+                      like
+                      {((event as EventWithStats).comments?.reduce(
+                        (total: number, comment) => total + (comment.likes?.length || 0),
+                        0,
+                      ) || 0) === 1
+                        ? ''
+                        : 's'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

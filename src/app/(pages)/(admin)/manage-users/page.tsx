@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/components/ui/notification';
 import { User } from '@/config/models/users';
 import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
-import { Download, Plus, Shield, UserCheck, Users } from 'lucide-react';
+import { Download, Plus, RefreshCw, Shield, UserCheck, Users } from 'lucide-react';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -18,6 +18,7 @@ const ManageStaff = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userStatusChanging, setUserStatusChanging] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { warning } = useNotifications();
 
@@ -61,6 +62,17 @@ const ManageStaff = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'users');
     const currentDate = new Date().toISOString().split('T')[0];
     XLSX.writeFile(workbook, `users_${currentDate}.xlsx`);
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await refreshUsers();
+    } catch (err) {
+      warning(`Failed to refresh users: ${(err as Error)?.message ?? 'Unknown error'}`);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleDeleteUser = async (id: string) => {
@@ -203,6 +215,17 @@ const ManageStaff = () => {
           </Button>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              className="rounded-full px-3 shadow-sm hover:shadow-md flex items-center gap-2"
+              title="Refresh users"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </Button>
+
             <Button
               variant="outline"
               size="sm"

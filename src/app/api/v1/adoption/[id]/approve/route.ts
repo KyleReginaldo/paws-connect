@@ -26,7 +26,14 @@ export async function PUT(_request: NextRequest, context: unknown) {
                 users!adoption_user_fkey(
                     id,
                     username,
-                    email
+                    email,
+                    phone_number,
+                    user_identification(
+                        first_name,
+                        last_name,
+                        middle_initial,
+                        address
+                    )
                 ),
                 pets!adoption_pet_fkey(
                     id,
@@ -67,11 +74,17 @@ export async function PUT(_request: NextRequest, context: unknown) {
             const notificationMessage = `Congratulations! Your adoption application for ${petName}${breed} has been approved. Please contact us to arrange pickup.`;
 
             try {
+                // Get the real name from user identification
+                const userIdent = adoptionDetails.users?.user_identification;
+                const realName = userIdent?.first_name && userIdent?.last_name
+                    ? `${userIdent.first_name} ${userIdent.middle_initial ? userIdent.middle_initial + ' ' : ''}${userIdent.last_name}`
+                    : adoptionDetails.users.username || 'No name';
+
                 // Send push notification
                 await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/send-email`, {
                 to: adoptionDetails.users.email,
                 subject: 'Your Adoption request has been Approved! 🎉',
-                text: adoptionMailerBody(new AdoptionMailerDto(adoptionDetails.users.username??'No name', adoptionDetails.pets?.name??'No name', adoptionDetails.pets?.breed??'Unkown breed', adoptionDetails.pets?.age?.toString()??'', adoptionDetails.pets?.size??'Unknown size', adoptionDetails.pets?.gender??"Unkown gender", adoptionDetails.pets?.photos![0] ??"")),
+                text: adoptionMailerBody(new AdoptionMailerDto(realName, adoptionDetails.pets?.name??'No name', adoptionDetails.pets?.breed??'Unkown breed', adoptionDetails.pets?.age?.toString()??'', adoptionDetails.pets?.size??'Unknown size', adoptionDetails.pets?.gender??"Unkown gender", adoptionDetails.pets?.photos![0] ??"")),
                 });
                 await pushNotification(
                     adoptionDetails.users.id,

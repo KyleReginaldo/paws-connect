@@ -40,6 +40,13 @@ interface Adoption {
   number_of_household_members: number | null;
   type_of_residence: string | null;
   status: string;
+  // New fields for adoption form
+  reason_for_adopting?: string | null;
+  willing_to_visit_shelter?: boolean | null;
+  willing_to_visit_again?: boolean | null;
+  adopting_for_self?: boolean | null;
+  how_can_you_give_fur_rever_home?: string | null;
+  where_did_you_hear_about_us?: string | null;
   // Supabase joins will add these directly
   pets?: Pet;
   users?: User;
@@ -59,6 +66,12 @@ interface User {
   username: string | null;
   email: string | null;
   phone_number: string;
+  user_identification?: {
+    first_name: string | null;
+    last_name: string | null;
+    middle_initial: string | null;
+    address: string | null;
+  } | null;
 }
 
 interface AdoptionWithDetails extends Adoption {
@@ -124,13 +137,20 @@ const AdoptionsPage = () => {
         const petBreed = adoption.pet_details?.breed?.toLowerCase() || '';
         const userName = adoption.user_details?.username?.toLowerCase() || '';
         const userEmail = adoption.user_details?.email?.toLowerCase() || '';
+        const firstName =
+          adoption.user_details?.user_identification?.first_name?.toLowerCase() || '';
+        const lastName = adoption.user_details?.user_identification?.last_name?.toLowerCase() || '';
+        const address = adoption.user_details?.user_identification?.address?.toLowerCase() || '';
         const search = searchTerm.toLowerCase();
 
         return (
           petName.includes(search) ||
           petBreed.includes(search) ||
           userName.includes(search) ||
-          userEmail.includes(search)
+          userEmail.includes(search) ||
+          firstName.includes(search) ||
+          lastName.includes(search) ||
+          address.includes(search)
         );
       });
     }
@@ -334,12 +354,22 @@ const AdoptionsPage = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="min-w-0">
+                          <div className="min-w-0 space-y-1">
                             <p className="font-medium text-sm truncate">
-                              {adoption.user_details?.username || 'Unknown User'}
+                              {adoption.user_details?.user_identification?.first_name &&
+                              adoption.user_details?.user_identification?.last_name
+                                ? `${adoption.user_details.user_identification.first_name} ${adoption.user_details.user_identification.middle_initial ? adoption.user_details.user_identification.middle_initial + ' ' : ''}${adoption.user_details.user_identification.last_name}`
+                                : adoption.user_details?.username || 'Unknown User'}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              Username: {adoption.user_details?.username || 'N/A'}
                             </p>
                             <p className="text-xs text-gray-500 truncate">
                               {adoption.user_details?.email || 'No email'}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              📍{' '}
+                              {adoption.user_details?.user_identification?.address || 'No address'}
                             </p>
                           </div>
                         </TableCell>
@@ -358,12 +388,12 @@ const AdoptionsPage = () => {
                             variant="outline"
                             className={
                               adoption.status === 'APPROVED'
-                                ? 'bg-green-100 text-green-800 border-green-300 font-medium'
+                                ? 'bg-green-100 text-green-800 border-green-300 font-medium hover:bg-green-200 transition-colors'
                                 : adoption.status === 'REJECTED'
-                                  ? 'bg-red-100 text-red-800 border-red-300 font-medium'
+                                  ? 'bg-red-100 text-red-800 border-red-300 font-medium hover:bg-red-200 transition-colors'
                                   : adoption.status === 'PENDING'
-                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300 font-medium'
-                                    : 'bg-gray-100 text-gray-800 border-gray-300 font-medium'
+                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300 font-medium hover:bg-yellow-200 transition-colors'
+                                    : 'bg-gray-100 text-gray-800 border-gray-300 font-medium hover:bg-gray-200 transition-colors'
                             }
                           >
                             {adoption.status}

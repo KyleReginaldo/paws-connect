@@ -152,10 +152,7 @@ export function HappinessImageUpload({
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Heart className="h-5 w-5 text-red-500" />
-          Happiness Gallery
-        </CardTitle>
+        <CardTitle className="flex items-center gap-2 text-lg">Happiness Gallery</CardTitle>
         <CardDescription>
           {previewImage
             ? `See how happy ${petName} is in their new home!`

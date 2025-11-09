@@ -164,6 +164,36 @@ const FundraisingPage = () => {
                   <section className="pt-6 border-t">
                     <h2 className="text-xl font-semibold mb-3">About this campaign</h2>
                     <p className="text-muted-foreground leading-relaxed">{campaign.description}</p>
+
+                    {/* Purpose */}
+                    {campaign.purpose && (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-800 mb-2">
+                          Campaign Purpose
+                        </h3>
+                        <p className="text-sm text-blue-700">{campaign.purpose}</p>
+                      </div>
+                    )}
+
+                    {/* Links */}
+                    {campaign.links && campaign.links.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-sm font-semibold mb-2">Related Links</h3>
+                        <div className="space-y-2">
+                          {campaign.links.map((link: string, index: number) => (
+                            <a
+                              key={index}
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {link}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   {/* Campaign Details Section */}
@@ -177,6 +207,14 @@ const FundraisingPage = () => {
                             {campaign.status}
                           </Badge>
                         </div>
+                        {campaign.purpose && (
+                          <div className="flex items-start justify-between py-2 border-b border-gray-100">
+                            <span className="text-sm font-medium text-gray-600">Purpose:</span>
+                            <span className="text-sm text-right max-w-48 text-blue-600">
+                              {campaign.purpose}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between py-2 border-b border-gray-100">
                           <span className="text-sm font-medium text-gray-600">Target Amount:</span>
                           <span className="text-sm font-semibold text-green-600">
@@ -199,14 +237,27 @@ const FundraisingPage = () => {
 
                       {/* Payment Information Column */}
                       <div className="space-y-3">
-                        {campaign.gcash_number && (
+                        {/* Payment Methods Count */}
+                        {((campaign.bank_accounts && campaign.bank_accounts.length > 0) ||
+                          (campaign.e_wallets && campaign.e_wallets.length > 0) ||
+                          campaign.qr_code) && (
                           <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                            <span className="text-sm font-medium text-gray-600">GCash Number:</span>
-                            <span className="text-sm font-mono font-medium text-blue-600">
-                              {campaign.gcash_number}
+                            <span className="text-sm font-medium text-gray-600">
+                              Payment Methods:
+                            </span>
+                            <span className="text-sm text-blue-600 flex items-center gap-1">
+                              {
+                                [
+                                  ...(campaign.bank_accounts || []),
+                                  ...(campaign.e_wallets || []),
+                                  ...(campaign.qr_code ? [{ label: 'QR Code' }] : []),
+                                ].length
+                              }{' '}
+                              Available
                             </span>
                           </div>
                         )}
+
                         {campaign.qr_code && (
                           <div className="flex items-center justify-between py-2 border-b border-gray-100">
                             <span className="text-sm font-medium text-gray-600">QR Code:</span>
@@ -234,6 +285,14 @@ const FundraisingPage = () => {
                             >
                               View Page
                             </a>
+                          </div>
+                        )}
+                        {campaign.links && campaign.links.length > 0 && (
+                          <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span className="text-sm font-medium text-gray-600">Links:</span>
+                            <span className="text-sm text-purple-600">
+                              {campaign.links.length} Link{campaign.links.length > 1 ? 's' : ''}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -301,7 +360,9 @@ const FundraisingPage = () => {
             </Card>
 
             {/* Payment Information */}
-            {(campaign.qr_code || campaign.gcash_number) && (
+            {(campaign.qr_code ||
+              (campaign.bank_accounts && campaign.bank_accounts.length > 0) ||
+              (campaign.e_wallets && campaign.e_wallets.length > 0)) && (
               <Card className="shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -315,63 +376,186 @@ const FundraisingPage = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {/* GCash Number */}
-                    {campaign.gcash_number && (
-                      <div className="p-3 rounded-lg border bg-gradient-to-r from-blue-50 to-indigo-50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs">₱</span>
-                          </div>
-                          <span className="font-medium text-sm">GCash Number</span>
+                  <div className="space-y-6">
+                    {/* Bank Accounts */}
+                    {campaign.bank_accounts && campaign.bank_accounts.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold mb-3 text-gray-700">Bank Accounts</h3>
+                        <div className="space-y-4">
+                          {campaign.bank_accounts.map(
+                            (
+                              bank: {
+                                label: string;
+                                account_number: string;
+                                qr_code?: string | null;
+                              },
+                              index: number,
+                            ) => (
+                              <div
+                                key={index}
+                                className="p-3 rounded-lg border bg-gradient-to-r from-green-50 to-blue-50"
+                              >
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-6 h-6 bg-green-500 text-white rounded flex items-center justify-center text-xs font-bold">
+                                    B
+                                  </div>
+                                  <span className="font-medium text-sm">{bank.label}</span>
+                                </div>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Account Number:</span>
+                                    <code className="bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">
+                                      {bank.account_number}
+                                    </code>
+                                  </div>
+                                </div>
+
+                                {bank.qr_code && (
+                                  <div className="mt-3 flex flex-col items-center gap-2">
+                                    <div className="w-24 h-24 bg-white rounded border-2 border-green-200 flex items-center justify-center overflow-hidden shadow-sm">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={bank.qr_code}
+                                        alt={`${bank.label} QR Code`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.nextElementSibling?.setAttribute(
+                                            'style',
+                                            'display: flex',
+                                          );
+                                        }}
+                                      />
+                                      <div
+                                        className="w-full h-full flex items-center justify-center text-xs text-gray-400"
+                                        style={{ display: 'none' }}
+                                      >
+                                        QR Code
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-center">
+                                      Scan to pay via {bank.label}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            ),
+                          )}
                         </div>
-                        <p className="text-[15px] font-mono text-blue-700 mb-1">
-                          {campaign.gcash_number}
-                        </p>
-                        <p className="text-xs text-blue-600">
-                          Donors can transfer directly to this number
-                        </p>
                       </div>
                     )}
 
-                    {/* QR Code */}
-                    {campaign.qr_code && (
-                      <div className="p-3 rounded-lg border bg-gradient-to-r">
-                        <div className="flex items-center gap-2 mb-3">
-                          <QrCode color="blue" />
-                          <span className="font-medium text-sm">GCash QR Code</span>
-                        </div>
+                    {/* E-Wallets */}
+                    {campaign.e_wallets && campaign.e_wallets.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold mb-3 text-gray-700">E-Wallets</h3>
+                        <div className="space-y-4">
+                          {campaign.e_wallets.map(
+                            (
+                              wallet: {
+                                label: string;
+                                account_number: string;
+                                qr_code?: string | null;
+                              },
+                              index: number,
+                            ) => (
+                              <div
+                                key={index}
+                                className="p-3 rounded-lg border bg-gradient-to-r from-purple-50 to-pink-50"
+                              >
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-6 h-6 bg-purple-500 text-white rounded flex items-center justify-center text-xs font-bold">
+                                    E
+                                  </div>
+                                  <span className="font-medium text-sm">{wallet.label}</span>
+                                </div>
 
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-32 h-32 bg-white rounded-lg border-2 border-green-200 flex items-center justify-center overflow-hidden shadow-sm">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={campaign.qr_code}
-                              alt="GCash QR Code"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.setAttribute(
-                                  'style',
-                                  'display: flex',
-                                );
-                              }}
-                            />
-                            <div
-                              className="w-full h-full flex items-center justify-center text-sm text-gray-400"
-                              style={{ display: 'none' }}
-                            >
-                              QR Code
-                            </div>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Account Number:</span>
+                                    <code className="bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">
+                                      {wallet.account_number}
+                                    </code>
+                                  </div>
+                                </div>
+
+                                {wallet.qr_code && (
+                                  <div className="mt-3 flex flex-col items-center gap-2">
+                                    <div className="w-24 h-24 bg-white rounded border-2 border-purple-200 flex items-center justify-center overflow-hidden shadow-sm">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={wallet.qr_code}
+                                        alt={`${wallet.label} QR Code`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.nextElementSibling?.setAttribute(
+                                            'style',
+                                            'display: flex',
+                                          );
+                                        }}
+                                      />
+                                      <div
+                                        className="w-full h-full flex items-center justify-center text-xs text-gray-400"
+                                        style={{ display: 'none' }}
+                                      >
+                                        QR Code
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-center">
+                                      Scan to pay via {wallet.label}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Legacy QR Code (for backward compatibility) */}
+                    {campaign.qr_code && (
+                      <div>
+                        <h3 className="text-sm font-semibold mb-3 text-gray-700">
+                          QR Code Payment
+                        </h3>
+                        <div className="p-3 rounded-lg border bg-gradient-to-r from-blue-50 to-green-50">
+                          <div className="flex items-center gap-2 mb-3">
+                            <QrCode className="w-5 h-5 text-blue-500" />
+                            <span className="font-medium text-sm">QR Code Payment</span>
                           </div>
 
-                          <div className="text-center">
-                            <p className="text-xs text-green-600 font-medium">
-                              Scan to pay via GCash
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Point your GCash app camera here
-                            </p>
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-32 h-32 bg-white rounded-lg border-2 border-green-200 flex items-center justify-center overflow-hidden shadow-sm">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={campaign.qr_code}
+                                alt="Payment QR Code"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.setAttribute(
+                                    'style',
+                                    'display: flex',
+                                  );
+                                }}
+                              />
+                              <div
+                                className="w-full h-full flex items-center justify-center text-sm text-gray-400"
+                                style={{ display: 'none' }}
+                              >
+                                QR Code
+                              </div>
+                            </div>
+
+                            <div className="text-center">
+                              <p className="text-xs text-green-600 font-medium">Scan to pay</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Point your payment app camera here
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
