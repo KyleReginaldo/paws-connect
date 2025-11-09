@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email using Supabase Auth
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/reset-password`,
+      redirectTo: `https://paws-connect-rho.vercel.app/auth/reset-password`,
     });
 
     if (resetError) {
