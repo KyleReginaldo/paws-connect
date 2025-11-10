@@ -177,6 +177,19 @@ export function FundraisingModal({
         return;
       }
 
+      // Validate end date is not in the past
+      if (formData.end_date) {
+        const endDate = new Date(formData.end_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+
+        if (endDate < today) {
+          console.log('❌ End date validation failed - date is in the past');
+          setError('End date cannot be in the past');
+          return;
+        }
+      }
+
       console.log('✅ Form validation passed');
 
       // Create FormData for multipart upload
@@ -624,9 +637,12 @@ export function FundraisingModal({
                 value={formData.end_date || ''}
                 onChange={(e) => handleInputChange('end_date', e.target.value || '')}
                 placeholder="Select end date"
+                min={new Date().toISOString().split('T')[0]} // Disable past dates
+                className="cursor-pointer"
               />
               <p className="text-xs text-muted-foreground">
-                Leave empty for no end date. Campaign will continue until target is reached.
+                Leave empty for no end date. Campaign will continue until target is reached. Past
+                dates are not allowed.
               </p>
             </div>
 

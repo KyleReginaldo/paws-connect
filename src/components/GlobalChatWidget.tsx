@@ -105,32 +105,89 @@ export default function GlobalChatWidget() {
   }, [open, messages, userId, userRole]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel('realtime:forum_chats')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'forum_chats', filter: 'forum_id=eq.1' },
-        async (payload) => {
-          console.log('New message:', payload);
-          await fetchMessages();
-        },
-      )
-      .subscribe((status) => {
-        console.log('Realtime status:', status);
-        try {
-          // Map supabase subscription status to our local status enum
-          // status is typically a string like 'SUBSCRIBED' when connected
-          if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
-          else if (status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeStatus('disconnected');
-          else setRealtimeStatus('disconnected');
-        } catch (e) {
-          // swallow any errors from mapping
-          console.error('Failed to set realtime status', e);
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const setupRealtimeSubscription = async () => {
+      try {
+        // Get the global forum ID first
+        const response = await fetch('/api/v1/global-chat?limit=1');
+        const data = await response.json();
+
+        if (!response.ok || !data.data || data.data.length === 0) {
+          console.warn('Could not get global forum ID for realtime subscription');
+          return;
         }
-      });
+
+        // Extract forum ID from the first message's context or make another API call
+        // Let's make a specific call to get forum info
+        const forumResponse = await fetch('/api/v1/global-chat/forum-info');
+        let forumId = 1; // fallback
+
+        if (forumResponse.ok) {
+          const forumData = await forumResponse.json();
+          forumId = forumData.forum_id;
+        }
+
+        channel = supabase
+          .channel('realtime:forum_chats')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'forum_chats',
+              filter: `forum=eq.${forumId}`,
+            },
+            async (payload) => {
+              console.log('New message:', payload);
+              // Add a small delay to ensure the message is fully committed to the database
+              setTimeout(async () => {
+                await fetchMessages();
+              }, 200);
+            },
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'forum_chats',
+              filter: `forum=eq.${forumId}`,
+            },
+            async (payload) => {
+              console.log('Updated message:', payload);
+              // Add a small delay to ensure the update is fully committed to the database
+              setTimeout(async () => {
+                await fetchMessages();
+              }, 200);
+            },
+          )
+          .subscribe((status) => {
+            console.log('Realtime status:', status);
+            try {
+              // Map supabase subscription status to our local status enum
+              // status is typically a string like 'SUBSCRIBED' when connected
+              if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
+              else if (status === 'TIMED_OUT' || status === 'CLOSED')
+                setRealtimeStatus('disconnected');
+              else setRealtimeStatus('disconnected');
+            } catch (e) {
+              // swallow any errors from mapping
+              console.error('Failed to set realtime status', e);
+            }
+          });
+      } catch (error) {
+        console.error('Failed to setup realtime subscription:', error);
+        setRealtimeStatus('error');
+      }
+    };
+
+    setupRealtimeSubscription();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [fetchMessages]);
   useEffect(() => {
@@ -146,6 +203,29 @@ export default function GlobalChatWidget() {
     setLoading(true);
     setText('');
     setInputWarning('');
+
+    // Optimistic update - add message immediately to UI
+    const optimisticMessage: MessageWithModeration = {
+      id: Date.now(), // Temporary ID
+      message: content,
+      user_id: userId,
+      created_at: new Date().toISOString(),
+      user: {
+        id: userId,
+        username: null, // Will be filled by server response
+        role: userRole || 3,
+      },
+      viewers: [],
+      message_warning: undefined,
+    };
+
+    // Add optimistic message to the UI
+    setMessages((prev) => [...prev, optimisticMessage]);
+
+    // Scroll to bottom immediately
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
 
     try {
       const response = await fetch('/api/v1/global-chat', {
@@ -164,15 +244,28 @@ export default function GlobalChatWidget() {
         const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
       }
+
+      // Immediately fetch messages after successful send to ensure the message appears
+      // This will replace the optimistic message with the real one from the server
+      await fetchMessages();
+
+      // Scroll to bottom to show the new message
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (error) {
       console.error('Failed to send message:', error);
+
+      // Remove the optimistic message since sending failed
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticMessage.id));
+
+      // Restore the text so user can try again
+      setText(content);
 
       console.error(
         'Message failed to send:',
         error instanceof Error ? error.message : 'Failed to send message',
       );
-
-      setText(content);
     } finally {
       setLoading(false);
     }

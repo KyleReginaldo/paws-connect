@@ -1,4 +1,4 @@
-import { supabase } from '@/app/supabase/supabase';
+import { supabaseServer } from '@/app/supabase/supabase-server';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -32,42 +32,42 @@ export async function POST(request: NextRequest) {
     const { email }: ForgotPasswordDto = validation.data;
 
     // Check if user exists in our database
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await supabaseServer
       .from('users')
       .select('id, email, username, role')
       .eq('email', email)
       .single();
 
+    // If there's an error or no user found, return specific error message
     if (userError || !userData) {
-      // Return success even if user doesn't exist for security reasons
       return new Response(
         JSON.stringify({ 
-          success: true,
-          message: 'If an account with this email exists, you will receive a password reset link shortly.' 
+          error: 'Not Found',
+          message: 'No account found with this email address. Please check your email or create a new account.' 
         }),
         {
-          status: 200,
+          status: 404,
           headers: { 'Content-Type': 'application/json' },
         }
       );
     }
 
     // Only allow password reset for admin and staff accounts (role 1 and 2)
-    if (userData.role !== 1 && userData.role !== 2) {
+    if (userData.role !== 1) {
       return new Response(
         JSON.stringify({ 
-          success: true,
-          message: 'If an account with this email exists, you will receive a password reset link shortly.' 
+          error: 'Unauthorized',
+          message: 'Password reset is only available for admin and staff accounts.' 
         }),
         {
-          status: 200,
+          status: 403,
           headers: { 'Content-Type': 'application/json' },
         }
       );
     }
 
     // Send password reset email using Supabase Auth
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error: resetError } = await supabaseServer.auth.resetPasswordForEmail(email, {
       redirectTo: `https://paws-connect-rho.vercel.app/auth/reset-password`,
     });
 

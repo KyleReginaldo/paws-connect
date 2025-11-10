@@ -16,6 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       address?: string | null;
       date_of_birth?: string | null;
       status?: "PENDING" | "ACCEPTED" | "REJECTED" | null;
+      id_type?: string | null;
 
     };
 
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           address: parsed.address ?? null,
           date_of_birth: parsed.date_of_birth ?? null,
           status: parsed.status ?? 'PENDING',
+          id_type: parsed.id_type ?? null,
         },
         { onConflict: "user" },
       )

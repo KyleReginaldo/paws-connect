@@ -124,7 +124,16 @@ const Signin = () => {
         setForgotPasswordMessage(data.message);
         setForgotPasswordEmail('');
       } else {
-        setForgotPasswordError(data.message || 'Failed to send reset email');
+        // Handle specific error types
+        if (response.status === 404) {
+          setForgotPasswordError(
+            'No account found with this email address. Please check your email or create a new account.',
+          );
+        } else if (response.status === 403) {
+          setForgotPasswordError('Password reset is only available for admin and staff accounts.');
+        } else {
+          setForgotPasswordError(data.message || 'Failed to send reset email');
+        }
       }
     } catch (error) {
       console.error('Forgot password error:', error);
