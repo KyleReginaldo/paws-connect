@@ -2,9 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { DownloadCloud } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import android from '../../public/android.png';
 import playstore from '../../public/playstore.png';
 
 export default function AppDownloadPage() {
@@ -28,12 +28,19 @@ export default function AppDownloadPage() {
 
           {/* Download Button */}
           <div className="flex justify-center pt-4">
-            <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-800">
+            <Button asChild size="lg" className="bg-black hover:bg-orange-800">
               <Link
                 href="https://github.com/KyleReginaldo/pawsconnect-uploads/releases"
                 target="_blank"
               >
-                <DownloadCloud className="mr-2 h-5 w-5" />
+                <Image
+                  src={android}
+                  alt="Android Logo"
+                  color="white"
+                  className="inline-block mr-2 text-white"
+                  height={20}
+                  width={20}
+                />{' '}
                 Download the App
               </Link>
             </Button>
