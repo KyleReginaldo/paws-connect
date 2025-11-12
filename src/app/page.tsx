@@ -21,6 +21,7 @@ export default function HomePage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,30 +96,108 @@ export default function HomePage() {
   const { userId } = useAuth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
-      <nav className="p-[16px]">
-        <ul className="flex justify-end gap-[24px]">
-          <a href="/download/app">
-            <li className="hover:font-bold hover:text-orange-500 transition-all cursor-pointer">
-              DOWNLOAD APP
-            </li>
-          </a>
-          <a href="#about-us">
-            <li className="hover:font-bold hover:text-orange-500 transition-all cursor-pointer">
-              ABOUT US
-            </li>
-          </a>
-          <a href="#contact">
-            <li className="hover:font-bold hover:text-orange-500 transition-all cursor-pointer">
-              CONTACT
-            </li>
-          </a>
-          <Separator orientation="vertical" className="bg-orange-500 h-6 w-[2px]" />
-          <Link href={userId ? '/dashboard' : '/auth/signin'}>
-            <li className="hover:font-bold text-orange-500 hover:text-gray-600 transition-all cursor-pointer">
-              {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
-            </li>
-          </Link>
-        </ul>
+      <nav className="p-4 relative">
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex justify-end">
+          <ul className="flex gap-6 items-center">
+            <a href="/download/app">
+              <li className="hover:font-bold hover:text-orange-500 transition-all cursor-pointer">
+                DOWNLOAD APP
+              </li>
+            </a>
+            <a href="#about-us">
+              <li className="hover:font-bold hover:text-orange-500 transition-all cursor-pointer">
+                ABOUT US
+              </li>
+            </a>
+            <a href="#contact">
+              <li className="hover:font-bold hover:text-orange-500 transition-all cursor-pointer">
+                CONTACT
+              </li>
+            </a>
+            <Separator orientation="vertical" className="bg-orange-500 h-6 w-[2px]" />
+            <Link href={userId ? '/dashboard' : '/auth/signin'}>
+              <li className="hover:font-bold text-orange-500 hover:text-gray-600 transition-all cursor-pointer">
+                {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
+              </li>
+            </Link>
+          </ul>
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden flex justify-between items-center">
+          <div className="flex items-center">
+            <Image
+              src={pawslogo}
+              alt="Paws Connect Logo"
+              width={40}
+              height={25}
+              className="object-contain rounded-[4px]"
+            />
+            <span className="ml-2 text-lg font-semibold text-gray-800">Paws Connect</span>
+          </div>
+
+          {/* Hamburger Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg
+              className="w-6 h-6 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {isMobileMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-lg border-t z-50">
+            <ul className="flex flex-col p-4 space-y-4">
+              <a href="/download/app" onClick={() => setIsMobileMenuOpen(false)}>
+                <li className="py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer">
+                  DOWNLOAD APP
+                </li>
+              </a>
+              <a href="#about-us" onClick={() => setIsMobileMenuOpen(false)}>
+                <li className="py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer">
+                  ABOUT US
+                </li>
+              </a>
+              <a href="#contact" onClick={() => setIsMobileMenuOpen(false)}>
+                <li className="py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer">
+                  CONTACT
+                </li>
+              </a>
+              <Link
+                href={userId ? '/dashboard' : '/auth/signin'}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <li className="py-2 text-orange-500 font-medium hover:text-gray-600 transition-all cursor-pointer">
+                  {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
+                </li>
+              </Link>
+            </ul>
+          </div>
+        )}
       </nav>
       <div className="container mx-auto px-4 py-16">
         {/* Hero Section */}
@@ -207,7 +286,7 @@ export default function HomePage() {
         </div>
 
         {/* About Us Section */}
-        <section id="about-us" className="mb-16 py-12 rounded-lg bg-orange-400">
+        <section id="about-us" className="mb-16 py-12 rounded-lg bg-orange-400 p-10">
           <div className="text-center">
             <h2 className="text-2xl font-semibold text-white mb-4">About Paws Connect</h2>
             <div className="max-w-3xl mx-auto">
