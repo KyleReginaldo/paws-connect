@@ -1,7 +1,7 @@
 import { StatusChangeEmailDto } from './common.dto';
 
 export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subject: string; html: string } {
-  const { username, newStatus, adminName } = dto;
+  const { username, newStatus } = dto;
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -53,12 +53,13 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
   const subject = statusInfo.title;
   
   const html = `
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${statusInfo.title}</title>
+    
     <style>
         * {
             margin: 0;
@@ -83,10 +84,16 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
         }
         
         .header {
-            background: linear-gradient(135deg, ${statusInfo.color} 0%, ${statusInfo.color}dd 100%);
+            background: linear-gradient(135deg, #e0d4c3 0%, #e0d4c3 100%);
             padding: 40px 30px;
             text-align: center;
             color: white;
+            background-image: url(https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/bg/fb_bg_tof.jpg);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: #e0d4c3;
+            height: 200px;
         }
         
         .header h1 {
@@ -97,12 +104,14 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
             align-items: center;
             justify-content: center;
             gap: 10px;
+            color: #1e293b;
         }
         
         .header p {
             font-size: 16px;
             opacity: 0.9;
             margin: 0;
+            color: #475569;
         }
         
         .content {
@@ -195,17 +204,9 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
             line-height: 1.6;
         }
         
-        .footer-content p {
-            margin: 8px 0;
-        }
-        
         .footer-content a {
             color: #f97316;
             text-decoration: none;
-        }
-        
-        .footer-content a:hover {
-            text-decoration: underline;
         }
         
         .logo {
@@ -226,11 +227,11 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
                 margin: 20px;
                 border-radius: 8px;
             }
-            
-            .header, .content, .footer {
+            .header,
+            .content,
+            .footer {
                 padding: 24px 20px;
             }
-            
             .header h1 {
                 font-size: 24px;
             }
@@ -239,22 +240,13 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
 </head>
 <body>
     <div class="email-container">
-        <div class="header">
-            <img src="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/playstore.png" alt="Paws Connect" class="logo">
-            <h1>${statusInfo.icon} ${statusInfo.title.replace(/^[^\s]+\s/, '')}</h1>
-            <p>Paws Connect - Connecting Hearts, Saving Lives</p>
-        </div>
+        <div class="header"></div>
         
         <div class="content">
             <div class="greeting">Hello ${username || 'there'}!</div>
             
             <div class="message">
-                ${statusInfo.message}
-            </div>
-            
-            <div class="status-card">
-                <div class="status-badge">${newStatus.replace('_', ' ')}</div>
-                <p>${statusInfo.description}</p>
+                ${statusInfo.message} ${statusInfo.icon}
             </div>
             
             ${newStatus !== 'INDEFINITE' ? `
@@ -265,16 +257,10 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
             ` : ''}
             
             <div style="text-align: center;">
-                <a href="https://paws-connect-sable.vercel.app/auth/login" class="cta-button">
+                <a href=${newStatus === 'INDEFINITE' ? 'mailto:pawsconnecttof@gmail.com' : 'https://paws-connect-rho.vercel.app/signin'} class="cta-button">
                     ${newStatus === 'INDEFINITE' ? 'Contact Support' : 'Access Your Account'}
                 </a>
             </div>
-            
-            <div class="divider"></div>
-            
-            <p style="color: #64748b; font-size: 14px; text-align: center;">
-                ${adminName ? `This status change was processed by ${adminName}.` : 'This status change was processed by our admin team.'}
-            </p>
         </div>
         
         <div class="footer">
@@ -283,9 +269,11 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
                 <p>Contact our support team:</p>
                 <p>📧 <a href="mailto:pawsconnecttof@gmail.com">pawsconnecttof@gmail.com</a></p>
                 <p>📞 +639923189664</p>
+                
                 <div class="divider"></div>
-                <p style="margin-top: 20px; font-size: 12px; color: #94a3b8;">
-                    © 2025 Paws Connect. All rights reserved.<br>
+                
+                <p style="margin-top: 20px; font-size: 12px;">
+                    © 2025 Paws Connect. All rights reserved.<br />
                     This email was sent because your account status was updated.
                 </p>
             </div>
