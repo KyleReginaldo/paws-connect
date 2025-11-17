@@ -212,7 +212,7 @@ export default function HomePage() {
             />
           </div>
           <h1 className="text-2xl md:text-4xl font-bold text-gray-800 mb-4">
-            Welcome to Paws Connect Admin
+            Welcome to Paws Connect
           </h1>
           <p className="text-base text-gray-600 mb-8 max-w-2xl mx-auto">
             Manage pet adoption listings, oversee fundraising campaigns, and monitor community
