@@ -11,22 +11,7 @@ async function parseJson(request: NextRequest) {
     return null;
   }
 }
-function formatTimestamp(date = new Date()) {
-  const pad = (num: number, size = 2) => num.toString().padStart(size, '0');
-
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  const seconds = pad(date.getSeconds());
-
-  const milliseconds = pad(date.getMilliseconds(), 3);
-  const microseconds = milliseconds + "000"; // convert ms → µs
-  // Standard Manila offset with colon for clarity
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${microseconds}+00`;
-}
+// Removed manual timezone stamping; rely on UTC ISO timestamps and client-side localization.
 
 
 
@@ -250,16 +235,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Helper: current time in Asia/Manila as ISO with +08:00 offset
-    // Insert message into forum_chats
-    console.log('date:', formatTimestamp());
+    // Insert message into forum_chats using UTC ISO timestamp; client will localize.
     const { data: newMessage, error: insertError } = await supabase
       .from('forum_chats')
       .insert({
         forum: globalForum.id,
         message,
         sender: user_id,
-        sent_at: formatTimestamp(),
+        sent_at: new Date().toISOString(),
       })
       .select(`
         id,

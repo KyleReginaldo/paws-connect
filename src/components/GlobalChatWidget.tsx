@@ -7,7 +7,7 @@ import {
   moderateContentWithCache,
   type ModerationResult,
 } from '@/lib/content-moderation';
-import { toManilaIso } from '@/lib/utils';
+import { formatManilaHM } from '@/lib/utils';
 import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -58,19 +58,8 @@ export default function GlobalChatWidget() {
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
 
-  // Show raw time from the string (no timezone conversion)
-  const formatSentAt = (value: string) => {
-    if (!value) return 'Invalid Date';
-    const s = value.trim();
-    // Expect forms like YYYY-MM-DDTHH:mm:ss(.sss)?(Z|+hh:mm)
-    const m = s.match(/T(\d{2}):(\d{2})/);
-    if (!m) return 'Invalid Date';
-    const h24 = parseInt(m[1], 10);
-    const min = m[2];
-    const ampm = h24 >= 12 ? 'PM' : 'AM';
-    const h12 = h24 % 12 || 12;
-    return `${h12}:${min} ${ampm}`;
-  };
+  // Convert UTC / any offset to Manila local for display
+  const formatSentAt = (value: string) => formatManilaHM(value);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -166,7 +155,7 @@ export default function GlobalChatWidget() {
       id: Date.now(),
       message: content,
       user_id: userId,
-      sent_at: toManilaIso(),
+      sent_at: new Date().toISOString(),
       user: {
         id: userId,
         username: null,
