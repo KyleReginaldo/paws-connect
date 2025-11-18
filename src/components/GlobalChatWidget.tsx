@@ -52,6 +52,7 @@ export default function GlobalChatWidget() {
   const [inputWarning, setInputWarning] = useState('');
   const [isCheckingContent, setIsCheckingContent] = useState(false);
   const [hiddenMessages, setHiddenMessages] = useState<Set<number>>(new Set());
+  // Removed separate unreadCount state; derive directly for simplicity.
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
@@ -67,135 +68,76 @@ export default function GlobalChatWidget() {
       console.error('Failed to fetch messages:', error);
     }
   }, []);
-
+  // Persistent realtime subscription (always listens even when closed)
   useEffect(() => {
-    fetchMessages();
+    let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const init = async () => {
+      await fetchMessages();
+      // Determine forum id
+      let forumId = 1;
+      try {
+        const forumResponse = await fetch('/api/v1/global-chat/forum-info');
+        if (forumResponse.ok) {
+          const forumData = await forumResponse.json();
+          forumId = forumData.forum_id || 1;
+        }
+      } catch {
+        /* silent */
+      }
+
+      if (!mounted) return;
+      channel = supabase
+        .channel('realtime:forum_chats')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'forum_chats', filter: `forum=eq.${forumId}` },
+          async () => {
+            if (!mounted) return;
+            await fetchMessages();
+          },
+        )
+        .subscribe((status) => {
+          if (!mounted) return;
+          setRealtimeStatus(status === 'SUBSCRIBED' ? 'connected' : 'disconnected');
+        });
+    };
+    init();
+    return () => {
+      mounted = false;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [fetchMessages]);
 
+  // Open-specific behaviors: mark all unseen messages as viewed for current user (not just admin), auto-scroll
   useEffect(() => {
-    if (open) {
-      fetchMessages();
-    }
-  }, [open, fetchMessages]);
-
-  // When an admin opens the chat and messages are loaded, mark unseen messages as viewed
-  useEffect(() => {
-    const markViewed = async (ids: number[]) => {
-      try {
-        await fetch('/api/v1/global-chat/viewers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: userId, message_ids: ids }),
-        });
-      } catch (err) {
-        console.error('Failed to mark messages viewed', err);
-      }
-    };
-
-    if (open && userId && userRole === 1 && messages.length > 0) {
-      // Find messages that don't include this user in viewers
+    if (!open) return;
+    // Auto-scroll
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Mark unseen messages via API for any authenticated user
+    if (userId && messages.length > 0) {
       const unseen = messages
         .filter((m) => !m.viewers || !m.viewers.some((v) => v.id === userId))
         .map((m) => m.id);
-
-      if (unseen.length > 0) {
-        void markViewed(unseen);
+      if (unseen.length) {
+        fetch('/api/v1/global-chat/viewers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, message_ids: unseen }),
+        })
+          .then(() => {
+            // Refetch to update viewers so unread count drops immediately
+            void fetchMessages();
+          })
+          .catch((e) => console.error('Failed marking viewed', e));
       }
     }
-  }, [open, messages, userId, userRole]);
+  }, [open, messages, userId, userRole, fetchMessages]);
 
-  useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    const setupRealtimeSubscription = async () => {
-      try {
-        // Get the global forum ID first
-        const response = await fetch('/api/v1/global-chat?limit=1');
-        const data = await response.json();
-
-        if (!response.ok || !data.data || data.data.length === 0) {
-          console.warn('Could not get global forum ID for realtime subscription');
-          return;
-        }
-
-        // Extract forum ID from the first message's context or make another API call
-        // Let's make a specific call to get forum info
-        const forumResponse = await fetch('/api/v1/global-chat/forum-info');
-        let forumId = 1; // fallback
-
-        if (forumResponse.ok) {
-          const forumData = await forumResponse.json();
-          forumId = forumData.forum_id;
-        }
-
-        channel = supabase
-          .channel('realtime:forum_chats')
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'forum_chats',
-              filter: `forum=eq.${forumId}`,
-            },
-            async (payload) => {
-              console.log('New message:', payload);
-              // Add a small delay to ensure the message is fully committed to the database
-              setTimeout(async () => {
-                await fetchMessages();
-              }, 200);
-            },
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'forum_chats',
-              filter: `forum=eq.${forumId}`,
-            },
-            async (payload) => {
-              console.log('Updated message:', payload);
-              // Add a small delay to ensure the update is fully committed to the database
-              setTimeout(async () => {
-                await fetchMessages();
-              }, 200);
-            },
-          )
-          .subscribe((status) => {
-            console.log('Realtime status:', status);
-            try {
-              // Map supabase subscription status to our local status enum
-              // status is typically a string like 'SUBSCRIBED' when connected
-              if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
-              else if (status === 'TIMED_OUT' || status === 'CLOSED')
-                setRealtimeStatus('disconnected');
-              else setRealtimeStatus('disconnected');
-            } catch (e) {
-              // swallow any errors from mapping
-              console.error('Failed to set realtime status', e);
-            }
-          });
-      } catch (error) {
-        console.error('Failed to setup realtime subscription:', error);
-        setRealtimeStatus('error');
-      }
-    };
-
-    setupRealtimeSubscription();
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [fetchMessages]);
-  useEffect(() => {
-    if (open) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, open]);
-
+  const unreadC = messages.filter(
+    (m) => !m.viewers || !m.viewers.some((v) => v.id === userId),
+  ).length;
   const send = async () => {
     const content = text.trim();
     if (!content || !userId || loading) return;
@@ -204,25 +146,22 @@ export default function GlobalChatWidget() {
     setText('');
     setInputWarning('');
 
-    // Optimistic update - add message immediately to UI
     const optimisticMessage: MessageWithModeration = {
-      id: Date.now(), // Temporary ID
+      id: Date.now(),
       message: content,
       user_id: userId,
       created_at: new Date().toISOString(),
       user: {
         id: userId,
-        username: null, // Will be filled by server response
+        username: null,
         role: userRole || 3,
       },
       viewers: [],
       message_warning: undefined,
     };
 
-    // Add optimistic message to the UI
     setMessages((prev) => [...prev, optimisticMessage]);
 
-    // Scroll to bottom immediately
     setTimeout(() => {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
@@ -245,21 +184,16 @@ export default function GlobalChatWidget() {
         throw new Error(errorMessage);
       }
 
-      // Immediately fetch messages after successful send to ensure the message appears
-      // This will replace the optimistic message with the real one from the server
       await fetchMessages();
 
-      // Scroll to bottom to show the new message
       setTimeout(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (error) {
       console.error('Failed to send message:', error);
 
-      // Remove the optimistic message since sending failed
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticMessage.id));
 
-      // Restore the text so user can try again
       setText(content);
 
       console.error(
@@ -356,10 +290,25 @@ export default function GlobalChatWidget() {
     return null;
   }
 
-  const unreadCount = messages.filter((m) => {
-    if (!m.viewers || m.viewers.length === 0) return true;
-    return !m.viewers.some((v) => v.id === userId);
-  }).length;
+  // readMessage used when opening to optimistically mark messages read before API viewer update completes
+
+  const readMessage = async () => {
+    // Optimistically update viewers locally to drop unread badge immediately
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (!m.viewers || !m.viewers.some((v) => v.id === userId)) {
+          return {
+            ...m,
+            viewers: [
+              ...(m.viewers || []).map((v) => v),
+              { id: userId!, username: '', profile_image_link: null },
+            ],
+          };
+        }
+        return m;
+      }),
+    );
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -385,7 +334,7 @@ export default function GlobalChatWidget() {
                   variant="outline"
                   className="text-xs bg-orange-50 text-orange-600 border-orange-200 px-1.5 py-0.5"
                 >
-                  {unreadCount}
+                  {unreadC}
                 </Badge>
               </div>
             </div>
@@ -485,7 +434,6 @@ export default function GlobalChatWidget() {
                               </p>
                             </div>
                           )}
-                          {/* Show viewers only on the last message */}
                           {messages.indexOf(msg) === messages.length - 1 &&
                             msg.viewers &&
                             msg.viewers.length > 0 && (
@@ -568,17 +516,20 @@ export default function GlobalChatWidget() {
         </Card>
       ) : (
         <Button
-          onClick={() => setOpen(true)}
+          onClick={async () => {
+            await readMessage();
+            setOpen(true);
+          }}
           className="h-14 w-14 bg-orange-500 hover:bg-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-110 rounded-full"
           title="Open Global Chat"
         >
           <MessageCircle className="h-6 w-6" />
-          {unreadCount > 0 && (
+          {unreadC > 0 && (
             <Badge
               className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[1.25rem] h-5 flex items-center justify-center"
-              aria-label={`${unreadCount} unread messages`}
+              aria-label={`${unreadC} unread messages`}
             >
-              {unreadCount}
+              {unreadC}
             </Badge>
           )}
         </Button>
