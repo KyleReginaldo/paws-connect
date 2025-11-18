@@ -11,6 +11,24 @@ async function parseJson(request: NextRequest) {
     return null;
   }
 }
+function formatTimestamp(date = new Date()) {
+  const pad = (num: number, size = 2) => num.toString().padStart(size, '0');
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+
+  const milliseconds = pad(date.getMilliseconds(), 3);
+  const microseconds = milliseconds + "000"; // convert ms → µs
+  // Standard Manila offset with colon for clarity
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${microseconds}+00`;
+}
+
+
 
 async function getOrCreateGlobalForum() {
   // First try to get the existing forum
@@ -44,6 +62,8 @@ async function getOrCreateGlobalForum() {
   // Some other error occurred
   return { data: null, error: getError };
 }
+
+// Note: We return DB sent_at as-is; clients format to Manila during render.
 
 // GET /api/v1/global-chat - Get recent messages from global forum
 export async function GET(request: NextRequest) {
@@ -132,7 +152,7 @@ export async function GET(request: NextRequest) {
         id: msg.id,
         message: msg.message,
         message_warning: msg.message_warning,
-        created_at: msg.sent_at,
+        sent_at: msg.sent_at,
         user_id: msg.sender,
         viewers: viewerDetails,
         user: msg.users
@@ -230,14 +250,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Helper: current time in Asia/Manila as ISO with +08:00 offset
     // Insert message into forum_chats
+    console.log('date:', formatTimestamp());
     const { data: newMessage, error: insertError } = await supabase
       .from('forum_chats')
       .insert({
         forum: globalForum.id,
         message,
         sender: user_id,
-        sent_at: new Date().toISOString(),
+        sent_at: formatTimestamp(),
       })
       .select(`
         id,
@@ -364,7 +386,7 @@ export async function POST(request: NextRequest) {
     const formattedMessage = {
       id: newMessage.id,
       message: newMessage.message,
-      created_at: newMessage.sent_at,
+      sent_at: newMessage.sent_at,
       user_id: newMessage.sender,
       user: newMessage.users
         ? {
@@ -374,11 +396,12 @@ export async function POST(request: NextRequest) {
           }
         : null,
     };
-
+    console.log('formattedMessage: ', formattedMessage);
     return new Response(JSON.stringify({ data: formattedMessage }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
+
   } catch (err) {
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),

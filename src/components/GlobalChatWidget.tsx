@@ -7,6 +7,7 @@ import {
   moderateContentWithCache,
   type ModerationResult,
 } from '@/lib/content-moderation';
+import { toManilaIso } from '@/lib/utils';
 import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -22,7 +23,7 @@ type ChatMessage = {
   message: string;
   message_warning?: string | null;
   user_id: string | null;
-  created_at: string;
+  sent_at: string;
   viewers?: Viewer[];
   user: {
     id: string;
@@ -57,11 +58,26 @@ export default function GlobalChatWidget() {
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
 
+  // Show raw time from the string (no timezone conversion)
+  const formatSentAt = (value: string) => {
+    if (!value) return 'Invalid Date';
+    const s = value.trim();
+    // Expect forms like YYYY-MM-DDTHH:mm:ss(.sss)?(Z|+hh:mm)
+    const m = s.match(/T(\d{2}):(\d{2})/);
+    if (!m) return 'Invalid Date';
+    const h24 = parseInt(m[1], 10);
+    const min = m[2];
+    const ampm = h24 >= 12 ? 'PM' : 'AM';
+    const h12 = h24 % 12 || 12;
+    return `${h12}:${min} ${ampm}`;
+  };
+
   const fetchMessages = useCallback(async () => {
     try {
       const response = await fetch('/api/v1/global-chat?limit=50');
       const data = await response.json();
       if (data.data) {
+        console.log('messages fetched:', data.data);
         setMessages(data.data);
       }
     } catch (error) {
@@ -150,7 +166,7 @@ export default function GlobalChatWidget() {
       id: Date.now(),
       message: content,
       user_id: userId,
-      created_at: new Date().toISOString(),
+      sent_at: toManilaIso(),
       user: {
         id: userId,
         username: null,
@@ -378,10 +394,7 @@ export default function GlobalChatWidget() {
                             </span>
                             {msg.user && getRoleBadge(msg.user.role)}
                             <span className="text-muted-foreground text-xs">
-                              {new Date(msg.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatSentAt(msg.sent_at)}
                             </span>
                           </div>
                           {/* Message Content */}
