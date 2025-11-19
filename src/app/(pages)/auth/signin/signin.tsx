@@ -212,7 +212,7 @@ const Signin = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="demo@example.com"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={errors.email ? 'border-red-500' : ''}
@@ -226,7 +226,7 @@ const Signin = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="password123"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={errors.password ? 'border-red-500' : ''}

@@ -209,7 +209,7 @@ const ManageStaff = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={openAddModal} className="rounded-full" size={'sm'}>
+          <Button onClick={openAddModal} className="rounded-full cursor-pointer" size={'sm'}>
             <Plus className="h-4 w-4" />
             Add User
           </Button>
@@ -219,7 +219,7 @@ const ManageStaff = () => {
               variant="ghost"
               size="sm"
               onClick={handleRefresh}
-              className="rounded-full px-3 shadow-sm hover:shadow-md flex items-center gap-2"
+              className="rounded-full px-3 shadow-sm hover:shadow-md flex items-center cursor-pointer gap-2"
               title="Refresh users"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -230,7 +230,7 @@ const ManageStaff = () => {
               variant="outline"
               size="sm"
               onClick={handleExport}
-              className="rounded-full px-3 shadow-sm hover:shadow-md"
+              className="rounded-full px-3 shadow-sm hover:shadow-md cursor-pointer"
               title="Export users"
             >
               <Download className="h-4 w-4" />

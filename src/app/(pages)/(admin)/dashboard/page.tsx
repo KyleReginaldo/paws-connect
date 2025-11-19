@@ -36,32 +36,13 @@ import {
 import { DashboardSkeleton } from '@/components/ui/skeleton-patterns';
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
 
-const chartConfig = {
-  users: {
-    label: 'Users',
-    color: '#FFA726', // Lighter orange
-  },
-  donations: {
-    label: 'Donations',
-    color: '#FFB74D', // Even lighter orange
-  },
-  pets: {
-    label: 'Pets',
-    color: '#FFCC80', // Soft orange
-  },
-  activity: {
-    label: 'Activity',
-    color: '#FFE0B2', // Very light orange
-  },
-  dogs: {
-    label: 'Dogs',
-    color: '#FFA726',
-  },
-  cats: {
-    label: 'Cats',
-    color: '#FFB74D',
-  },
-} satisfies ChartConfig;
+const chartConfig: ChartConfig = {
+  users: { label: 'Users', color: '#FFA726' },
+  donations: { label: 'Donations', color: '#FFB74D' },
+  pets: { label: 'Pets', color: '#FFA726' },
+  dogs: { label: 'Dogs', color: '#FFA726' },
+  cats: { label: 'Cats', color: '#FFB74D' },
+};
 
 function EnhancedUserGrowthChart({ chartData }: { chartData: ChartDataPoint[] }) {
   return (
@@ -136,94 +117,6 @@ function EnhancedDonationTrendsChart({ chartData }: { chartData: ChartDataPoint[
           <Bar dataKey="donations" fill="url(#donationGradient)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ChartContainer>
-    </div>
-  );
-}
-
-function EnhancedPetAnalytics({
-  period,
-  chartData,
-}: {
-  period: string;
-  chartData: ChartDataPoint[];
-}) {
-  return (
-    <div className="space-y-4 sm:space-y-6 overflow-hidden">
-      <div className="w-full overflow-hidden">
-        <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
-          <AreaChart data={chartData}>
-            <defs>
-              <linearGradient id="dogGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#FFA726" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#FFA726" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="catGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#FFB74D" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#FFB74D" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="period"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-            />
-            <YAxis hide />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Area
-              type="monotone"
-              dataKey="dogs"
-              stackId="1"
-              stroke="#FFA726"
-              fill="url(#dogGradient)"
-              strokeWidth={2}
-            />
-            <Area
-              type="monotone"
-              dataKey="cats"
-              stackId="1"
-              stroke="#FFB74D"
-              fill="url(#catGradient)"
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ChartContainer>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 truncate">Dog Breeds ({period})</h4>
-          <div className="space-y-1">
-            {[
-              'Aspin (Philippine Dog)',
-              'Mixed Breed',
-              'Labrador Mix',
-              'Golden Retriever Mix',
-              'Other',
-            ].map((breed) => (
-              <div key={breed} className="flex justify-between text-xs">
-                <span className="text-muted-foreground truncate flex-1 mr-2">{breed}</span>
-                <span className="font-medium text-orange-500 flex-shrink-0">
-                  {Math.floor(Math.random() * 5) + 1}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 truncate">Cat Breeds ({period})</h4>
-          <div className="space-y-1">
-            {['Persian', 'Siamese', 'Maine Coon', 'Mixed Breed', 'Other'].map((breed) => (
-              <div key={breed} className="flex justify-between text-xs">
-                <span className="text-muted-foreground truncate flex-1 mr-2">{breed}</span>
-                <span className="font-medium text-orange-500 flex-shrink-0">
-                  {Math.floor(Math.random() * 3) + 1}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -856,8 +749,8 @@ const Page = () => {
       changeType: 'positive' as const,
       icon: Dog,
       description: `${stats.totalPets} available pets`,
-      gradient: 'from-orange-25 to-orange-50',
-      iconColor: 'text-orange-500',
+      gradient: 'from-orange-200 to-orange-400',
+      iconColor: 'text-white',
     },
     {
       title: 'Adoption applications',
@@ -921,13 +814,13 @@ const Page = () => {
             onClick={handleGenerateReport}
             variant="outline"
             size="sm"
-            className="gap-2 border-orange-200 hover:bg-orange-25 bg-transparent rounded-full"
+            className="cursor-pointer gap-2 border-orange-200 hover:bg-orange-25 bg-transparent rounded-full"
           >
             <FileText className="h-4 w-4 text-orange-500" />
             Generate Report
           </Button>
           <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
-            <PopoverTrigger asChild>
+            <PopoverTrigger asChild className="cursor-pointer">
               <Button
                 id="pc-dash-date-filter"
                 variant="outline"
@@ -948,7 +841,7 @@ const Page = () => {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <div className="p-2">
+              <div className="p-2 cu">
                 <Calendar
                   mode="range"
                   selected={dateRange}
@@ -1002,7 +895,9 @@ const Page = () => {
             className={`bg-gradient-to-br ${stat.gradient} border-0 shadow-sm hover:shadow-md transition-shadow`}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700 truncate pr-2">
+              <CardTitle
+                className={`text-sm font-medium ${index === 0 ? 'text-gray-900' : 'text-gray-700'} truncate pr-2`}
+              >
                 {stat.title}
               </CardTitle>
               <stat.icon className={`h-5 w-5 ${stat.iconColor} flex-shrink-0`} />
@@ -1094,7 +989,7 @@ const Page = () => {
           </Card>
 
           {/* Enhanced Donation Analytics */}
-          <Card className="lg:col-span-2 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+          <Card className="lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />
@@ -1110,25 +1005,6 @@ const Page = () => {
                   chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Enhanced Pet Analytics */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
-                <PawPrint className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span className="truncate">Pet Intake Analytics </span>
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Pet arrivals by type and breed breakdown
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-hidden">
-              <EnhancedPetAnalytics
-                period={analyticsPeriod}
-                chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
-              />
             </CardContent>
           </Card>
         </div>
@@ -1263,9 +1139,9 @@ const Page = () => {
             {ongoingCampaigns.map((campaign) => (
               <Card
                 key={campaign.id}
-                className="border-l-4 border-l-orange-400 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-25 to-orange-50"
+                className="border-l-4 border-l-orange-200 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-25 to-white"
               >
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-2 sm:p-6">
                   <div className="space-y-4">
                     <div className="min-w-0">
                       <h4 className="font-semibold text-gray-900 truncate">{campaign.title}</h4>

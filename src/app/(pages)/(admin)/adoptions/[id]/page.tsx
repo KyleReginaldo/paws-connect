@@ -13,12 +13,12 @@ import {
   Check,
   CheckCircle,
   Clock,
-  FileText,
+  FileBadge,
+  FileHeart,
   Home,
   Mail,
   PawPrint,
   Phone,
-  Printer,
   User,
   X,
   XCircle,
@@ -156,6 +156,7 @@ const AdoptionPage = () => {
   <body>
     <div class="certificate-container">
       <div class="inner-border">
+        <p style="text-align:center;font-size:12px;color:#666;margin:0 0 8px;">Issued on ${today}</p>
         <div class="certificate-header">
           <img class="paw-icon" src="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/playstore.png" alt="Paw Icon" />
           <h1 class="certificate-title">Certificate of Pet Adoption</h1>
@@ -165,7 +166,6 @@ const AdoptionPage = () => {
         <p class="adoption-text">has lovingly adopted</p>
         <p class="pet-name">${petName} 🐾</p>
         <p class="pledge">and has pledged to provide unconditional love, care, and a forever home. Thank you for giving ${petName} a second chance at happiness.</p>
-        <p style="text-align: center; font-size: 14px; color: #666; margin-top: 20px;">Date: ${today}</p>
         <div class="footer">
           <div class="signature">
             <div class="signature-line"></div>
@@ -486,25 +486,25 @@ const AdoptionPage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs h-7"
+                  className="text-xs h-7 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white cursor-pointer"
                   onClick={handleGenerateAdoptionForm}
                   title="Generate and save adoption form as PDF"
                 >
-                  <FileText className="h-3 w-3 mr-1" />
-                  Download PDF
+                  <FileHeart className="h-3 w-3 mr-1" />
+                  Generate Adoption Form
                 </Button>
 
                 {/* Certificate Button - Only for adopted pets */}
                 {isAdopted(adoption.status) && (
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    className="text-xs h-7"
+                    className="text-xs h-7 bg-orange-500 text-white hover:bg-orange-700 cursor-pointer"
                     onClick={handleGenerateCertificate}
                     title="Generate and save certificate as PDF"
                   >
-                    <Printer className="h-3 w-3 mr-1" />
-                    Download PDF
+                    <FileBadge className="h-3 w-3 mr-1" />
+                    Generate Certificate
                   </Button>
                 )}
               </div>

@@ -561,8 +561,7 @@ export async function POST(request: NextRequest) {
       purpose: validated.purpose,
       target_amount: validated.target_amount,
       images: validated.images || [],
-      raised_amount: 0, // Initialize with 0
-      status: validated.status || 'PENDING',
+      raised_amount: 0,
       created_by: validated.created_by,
       end_date: validated.end_date,
       facebook_link: validated.facebook_link,
@@ -605,6 +604,23 @@ export async function POST(request: NextRequest) {
     console.log('✅ Successfully created campaign:', data.id);
     console.log('📷 Campaign images saved:', data.images?.length || 0);
     console.log('=== FUNDRAISING CREATE END ===');
+
+    // Attempt to send push notifications in background (non-blocking)
+    try {
+      interface FundraisingCreatedData {
+        id: number;
+        title: string;
+        created_by_user?: { username?: string | null } | null;
+      }
+      const creatorName = (data as unknown as FundraisingCreatedData).created_by_user?.username || undefined;
+      // Lazy import to avoid circular dependency issues
+      const { notifyAllUsersNewFundraising } = await import('@/app/api/helper');
+      notifyAllUsersNewFundraising(data.title??'New Fundraising Campaign', String(data.id), creatorName).catch((e) => {
+        console.error('Failed to dispatch fundraising notifications:', e);
+      });
+    } catch (notifErr) {
+      console.error('Notification dispatch error (fundraising):', notifErr);
+    }
     
     return new Response(
       JSON.stringify({

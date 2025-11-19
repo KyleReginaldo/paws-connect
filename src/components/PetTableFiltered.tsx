@@ -273,7 +273,6 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                 <TableHead>Request Status</TableHead>
                 <TableHead>Vaccination Status</TableHead>
                 <TableHead>Spayed/Neutered</TableHead>
-                <TableHead>Health Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -330,7 +329,6 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                   <TableCell>
                     {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}
                   </TableCell>
-                  <TableCell>{pet.health_status || 'Unknown'}</TableCell>
                   <TableCell>
                     <div className="flex gap-[8px] items-center mr-4">
                       <DropdownMenu>

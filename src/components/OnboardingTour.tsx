@@ -46,7 +46,6 @@ export default function OnboardingTour() {
   );
 
   useEffect(() => {
-    // Open only if user not onboarded in DB and local storage
     const localDone =
       typeof window !== 'undefined' ? localStorage.getItem(storageKey) === '1' : false;
     if (

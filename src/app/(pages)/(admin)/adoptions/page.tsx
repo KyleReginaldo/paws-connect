@@ -4,7 +4,7 @@ import { HappinessImageDisplay } from '@/components/HappinessImageDisplay';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// removed Card wrapper around the table
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -22,8 +22,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, PawPrint, SearchIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  Check,
+  ClockFading,
+  Eye,
+  Loader2,
+  LucideProps,
+  PawPrint,
+  SearchIcon,
+  X,
+} from 'lucide-react';
+import { ForwardRefExoticComponent, RefAttributes, useCallback, useEffect, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 interface Adoption {
@@ -78,6 +87,21 @@ interface AdoptionWithDetails extends Adoption {
   pet_details?: Pet;
   user_details?: User;
 }
+const toIcon = (
+  status: string,
+): ForwardRefExoticComponent<Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>> => {
+  switch (status) {
+    case 'APPROVED':
+      return Check;
+    case 'REJECTED':
+    case 'CANCELLED':
+      return X;
+    case 'PENDING':
+      return ClockFading;
+    default:
+      return PawPrint;
+  }
+};
 
 const AdoptionsPage = () => {
   const [adoptions, setAdoptions] = useState<AdoptionWithDetails[]>([]);
@@ -279,206 +303,204 @@ const AdoptionsPage = () => {
       </div>
 
       {/* Adoptions Table */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
+      <div>
+        <div className="pb-2">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Applications ({filteredAdoptions.length})</CardTitle>
-              <CardDescription>Track and manage all adoption applications</CardDescription>
+              <h2 className="text-lg font-semibold">Applications ({filteredAdoptions.length})</h2>
+              <p className="text-sm text-muted-foreground">
+                Track and manage all adoption applications
+              </p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {filteredAdoptions.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Pet</TableHead>
-                    <TableHead className="w-[200px]">Adopter</TableHead>
-                    <TableHead>Application Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Household</TableHead>
-                    <TableHead className="w-[200px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAdoptions.map((adoption) => {
-                    return (
-                      <TableRow key={adoption.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage
-                                  src={
-                                    (adoption.pet_details?.photos &&
-                                    adoption.pet_details.photos.length > 0
-                                      ? adoption.pet_details.photos[0]
-                                      : null) || ''
-                                  }
-                                  alt={adoption.pet_details?.name || 'Pet'}
+        </div>
+        {filteredAdoptions.length > 0 ? (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Pet</TableHead>
+                  <TableHead className="w-[200px]">Adopter</TableHead>
+                  <TableHead>Application Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Household</TableHead>
+                  <TableHead className="w-[200px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAdoptions.map((adoption) => {
+                  const StatusIcon = toIcon(adoption.status);
+                  return (
+                    <TableRow key={adoption.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage
+                                src={
+                                  (adoption.pet_details?.photos &&
+                                  adoption.pet_details.photos.length > 0
+                                    ? adoption.pet_details.photos[0]
+                                    : null) || ''
+                                }
+                                alt={adoption.pet_details?.name || 'Pet'}
+                              />
+                              <AvatarFallback className="bg-orange-50 text-orange-600">
+                                <PawPrint className="h-5 w-5" />
+                              </AvatarFallback>
+                            </Avatar>
+                            {/* Show happiness image if adoption is approved and has one */}
+                            {adoption.status === 'APPROVED' && adoption.happiness_image && (
+                              <div className="absolute -top-2 -right-2">
+                                <HappinessImageDisplay
+                                  happinessImage={adoption.happiness_image}
+                                  petName={adoption.pet_details?.name || 'Pet'}
+                                  size="sm"
+                                  showLabel={false}
                                 />
-                                <AvatarFallback className="bg-orange-50 text-orange-600">
-                                  <PawPrint className="h-5 w-5" />
-                                </AvatarFallback>
-                              </Avatar>
-                              {/* Show happiness image if adoption is approved and has one */}
-                              {adoption.status === 'APPROVED' && adoption.happiness_image && (
-                                <div className="absolute -top-2 -right-2">
-                                  <HappinessImageDisplay
-                                    happinessImage={adoption.happiness_image}
-                                    petName={adoption.pet_details?.name || 'Pet'}
-                                    size="sm"
-                                    showLabel={false}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">
-                                {adoption.pet_details?.name || 'Unknown Pet'}
-                              </p>
-                              <p className="text-xs text-gray-500 truncate">
-                                {adoption.pet_details?.breed ||
-                                  adoption.pet_details?.type ||
-                                  'Unknown Type'}
-                              </p>
-                              {adoption.status === 'APPROVED' && adoption.happiness_image && (
-                                <p className="text-xs text-green-600 font-medium">
-                                  ✨ Happy & Loved
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="min-w-0 space-y-1">
-                            <p className="font-medium text-sm truncate">
-                              {adoption.user_details?.user_identification?.first_name &&
-                              adoption.user_details?.user_identification?.last_name
-                                ? `${adoption.user_details.user_identification.first_name} ${adoption.user_details.user_identification.middle_initial ? adoption.user_details.user_identification.middle_initial + ' ' : ''}${adoption.user_details.user_identification.last_name}`
-                                : adoption.user_details?.username || 'Unknown User'}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              Username: {adoption.user_details?.username || 'N/A'}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {adoption.user_details?.email || 'No email'}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              📍{' '}
-                              {adoption.user_details?.user_identification?.address || 'No address'}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {new Date(adoption.created_at).toLocaleDateString()}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatTimeAgo(adoption.created_at)}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              adoption.status === 'APPROVED'
-                                ? 'bg-green-100 text-green-800 border-green-300 font-medium hover:bg-green-200 transition-colors'
-                                : adoption.status === 'REJECTED'
-                                  ? 'bg-red-100 text-red-800 border-red-300 font-medium hover:bg-red-200 transition-colors'
-                                  : adoption.status === 'PENDING'
-                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300 font-medium hover:bg-yellow-200 transition-colors'
-                                    : 'bg-gray-100 text-gray-800 border-gray-300 font-medium hover:bg-gray-200 transition-colors'
-                            }
-                          >
-                            {adoption.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">
-                            {adoption.user_details?.phone_number || 'No phone'}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="text-sm">
-                              {adoption.type_of_residence || 'Not specified'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {adoption.number_of_household_members || 0} members
-                            </p>
-                            {adoption.has_children_in_home && (
-                              <Badge variant="outline" className="text-xs">
-                                Has children
-                              </Badge>
+                              </div>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {adoption.pet_details?.name || 'Unknown Pet'}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {adoption.pet_details?.breed ||
+                                adoption.pet_details?.type ||
+                                'Unknown Type'}
+                            </p>
+                            {adoption.status === 'APPROVED' && adoption.happiness_image && (
+                              <p className="text-xs text-green-600 font-medium">✨ Happy & Loved</p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="min-w-0 space-y-1">
+                          <p className="font-medium text-sm truncate">
+                            {adoption.user_details?.user_identification?.first_name &&
+                            adoption.user_details?.user_identification?.last_name
+                              ? `${adoption.user_details.user_identification.first_name} ${adoption.user_details.user_identification.middle_initial ? adoption.user_details.user_identification.middle_initial + ' ' : ''}${adoption.user_details.user_identification.last_name}`
+                              : adoption.user_details?.username || 'Unknown User'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            Username: {adoption.user_details?.username || 'N/A'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {adoption.user_details?.email || 'No email'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            📍 {adoption.user_details?.user_identification?.address || 'No address'}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {new Date(adoption.created_at).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatTimeAgo(adoption.created_at)}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            adoption.status === 'APPROVED'
+                              ? 'bg-green-100 text-green-800 border-green-300 font-medium hover:bg-green-200 transition-colors'
+                              : adoption.status === 'REJECTED'
+                                ? 'bg-red-100 text-red-800 border-red-300 font-medium hover:bg-red-200 transition-colors'
+                                : adoption.status === 'PENDING'
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300 font-medium hover:bg-yellow-200 transition-colors'
+                                  : 'bg-gray-100 text-gray-800 border-gray-300 font-medium hover:bg-gray-200 transition-colors'
+                          }
+                        >
+                          <StatusIcon className="ml-1 h-4 w-4" />
+                          {adoption.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm">
+                          {adoption.user_details?.phone_number || 'No phone'}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="text-sm">{adoption.type_of_residence || 'Not specified'}</p>
+                          <p className="text-xs text-gray-500">
+                            {adoption.number_of_household_members || 0} members
+                          </p>
+                          {adoption.has_children_in_home && (
+                            <Badge variant="outline" className="text-xs">
+                              Has children
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs cursor-pointer text-gray-700 hover:bg-gray-100"
+                            onClick={() => {
+                              router.push(`/adoptions/${adoption.id}`);
+                            }}
+                          >
+                            <Eye />
+                            View Details
+                          </Button>
+                          {adoption.status === 'PENDING' && (
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-xs"
-                              onClick={() => {
-                                router.push(`/adoptions/${adoption.id}`);
-                              }}
+                              className="bg-orange-500 hover:bg-orange-600 text-xs cursor-pointer text-white"
+                              onClick={() => approveAdoption(adoption.id)}
                             >
-                              View Details
+                              {approving === adoption.id ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                'Approve'
+                              )}
                             </Button>
-                            {adoption.status === 'PENDING' && (
-                              <Button
-                                size="sm"
-                                className="bg-orange-500 hover:bg-orange-600 text-xs"
-                                onClick={() => approveAdoption(adoption.id)}
-                              >
-                                {approving === adoption.id ? (
-                                  <Loader2 className="animate-spin" />
-                                ) : (
-                                  'Approve'
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="py-16 text-center">
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <PawPrint className="h-8 w-8 text-gray-400" />
             </div>
-          ) : (
-            <div className="py-16 text-center">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                <PawPrint className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No adoption applications found
-              </h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                {searchTerm || statusFilter !== 'all' || petTypeFilter !== 'all'
-                  ? 'Try adjusting your filters to see more results'
-                  : 'Applications will appear here once users start applying for pets'}
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('all');
-                  setPetTypeFilter('all');
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No adoption applications found
+            </h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              {searchTerm || statusFilter !== 'all' || petTypeFilter !== 'all'
+                ? 'Try adjusting your filters to see more results'
+                : 'Applications will appear here once users start applying for pets'}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setPetTypeFilter('all');
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -24,11 +24,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pet } from '@/config/types/pet';
-import { HelpCircle, Info, Upload } from 'lucide-react';
+import { HelpCircle, Upload } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
-// ---- Age helper functions (module scope for stable references) ----
 const calculateAgeFromBirth = (birthDate: string): number => {
   if (!birthDate) return 0;
   try {
@@ -80,7 +79,7 @@ const validateAgeAndBirth = (
   birthDate: string,
 ): { isValid: boolean; message?: string } => {
   if (!birthDate) {
-    return { isValid: true }; // No validation needed if no birth date
+    return { isValid: true };
   }
 
   const calculatedAge = calculateAgeFromBirth(birthDate);
@@ -146,7 +145,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     description: '',
     special_needs: '',
     added_by: userId || '',
-    request_status: '',
+    request_status: 'approved',
     photos: [],
   });
 
@@ -158,13 +157,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const [ageWarning, setAgeWarning] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [catBreeds, setCatBreeds] = useState<{ name: string; image: string }[]>([]);
   const [dogBreeds, setDogBreeds] = useState<{ name: string; image: string }[]>([]);
   const [breedsLoading, setBreedsLoading] = useState(false);
 
   const validateFile = (file: File): string | null => {
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
@@ -180,30 +178,25 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       return `Image size (${(file.size / 1024 / 1024).toFixed(2)}MB) must be less than 5MB`;
     }
 
-    // Check file type
     const fileType = file.type.toLowerCase();
     if (!allowedTypes.includes(fileType)) {
       return `File type '${file.type}' is not supported. Please upload JPEG, JPG, PNG, or WebP images only.`;
     }
 
-    // Check file extension as backup
     const fileName = file.name.toLowerCase();
     const fileExtension = fileName.split('.').pop() || '';
     if (!allowedExtensions.includes(fileExtension)) {
       return `File extension '.${fileExtension}' is not supported. Please use .jpg, .jpeg, .png, or .webp files.`;
     }
 
-    // Check for valid file name
     if (!file.name || file.name.length < 3 || file.name.length > 255) {
       return 'Invalid file name. Please choose a file with a proper name.';
     }
 
-    // Check for suspicious file patterns
     if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
       return 'Invalid characters in file name';
     }
 
-    // Basic file corruption check - very small files are likely corrupted
     if (file.size < 100) {
       return 'File is too small and may be corrupted. Please choose a different image.';
     }
@@ -211,12 +204,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return null;
   };
 
-  // Supabase bucket name is 'paws-connect' - no longer needed as variable
-
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
-    // Required fields validation (name no longer validated here)
     if (!formData.type) {
       errors.type = 'Pet type is required';
     }
@@ -227,7 +217,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       errors.photos = 'At least one pet photo is required';
     }
 
-    // Age and date of birth validation (soft warning – does not block submission)
     if (formData.date_of_birth && formData.age !== undefined) {
       const validation = validateAgeAndBirth(formData.age, formData.date_of_birth);
       if (!validation.isValid && validation.message) {
@@ -252,7 +241,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
     setUploadError('');
 
-    // Store file and create local preview
     const previewUrl = URL.createObjectURL(file);
     setPhotoFiles((prev) => [...prev, file]);
     setPhotosPreviews((prev) => [...prev, previewUrl]);
@@ -262,12 +250,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      // Store files locally
       for (let i = 0; i < files.length; i++) {
         handleFileUpload(files[i]);
       }
     }
-    // Reset input value to allow selecting the same files again if needed
+
     if (e.target) {
       e.target.value = '';
     }
@@ -279,7 +266,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      // Store files locally
       for (let i = 0; i < files.length; i++) {
         handleFileUpload(files[i]);
       }
@@ -297,27 +283,22 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
   };
 
   const removePhoto = (photoUrl: string) => {
-    // Check if it's a new preview (blob URL or recently added)
     const previewIndex = photosPreviews.indexOf(photoUrl);
 
     if (previewIndex !== -1) {
-      // It's a new preview - remove from previews and files
       setPhotosPreviews((prev) => prev.filter((url) => url !== photoUrl));
       setPhotoFiles((prev) => prev.filter((_, index) => index !== previewIndex));
 
-      // Clean up blob URL if it's a local preview
       if (photoUrl.startsWith('blob:')) {
         URL.revokeObjectURL(photoUrl);
       }
     } else {
-      // It's an existing photo - remove from formData.photos
       setFormData((prev) => ({
         ...prev,
         photos: (prev.photos || []).filter((url) => url !== photoUrl),
       }));
     }
 
-    // Clear validation error if no photos remain
     const remainingExisting = formData.photos?.filter((url) => url !== photoUrl) || [];
     const remainingPreviews = photosPreviews.filter((url) => url !== photoUrl);
     if (remainingExisting.length === 0 && remainingPreviews.length === 0) {
@@ -325,7 +306,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     }
     setUploadError('');
 
-    // Clear the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -337,13 +317,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     setIsSubmitting(false);
   };
 
-  // Calculate size based on weight and pet type
   const calculateSizeFromWeight = (weight: string, petType: string): string => {
-    // Extract numeric value from weight string
     const numericWeight = parseFloat(weight.replace(/[^\d.]/g, ''));
 
     if (isNaN(numericWeight)) {
-      return ''; // Return empty if weight is not a valid number
+      return '';
     }
 
     if (petType === 'Dog') {
@@ -362,15 +340,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       } else if (numericWeight >= 4.6 && numericWeight <= 6.8) {
         return 'medium';
       } else if (numericWeight >= 6.9) {
-        // 6.8+ for cats
         return 'large';
       }
     }
 
-    return ''; // Return empty if weight doesn't match any range
+    return '';
   };
 
-  // Get minimum weight for a size category based on pet type
   const getMinWeightForSize = (size: string, petType: string): string => {
     if (petType === 'Dog') {
       switch (size) {
@@ -400,9 +376,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     return '';
   };
 
-  // (helpers moved to module scope)
-
-  // Load breed data
   const loadBreedData = async () => {
     setBreedsLoading(true);
     try {
@@ -431,7 +404,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     console.log(`user in modal: ${userId}`);
     console.log('Modal opened, editingPet:', editingPet);
 
-    // Load breed data when modal opens
     if (open && (catBreeds.length === 0 || dogBreeds.length === 0)) {
       loadBreedData();
     }
@@ -444,13 +416,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         typeof editingPet.date_of_birth,
       );
 
-      // Format the date for HTML date input (YYYY-MM-DD)
       let formattedDate = '';
       if (editingPet.date_of_birth) {
         try {
           const date = new Date(editingPet.date_of_birth);
           if (!isNaN(date.getTime())) {
-            formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+            formattedDate = date.toISOString().split('T')[0];
           }
         } catch (error) {
           console.error('🗓️ Error parsing date:', error);
@@ -458,7 +429,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       }
       console.log('🗓️ Formatted date for input:', formattedDate);
 
-      // If there is a DOB, compute an age to keep consistency
       const computedAgeLabel = getAgeLabel(
         formattedDate,
         typeof editingPet.age === 'number' ? editingPet.age : null,
@@ -491,13 +461,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       const parsedDate = editingPet.date_of_birth ? new Date(editingPet.date_of_birth) : undefined;
       console.log('🗓️ Parsed birthDate:', parsedDate);
       setBirthDate(parsedDate);
-      // Don't set existing photos to photosPreviews - they're handled separately via formData.photos
+
       console.log('Existing pet photos will be displayed via formData.photos:', editingPet.photos);
-      setPhotosPreviews([]); // Clear previews for new files only
-      setPhotoFiles([]); // Clear local files when editing existing pet
+      setPhotosPreviews([]);
+      setPhotoFiles([]);
     } else {
       console.log('Setting up form for new pet');
-      // Reset form for new pet
+
       setFormData({
         name: '',
         type: '',
@@ -517,15 +487,15 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         description: '',
         special_needs: '',
         added_by: userId || '',
-        request_status: '',
+        request_status: 'approved',
         photos: [],
       });
       setBirthDate(undefined);
       setPhotosPreviews([]);
-      setPhotoFiles([]); // Clear local files for new pet
+      setPhotoFiles([]);
     }
     resetUploadStates();
-    // Load draft from session storage if exists (only for new pet)
+
     try {
       if (!editingPet) {
         const draft = sessionStorage.getItem('pet_form_draft');
@@ -534,40 +504,31 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
           setFormData((prev) => ({ ...prev, ...parsed }));
         }
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [editingPet, open, userId, catBreeds.length, dogBreeds.length]);
 
-  // Persist draft to sessionStorage
   useEffect(() => {
     try {
       sessionStorage.setItem('pet_form_draft', JSON.stringify(formData));
-    } catch {
-      // ignore storage errors
-    }
+    } catch {}
 
-    // Debug: Log the current formData.date_of_birth value
     console.log('🗓️ Current formData.date_of_birth:', formData.date_of_birth);
   }, [formData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form before submission
     if (!validateForm()) {
       return;
     }
 
     if (isSubmitting) {
-      return; // Prevent double submission
+      return;
     }
 
     setIsSubmitting(true);
-    setUploadError(''); // Clear any previous errors
+    setUploadError('');
 
-    // Ensure all required fields are present and normalized
-    // Prefer manually entered age label if present; otherwise compute from DOB
     const computedAgeLabelForSubmit =
       formData.age && formData.age.trim()
         ? formData.age.trim()
@@ -595,15 +556,15 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       description: formData.description || '',
       special_needs: formData.special_needs || '',
       added_by: formData.added_by || userId || '',
-      request_status: formData.request_status || 'pending',
+      request_status: formData.request_status || 'approved',
       color: formData.color || '',
-      photos: editingPet ? formData.photos || [] : [], // For editing, keep existing photos; for new pets, photos will be uploaded
+      photos: editingPet ? formData.photos || [] : [],
     };
 
     console.log('🐾 PetModal - Submitting pet data:', {
       ...petData,
-      color: `"${petData.color}"`, // Show color value explicitly
-      formDataColor: `"${formData.color}"`, // Show original form color
+      color: `"${petData.color}"`,
+      formDataColor: `"${formData.color}"`,
     });
 
     try {
@@ -623,12 +584,10 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       console.log('Updating photo field:', value);
     }
 
-    // Debug logging for color field
     if (field === 'color') {
       console.log('Updating color field:', value, 'Current color:', formData.color);
     }
 
-    // If changing pet type, clear color and breed if they're not valid for the new type
     if (field === 'type' && typeof value === 'string') {
       const dogColors = [
         'Black',
@@ -673,7 +632,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       const currentBreed = formData.breed;
       const newType = value;
 
-      // Check if current breed is valid for new type
       let shouldClearBreed = false;
       if (currentBreed) {
         if (newType === 'Dog' && !dogBreeds.some((breed) => breed.name === currentBreed)) {
@@ -683,13 +641,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
         }
       }
 
-      // Clear color if it's not valid for the new type
       const shouldClearColor =
         currentColor &&
         ((newType === 'Dog' && !dogColors.includes(currentColor)) ||
           (newType === 'Cat' && !catColors.includes(currentColor)));
 
-      // Recalculate size based on current weight and new pet type
       let calculatedSize = formData.size;
       if (formData.weight) {
         const newSize = calculateSizeFromWeight(formData.weight, newType);
@@ -709,7 +665,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setFormData((prev) => ({ ...prev, [field]: value }));
     }
 
-    // Clear validation error for this field
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: '' }));
     }
@@ -940,7 +895,6 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 onValueChange={(value) => {
                   handleInputChange('size', value);
 
-                  // Always set default weight based on minimum for selected size category
                   if (formData.type && value) {
                     const minWeight = getMinWeightForSize(value, formData.type);
                     if (minWeight) {
@@ -986,12 +940,11 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 <Input
                   id="weight"
                   placeholder="e.g., 25"
-                  value={formData.weight.replace(/kg$/, '')} // Display without kg suffix
+                  value={formData.weight.replace(/kg$/, '')}
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^\d.]/g, ''); // Only allow numbers and decimal
+                    const numericValue = e.target.value.replace(/[^\d.]/g, '');
                     handleInputChange('weight', numericValue);
 
-                    // Automatically calculate and set size based on weight and pet type
                     if (formData.type && numericValue) {
                       const calculatedSize = calculateSizeFromWeight(numericValue, formData.type);
                       if (calculatedSize) {
@@ -1036,11 +989,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                           const dateString = date.toISOString().split('T')[0];
                           handleInputChange('date_of_birth', dateString);
 
-                          // Auto-calculate and set age label based on birth date
                           const calculatedLabel = getAgeLabel(dateString);
                           handleInputChange('age', calculatedLabel);
 
-                          // Clear any age validation errors since we're auto-setting
                           setValidationErrors((prev) => ({ ...prev, age: '' }));
                         } else {
                           handleInputChange('date_of_birth', '');
@@ -1113,24 +1064,18 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
             {/* Good With */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1 relative">
-                <Label>Good With</Label>
-                <span
-                  onMouseEnter={() => setShowTooltip(true)}
-                  onMouseLeave={() => setShowTooltip(false)}
-                  className="relative cursor-pointer"
-                >
-                  <Info size={16} />
-
-                  {showTooltip && (
-                    <span className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                      This tells adopters
-                      <br />
-                      what your pet is comfortable around.
-                    </span>
-                  )}
-                </span>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="good_with">Good With</Label>
+                <Tooltip>
+                  <TooltipTrigger type="button">
+                    <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>This tells adopters what your pet is comfortable around.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
+
               <div className="flex flex-col gap-1">
                 {['dogs', 'cats', 'children', 'other'].map((option) => (
                   <label key={option} className="flex items-center gap-2">

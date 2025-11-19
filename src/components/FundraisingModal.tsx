@@ -1,6 +1,7 @@
 'use client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +23,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { Fundraising } from '@/config/types/fundraising';
-import { AlertCircle, HelpCircle, Loader2, Plus, QrCode, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+  AlertCircle,
+  Calendar as CalendarIcon,
+  HelpCircle,
+  Loader2,
+  Plus,
+  QrCode,
+  X,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 // Extended interface for form data with file properties
 interface FundraisingFormData {
@@ -95,6 +105,28 @@ export function FundraisingModal({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // End date calendar picker state
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [endDateObj, setEndDateObj] = useState<Date | undefined>(
+    formData.end_date ? new Date(formData.end_date) : undefined,
+  );
+  const [endDateMonth, setEndDateMonth] = useState<Date | undefined>(endDateObj);
+  const [endDateValue, setEndDateValue] = useState<string>(formatDisplayDate(endDateObj));
+
+  function formatDisplayDate(date?: Date) {
+    if (!date) return '';
+    return date.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  function isValidDate(date?: Date) {
+    if (!date) return false;
+    return !isNaN(date.getTime());
+  }
 
   useEffect(() => {
     if (editingCampaign) {
@@ -121,6 +153,10 @@ export function FundraisingModal({
       });
       setImagePreviews((editingCampaign?.images as string[]) || []);
       setImageFiles([]); // Clear local files when editing
+      const parsedEnd = editingCampaign.end_date ? new Date(editingCampaign.end_date) : undefined;
+      setEndDateObj(parsedEnd);
+      setEndDateMonth(parsedEnd);
+      setEndDateValue(formatDisplayDate(parsedEnd));
     } else {
       setFormData({
         title: '',
@@ -139,6 +175,9 @@ export function FundraisingModal({
       });
       setImagePreviews([]);
       setImageFiles([]); // Clear local files for new campaign
+      setEndDateObj(undefined);
+      setEndDateMonth(undefined);
+      setEndDateValue('');
     }
     // Clear error when modal opens/closes or campaign changes
     setError(null);
@@ -500,6 +539,7 @@ export function FundraisingModal({
         filesToUpload.forEach((file) => fileList.items.add(file));
         handleImageUpload(fileList.files);
       }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -590,25 +630,48 @@ export function FundraisingModal({
               <div className="flex items-center justify-between">
                 <Label>Images (optional)</Label>
               </div>
-              <input
+              <Input
+                id="campaign-images"
                 type="file"
                 accept="image/*"
-                multiple
                 onChange={(e) => handleImageFiles(e.target.files)}
+                multiple
               />
               <p className="text-xs text-muted-foreground">
                 Upload images for your campaign. Max 10MB per file. Supported formats: JPG, PNG,
                 GIF, WebP
               </p>
+              {imageFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Selected:{' '}
+                  {imageFiles
+                    .slice(0, 3)
+                    .map((f) => f.name)
+                    .join(', ')}
+                  {imageFiles.length > 3 && ` +${imageFiles.length - 3} more`}
+                </p>
+              )}
               <div className="flex gap-2 mt-2 flex-wrap">
                 {imagePreviews.map((src, idx) => (
                   <div key={idx} className="w-20 h-20 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt={`preview-${idx}`}
-                      className="w-20 h-20 object-cover rounded"
-                    />
+                    <div className="relative">
+                      <X
+                        size={16}
+                        className="absolute top-0 right-0 cursor-pointer text-white bg-red-500 rounded-full"
+                        onClick={() => {
+                          // Remove image preview and corresponding file
+                          setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+                          setImageFiles((prev) => prev.filter((_, i) => i !== idx));
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                      />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={`preview-${idx}`}
+                        className="w-20 h-20 object-cover rounded"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -630,19 +693,69 @@ export function FundraisingModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date (optional)</Label>
-              <Input
-                id="end_date"
-                type="date"
-                value={formData.end_date || ''}
-                onChange={(e) => handleInputChange('end_date', e.target.value || '')}
-                placeholder="Select end date"
-                min={new Date().toISOString().split('T')[0]} // Disable past dates
-                className="cursor-pointer"
-              />
+              <Label htmlFor="end_date_picker">End Date (optional)</Label>
+              <div className="relative flex gap-2">
+                <Input
+                  id="end_date_picker"
+                  value={endDateValue}
+                  placeholder="June 01, 2025"
+                  className="bg-background pr-10"
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setEndDateValue(raw);
+                    const d = new Date(raw);
+                    if (isValidDate(d)) {
+                      setEndDateObj(d);
+                      setEndDateMonth(d);
+                      handleInputChange('end_date', d.toISOString().split('T')[0]);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setEndDateOpen(true);
+                    }
+                  }}
+                />
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="end_date_button"
+                      variant="ghost"
+                      type="button"
+                      className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
+                      onClick={() => setEndDateOpen((o) => !o)}
+                    >
+                      <CalendarIcon className="size-3.5" />
+                      <span className="sr-only">Select end date</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-auto overflow-hidden p-0"
+                    align="end"
+                    alignOffset={-8}
+                    sideOffset={10}
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={endDateObj}
+                      captionLayout="dropdown"
+                      month={endDateMonth}
+                      onMonthChange={setEndDateMonth}
+                      onSelect={(date) => {
+                        setEndDateObj(date);
+                        setEndDateValue(formatDisplayDate(date));
+                        handleInputChange('end_date', date ? date.toISOString().split('T')[0] : '');
+                        setEndDateOpen(false);
+                      }}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Leave empty for no end date. Campaign will continue until target is reached. Past
-                dates are not allowed.
+                Leave empty for no end date. Campaign continues until target reached. Past dates
+                disabled.
               </p>
             </div>
 

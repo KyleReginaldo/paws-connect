@@ -522,7 +522,7 @@ export default function GlobalChatWidget() {
             await readMessage();
             setOpen(true);
           }}
-          className="h-14 w-14 bg-orange-500 hover:bg-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-110 rounded-full"
+          className="h-14 w-14 bg-orange-500 hover:bg-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-110 rounded-full cursor-pointer relative flex items-center justify-center"
           title="Open Global Chat"
         >
           <MessageCircle className="h-6 w-6" />

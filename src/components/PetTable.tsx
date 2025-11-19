@@ -71,7 +71,6 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
             <TableHead>Request Status</TableHead>
             <TableHead>Vaccination status</TableHead>
             <TableHead>Spayed/Neutered</TableHead>
-            <TableHead>Health status</TableHead>
             <TableHead>Actions</TableHead>
 
             <TableHead className="w-[50px]"></TableHead>
@@ -133,7 +132,6 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
               <TableCell>
                 {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}
               </TableCell>
-              <TableCell>{pet.health_status || 'Unknown'}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -112,6 +112,98 @@ export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string
     }
 }
 
+// Notify all users of a newly created fundraising campaign
+export async function notifyAllUsersNewFundraising(campaignTitle: string, campaignId: string, creatorName?: string) {
+    try {
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('id')
+            .neq('status', 'INDEFINITE');
+
+        if (error || !users) {
+            console.error('Error fetching users for fundraising notification:', error);
+            return;
+        }
+
+        const notificationTitle = '🐾 New Fundraising Campaign';
+        const notificationMessage = `${creatorName ? creatorName : 'Admin'} started: "${campaignTitle}". Tap to view & support!`;
+
+        const batchSize = 50;
+        for (let i = 0; i < users.length; i += batchSize) {
+            const batch = users.slice(i, i + batchSize);
+            await Promise.allSettled(
+                batch.map(async (user) => {
+                    try {
+                        await pushNotification(
+                            user.id,
+                            notificationTitle,
+                            notificationMessage,
+                            `/fundraising/${campaignId}`
+                        );
+                        await storeNotification(
+                            user.id,
+                            notificationTitle,
+                            notificationMessage
+                        );
+                    } catch (err) {
+                        console.error(`Failed to notify user ${user.id} (fundraising):`, err);
+                    }
+                })
+            );
+        }
+
+        console.log(`Fundraising notification sent to ${users.length} users for campaign: ${campaignTitle}`);
+    } catch (err) {
+        console.error('Error in notifyAllUsersNewFundraising:', err);
+    }
+}
+
+// Notify all users of a newly added pet
+export async function notifyAllUsersNewPet(petName: string, petId: number, addedByName?: string) {
+    try {
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('id')
+            .neq('status', 'INDEFINITE');
+
+        if (error || !users) {
+            console.error('Error fetching users for pet notification:', error);
+            return;
+        }
+
+        const notificationTitle = '🐶 New Pet Added';
+        const notificationMessage = `${addedByName ? addedByName : 'Admin'} added "${petName}". See details & consider adoption!`;
+
+        const batchSize = 50;
+        for (let i = 0; i < users.length; i += batchSize) {
+            const batch = users.slice(i, i + batchSize);
+            await Promise.allSettled(
+                batch.map(async (user) => {
+                    try {
+                        await pushNotification(
+                            user.id,
+                            notificationTitle,
+                            notificationMessage,
+                            `/pet-details/${petId}`
+                        );
+                        await storeNotification(
+                            user.id,
+                            notificationTitle,
+                            notificationMessage
+                        );
+                    } catch (err) {
+                        console.error(`Failed to notify user ${user.id} (pet):`, err);
+                    }
+                })
+            );
+        }
+
+        console.log(`Pet notification sent to ${users.length} users for pet: ${petName}`);
+    } catch (err) {
+        console.error('Error in notifyAllUsersNewPet:', err);
+    }
+}
+
 
 export async function notifyAllForumMembersAdminMessage(
     forumId: number, 

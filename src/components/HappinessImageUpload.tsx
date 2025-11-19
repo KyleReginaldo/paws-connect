@@ -42,16 +42,13 @@ export function HappinessImageUpload({
   const { success, error: showError } = useNotifications();
   const { userId } = useAuth();
 
-  // Only allow upload if user is the adopter and adoption is approved
   const canUpload = isAdopter && adoptionStatus === 'APPROVED';
 
   const validateFile = (file: File): string | null => {
-    // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       return 'File size must be less than 10MB';
     }
 
-    // Check file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       return 'Only image files (JPEG, PNG, GIF, WebP) are allowed';
@@ -71,7 +68,6 @@ export function HappinessImageUpload({
     setIsUploading(true);
 
     try {
-      // Upload the image
       const formData = new FormData();
       formData.append('file', file);
 
@@ -88,7 +84,6 @@ export function HappinessImageUpload({
       const uploadResult = await uploadResponse.json();
       const imageUrl = uploadResult.url;
 
-      // Update the adoption record with the image URL
       const updateResponse = await fetch(`/api/v1/adoption/${adoptionId}/happiness-image`, {
         method: 'PATCH',
         headers: {
@@ -144,7 +139,6 @@ export function HappinessImageUpload({
     setIsDragOver(false);
   };
 
-  // Don't render anything if the adoption isn't approved
   if (adoptionStatus !== 'APPROVED') {
     return null;
   }

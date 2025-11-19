@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { TableFilter, TableFilters } from '@/components/ui/table-filters';
 import {
-  Bot,
   Calendar,
   Edit,
   Eye,
@@ -363,21 +362,6 @@ export function EventTableFiltered({
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(event.created_at)}</span>
                   </div>
-                </div>
-
-                {/* AI Suggestions */}
-                <div className="flex justify-center mb-4">
-                  {event.suggestions && event.suggestions.length > 0 ? (
-                    <Badge variant="outline" className="text-xs font-medium">
-                      <Bot className="h-3 w-3 mr-1" />
-                      {event.suggestions.length} suggestion
-                      {event.suggestions.length !== 1 ? 's' : ''}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
-                      No AI suggestions
-                    </Badge>
-                  )}
                 </div>
 
                 {/* Event Stats */}

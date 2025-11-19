@@ -9,15 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Bot,
-  Calendar,
-  Edit,
-  Image as ImageIcon,
-  MoreHorizontal,
-  Trash2,
-  User,
-} from 'lucide-react';
+import { Calendar, Edit, Image as ImageIcon, MoreHorizontal, Trash2, User } from 'lucide-react';
 import Image from 'next/image';
 
 interface EventTableProps {
@@ -188,21 +180,6 @@ export function EventTable({
                 <Calendar className="h-3 w-3" />
                 <span>{formatDate(event.created_at)}</span>
               </div>
-            </div>
-
-            {/* AI Suggestions */}
-            <div className="flex justify-center">
-              {event.suggestions && event.suggestions.length > 0 ? (
-                <Badge variant="outline" className="text-xs font-medium">
-                  <Bot />
-                  {event.suggestions.length} suggestion
-                  {event.suggestions.length !== 1 ? 's' : ''}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
-                  No AI suggestions
-                </Badge>
-              )}
             </div>
           </div>
         </div>

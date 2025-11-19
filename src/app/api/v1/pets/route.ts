@@ -418,7 +418,20 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-
+    try {
+      const { notifyAllUsersNewPet } = await import('@/app/api/helper');
+      const addedByName = added_by
+        ? (await supabase.from('users').select('username').eq('id', added_by).single()).data?.username
+        : undefined;
+      const petName: string = typeof name === 'string' && name.length > 0 ? name : 'New Pet';
+      if (typeof petName === 'string') {
+        notifyAllUsersNewPet(petName, data.id, addedByName?? 'PawsConnect').catch((e) => {
+          console.error('Failed to dispatch pet notifications:', e);
+        });
+      }
+    } catch (notifErr) {
+      console.error('Notification dispatch error (pet):', notifErr);
+    }
     return new Response(
       JSON.stringify({
         message: 'Pet created successfully',
@@ -429,6 +442,7 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' },
       },
     );
+    // Notification dispatched above before returning response
   } catch (error) {
     console.error('Error creating pet:', error);
     return new Response(
