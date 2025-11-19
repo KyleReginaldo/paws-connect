@@ -31,7 +31,7 @@ export async function pushNotification(userId: string,headings: string, message:
     },
 },{
     headers: {
-        Authorization: "Bearer Key os_v2_app_gi6mf633vnayxfkouv4hrbezxxp72khzfmkewevrzvyolniubc2ovvmqsfpogf6apcvwiw4plk5kcoeiv7hvqxqxvfjjhoaauox5k6i"
+        Authorization: `Bearer Key ${process.env.ONESIGNAL}`
     }
 });
     console.log(response.data);
