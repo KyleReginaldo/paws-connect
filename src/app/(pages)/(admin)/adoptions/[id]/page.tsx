@@ -474,7 +474,7 @@ const AdoptionPage = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${getStatusColor(adoption.status)}`}
                 >

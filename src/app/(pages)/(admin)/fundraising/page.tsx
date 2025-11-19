@@ -21,11 +21,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { type Fundraising, type FundraisingStatus } from '@/config/types/fundraising';
 import {
-  DollarSign,
   Download,
   Edit,
   Loader2,
   MoreHorizontal,
+  PhilippinePeso,
   Plus,
   Search,
   Target,
@@ -413,7 +413,7 @@ const Fundraising = () => {
       <div className="flex flex-wrap gap-3 mb-6">
         {/* Total Raised Badge */}
         <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
-          <DollarSign className="h-3.5 w-3.5" />
+          <PhilippinePeso className="h-3.5 w-3.5" />
           <span className="text-sm font-medium">
             ₱{(stats?.total_raised || 0).toLocaleString()}
           </span>

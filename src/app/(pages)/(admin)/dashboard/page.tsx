@@ -16,10 +16,10 @@ import {
   ArrowUpRight,
   CalendarIcon,
   Dog,
-  DollarSign,
   FileText,
   Heart,
   PawPrint,
+  PhilippinePeso,
   Shield,
   User as UserIcon,
   Users,
@@ -198,7 +198,7 @@ function RecentActivityComponent({ activities }: { activities: ActivityItem[] })
             ) : it.type === 'pet' ? (
               <PawPrint className="h-4 w-4 text-orange-500" />
             ) : (
-              <DollarSign className="h-4 w-4 text-orange-500" />
+              <PhilippinePeso className="h-4 w-4 text-orange-500" />
             )}
           </div>
           <div className="space-y-1 min-w-0 flex-1">
@@ -765,7 +765,7 @@ const Page = () => {
       title: 'Total Donations',
       value: `₱${stats.totalDonations.toLocaleString()}`,
       changeType: 'positive' as const,
-      icon: DollarSign,
+      icon: PhilippinePeso,
       description: `${stats.activeCampaigns} active campaigns`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
@@ -992,7 +992,7 @@ const Page = () => {
           <Card className="lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
-                <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                <PhilippinePeso className="h-5 w-5 text-orange-500 flex-shrink-0" />
                 <span className="truncate">Donation Analytics </span>
               </CardTitle>
               <CardDescription className="text-sm">
@@ -1127,7 +1127,7 @@ const Page = () => {
       >
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
-            <DollarSign className="h-5 w-5 text-orange-500 flex-shrink-0" />
+            <PhilippinePeso className="h-5 w-5 text-orange-500 flex-shrink-0" />
             <span className="truncate">Active Fundraising Campaigns</span>
           </CardTitle>
           <CardDescription className="text-sm">

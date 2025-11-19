@@ -11,8 +11,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Calendar,
-  DollarSign,
   Heart,
+  PhilippinePeso,
   QrCode,
   User,
   Users,
@@ -327,7 +327,7 @@ const FundraisingPage = () => {
             <Card className="shadow-sm">
               <CardHeader className="pb-0">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <DollarSign className="h-4 w-4 text-primary" />
+                  <PhilippinePeso className="h-4 w-4 text-primary" />
                   Donation Statistics
                 </CardTitle>
               </CardHeader>
