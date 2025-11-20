@@ -9,7 +9,8 @@ import {
 } from '@/lib/content-moderation';
 import { formatManilaHM } from '@/lib/utils';
 import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { AvatarCircles } from './ui/avatar-circles';
 import { Badge } from './ui/badge';
@@ -41,9 +42,39 @@ type MessageWithModeration = ChatMessage & {
   moderation?: ModerationResult;
 };
 
-export default function GlobalChatWidget() {
+type Corner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+interface GlobalChatWidgetProps {
+  /** Renders as fixed widget in a chosen screen corner when inline=false */
+  position?: Corner;
+  /** If true, renders inline where placed; otherwise fixed (default). */
+  inline?: boolean;
+  /** Render via React Portal into document.body or a target element. Default: true */
+  usePortal?: boolean;
+  /** If provided, portal will mount into element with this id. */
+  portalContainerId?: string;
+  /** Pixel offsets from the chosen corner. */
+  offset?: { x?: number; y?: number };
+  /** z-index to use for fixed mode. Default: 50 */
+  zIndex?: number;
+  /** Start with chat open. Default: false */
+  defaultOpen?: boolean;
+  /** Extra classes for the outer container. */
+  className?: string;
+}
+
+export default function GlobalChatWidget({
+  position = 'bottom-right',
+  inline = false,
+  usePortal = true,
+  portalContainerId,
+  offset,
+  zIndex = 50,
+  defaultOpen = false,
+  className = '',
+}: GlobalChatWidgetProps = {}) {
   const { userId, userRole } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!defaultOpen);
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'error'>(
     'disconnected',
   );
@@ -143,6 +174,8 @@ export default function GlobalChatWidget() {
   const unreadC = messages.filter(
     (m) => !m.viewers || !m.viewers.some((v) => v.id === userId),
   ).length;
+
+  // Draggable removed per request — fixed position only using corner props
   const send = async () => {
     const content = text.trim();
     if (!content || !userId || loading) return;
@@ -291,9 +324,7 @@ export default function GlobalChatWidget() {
   const isMessageHidden = (msg: MessageWithModeration) => {
     return isMessageInappropriate(msg) && !hiddenMessages.has(msg.id);
   };
-  if (!userId) {
-    return null;
-  }
+  // Note: Do not early-return before hooks; render no UI later if unauthenticated.
 
   // readMessage used when opening to optimistically mark messages read before API viewer update completes
 
@@ -315,8 +346,34 @@ export default function GlobalChatWidget() {
     );
   };
 
-  return (
-    <div className="fixed bottom-4 right-4 z-50">
+  const portalTarget = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    if (!usePortal) return null;
+    if (portalContainerId) return document.getElementById(portalContainerId) || document.body;
+    return document.body;
+  }, [usePortal, portalContainerId]);
+
+  const containerStyle: React.CSSProperties = inline
+    ? {}
+    : (() => {
+        const style: React.CSSProperties = { position: 'fixed', zIndex };
+        const ox = offset?.x ?? 16; // default 16px
+        const oy = offset?.y ?? 16;
+        if (position.includes('bottom')) style.bottom = oy;
+        if (position.includes('top')) style.top = oy;
+        if (position.includes('right')) style.right = ox;
+        if (position.includes('left')) style.left = ox;
+        return style;
+      })();
+
+  if (!userId) {
+    // Do not render chat for unauthenticated users
+    if (!portalTarget || inline) return null;
+    return createPortal(<></>, portalTarget);
+  }
+
+  const Container = (
+    <div className={`${inline ? '' : ''} ${className}`.trim()} style={containerStyle}>
       {open ? (
         <Card className="w-96 h-[600px] p-[0px] m-[0px] shadow-2xl transition-all duration-300 ease-in-out bg-white border border-gray-200">
           {/* Header */}
@@ -538,4 +595,7 @@ export default function GlobalChatWidget() {
       )}
     </div>
   );
+
+  if (!portalTarget || inline) return Container;
+  return createPortal(Container, portalTarget);
 }

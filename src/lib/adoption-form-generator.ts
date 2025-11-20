@@ -78,18 +78,17 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
   const petData = adoption.pets || adoption.pet;
   const adopterData = adoption.users;
 
-  // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string | null): string => {
     if (!dateOfBirth) return 'Not provided';
     const birthDate = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
+    const now = new Date();
+    let age = now.getFullYear() - birthDate.getFullYear();
+    const md = now.getMonth() - birthDate.getMonth();
+    if (md < 0 || (md === 0 && now.getDate() < birthDate.getDate())) age--;
     return `${age} years old`;
   };
+
+  const safe = (v: string | null | undefined, fallback: string) => v ?? fallback;
 
   return `<!doctype html>
 <html lang="en">
@@ -98,390 +97,113 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pet Adoption Application Form</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-      
-      * { box-sizing: border-box; }
-      body { 
-        margin: 0; 
-        padding: 20px; 
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-        line-height: 1.6; 
-        color: #1f2937;
-        background: #f9fafb;
-        font-size: 14px;
-      }
-      
-      .form-container { 
-        max-width: 700px; 
-        margin: 0 auto; 
-        background: white; 
-        padding: 40px; 
-        border-radius: 8px; 
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e5e7eb;
-      }
-      
-      .header { 
-        text-align: center; 
-        margin-bottom: 40px; 
-        border-bottom: 2px solid #059669;
-        padding-bottom: 20px;
-      }
-      
-      .logo { 
-        font-size: 32px; 
-        margin-bottom: 10px;
-      }
-      
-      .form-title { 
-        font-size: 24px; 
-        font-weight: 700; 
-        color: #111827; 
-        margin: 0 0 5px 0;
-      }
-      
-      .form-subtitle { 
-        font-size: 14px; 
-        color: #6b7280; 
-        margin: 0;
-      }
-      
-      .application-id {
-        display: inline-block;
-        background: #f3f4f6;
-        color: #374151;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-top: 8px;
-      }
-      
-      .question { 
-        margin-bottom: 25px;
-        page-break-inside: avoid;
-      }
-      
-      .question-number {
-        display: inline-block;
-        width: 25px;
-        height: 25px;
-        background: #059669;
-        color: white;
-        border-radius: 50%;
-        text-align: center;
-        line-height: 25px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-right: 12px;
-        flex-shrink: 0;
-      }
-      
-      .question-header {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 12px;
-      }
-      
-      .question-text { 
-        font-weight: 600; 
-        color: #374151; 
-        margin: 0;
-        flex: 1;
-        font-size: 15px;
-        line-height: 1.4;
-      }
-      
-      .answer-box { 
-        background: #f9fafb;
-        border: 2px solid #d1d5db;
-        border-radius: 6px;
-        min-height: 50px;
-        padding: 12px;
-        margin-left: 37px;
-        font-size: 14px;
-        color: #111827;
-        position: relative;
-      }
-      
-      .answer-box.filled {
-        background: #ecfdf5;
-        border-color: #059669;
-        color: #047857;
-        font-weight: 500;
-      }
-      
-      .answer-box.short {
-        min-height: 40px;
-      }
-      
-      .answer-box.tall {
-        min-height: 80px;
-      }
-      
-      .answer-placeholder {
-        color: #9ca3af;
-        font-style: italic;
-        font-size: 13px;
-      }
-      
-      .pet-info {
-        background: #f0f9ff;
-        border: 2px solid #0ea5e9;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
-        text-align: center;
-      }
-      
-      .pet-name {
-        font-size: 20px;
-        font-weight: 700;
-        color: #0c4a6e;
-        margin-bottom: 8px;
-      }
-      
-      .pet-details {
-        font-size: 14px;
-        color: #075985;
-        line-height: 1.5;
-      }
-      
-      .footer {
-        margin-top: 40px;
-        text-align: center;
-        padding-top: 20px;
-        border-top: 1px solid #e5e7eb;
-        font-size: 11px;
-        color: #6b7280;
-      }
-      
-      .signature-section {
-        margin-top: 40px;
-        display: flex;
-        justify-content: space-between;
-        gap: 40px;
-      }
-      
-      .signature-box {
-        flex: 1;
-        text-align: center;
-      }
-      
-      .signature-line {
-        border-top: 2px solid #374151;
-        margin-bottom: 8px;
-        width: 150px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      
-      .signature-label {
-        font-size: 11px;
-        color: #6b7280;
-        font-weight: 500;
-      }
-      
-      @media print { 
-        body { 
-          background: white; 
-          padding: 0;
-        } 
-        .form-container { 
-          box-shadow: none; 
-          border: none;
-          padding: 20px;
-        }
-        .question {
-          page-break-inside: avoid;
-        }
-      }
+      @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@600&family=Open+Sans&display=swap');
+      body { margin: 0; padding: 0; background: #f4f4f4; font-family: 'Open Sans', sans-serif; }
+      .certificate-container { width: 900px; background: #fffaf5; margin: 24px auto; padding: 25px; border: 10px solid #4b9b6a; border-radius: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); position: relative; background-image: radial-gradient(circle at center, rgba(75,155,106,0.05) 0%, transparent 80%); }
+      .inner-border { border: 3px dashed #d4af37; border-radius: 10px; margin: 10px; padding: 28px; box-sizing: border-box; background: rgba(255,255,255,0.96); }
+      .header { text-align: center; margin-bottom: 14px; }
+      .paw-icon { width: 60px; margin: 6px auto 8px; display: block; border-radius: 100%; }
+      .title { font-family: 'Playfair Display', serif; font-size: 30px; color: #2f6546; margin: 2px 0 4px; letter-spacing: .5px; text-transform: uppercase; }
+      .subtitle { font-size: 14px; color: #666; margin: 0 0 8px; }
+      .meta { text-align:center; font-size: 12px; color:#666; margin-bottom: 14px; }
+      .section { margin: 12px 0 16px; }
+      .section-title { font-family: 'Playfair Display', serif; font-size: 18px; color: #2f6546; margin: 0 0 8px; }
+      .panel { background:#fff; border:2px solid #e5e7eb; border-radius:8px; padding:12px 14px; }
+      .grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px 12px; }
+      .row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+      .label { width: 200px; font-weight:600; color:#334155; font-size: 13px; }
+      .value { flex:1; color:#111827; font-size: 13px; }
+      .qa { margin: 10px 0; }
+      .q { font-weight:600; color:#374151; margin:0 0 6px; font-size: 14px; }
+      .a { background:#fff; border:2px solid #e5e7eb; border-radius:8px; padding:10px 12px; min-height:44px; font-size: 13px; }
+      .a.filled { border-color:#4b9b6a; background:#f3faf6; color:#065f46; font-weight:500; }
+      .sig { display:flex; justify-content:space-between; gap:40px; margin-top:18px; }
+      .sig-box { flex:1; text-align:center; }
+      .sig-line { border-top:2px solid #333; width: 220px; margin: 22px auto 6px; }
+      .sig-label { font-size:12px; color:#666; font-weight:600; }
+      @media print { body { background:#fff; } .certificate-container { margin:0; box-shadow:none; page-break-inside: avoid; } @page { margin: 0.5in; size: A4; } }
     </style>
   </head>
   <body>
-    <div class="form-container">
-      <div class="header">
-        <div class="logo">🐾</div>
-        <h1 class="form-title">Pet Adoption Application</h1>
-        <p class="form-subtitle">Please complete all questions below</p>
-        <div class="application-id">Application #${adoption.id} • ${adoptionDate}</div>
-      </div>
+    <div class="certificate-container">
+      <div class="inner-border">
+        <p class="meta">Generated on ${today}</p>
+        <div class="header">
+          <img class="paw-icon" src="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/playstore.png" alt="Paw Icon" />
+          <h1 class="title">Pet Adoption Application</h1>
+          <p class="subtitle">Application #${adoption.id} • ${adoptionDate}</p>
+        </div>
 
-      ${petData ? `
-        <div class="pet-info">
-          <div class="pet-name">${petData.name || 'Pet'}</div>
-          <div class="pet-details">
-            ${petData.type || 'Animal'} • ${petData.breed || 'Mixed Breed'} • ${petData.gender || 'Unknown'}<br>
-            ${petData.age ? `${petData.age} years old` : 'Age unknown'} • ${petData.size || 'Size not specified'}
+        ${petData ? `
+        <div class="section">
+          <h3 class="section-title">Pet Information</h3>
+          <div class="panel grid">
+            <div class="row"><div class="label">Name</div><div class="value">${safe(petData.name, 'Pet')}</div></div>
+            <div class="row"><div class="label">Type</div><div class="value">${safe(petData.type, 'Animal')}</div></div>
+            <div class="row"><div class="label">Breed</div><div class="value">${safe(petData.breed, 'Mixed Breed')}</div></div>
+            <div class="row"><div class="label">Gender</div><div class="value">${safe(petData.gender, 'Unknown')}</div></div>
+            <div class="row"><div class="label">Age</div><div class="value">${petData.age ? `${petData.age} years old` : 'Age unknown'}</div></div>
+            <div class="row"><div class="label">Size</div><div class="value">${safe(petData.size, 'Not specified')}</div></div>
+          </div>
+        </div>` : ''}
+
+        <div class="section">
+          <h3 class="section-title">Adopter Information</h3>
+          <div class="panel grid">
+            <div class="row"><div class="label">Full name</div><div class="value">${safe(adopterData?.username, 'Not provided')}</div></div>
+            <div class="row"><div class="label">Age</div><div class="value">${adopterData?.user_identification?.date_of_birth ? calculateAge(adopterData.user_identification.date_of_birth) : 'Not provided'}</div></div>
+            <div class="row"><div class="label">Email</div><div class="value">${safe(adopterData?.email, 'Not provided')}</div></div>
+            <div class="row"><div class="label">Phone</div><div class="value">${safe(adopterData?.phone_number, 'Not provided')}</div></div>
+            <div class="row" style="grid-column: 1 / -1;"><div class="label">Address</div><div class="value">${safe(adopterData?.user_identification?.address, 'Not provided')}</div></div>
           </div>
         </div>
-      ` : ''}
 
-      <!-- Question 1: Full name of adopter -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">1</div>
-          <p class="question-text">Full name of adopter</p>
+        <div class="section">
+          <h3 class="section-title">Application Questions</h3>
+          <div class="qa">
+            <p class="q">1) What animal would you like to adopt?</p>
+            <div class="a ${petData ? 'filled' : ''}">${petData ? `${petData.name} - ${petData.type} (${petData.breed || 'Mixed breed'})` : 'Please specify the animal you would like to adopt'}</div>
+          </div>
+          <div class="qa">
+            <p class="q">2) What made you decide to adopt an animal?</p>
+            <div class="a ${adoption.reason_for_adopting ? 'filled' : ''}">${adoption.reason_for_adopting || 'Please explain your motivation for adopting'}</div>
+          </div>
+          <div class="qa">
+            <p class="q">3) Are you willing to visit the shelter to pick out your new fur-baby?</p>
+            <div class="a ${adoption.willing_to_visit_shelter !== null ? 'filled' : ''}">${adoption.willing_to_visit_shelter !== null ? (adoption.willing_to_visit_shelter ? '☑ Yes ☐ No' : '☐ Yes ☑ No') : '☐ Yes ☐ No'}</div>
+          </div>
+          <div class="qa">
+            <p class="q">4) Are you willing to visit us a few more times after that?</p>
+            <div class="a ${adoption.willing_to_visit_again !== null ? 'filled' : ''}">${adoption.willing_to_visit_again !== null ? (adoption.willing_to_visit_again ? '☑ Yes ☐ No' : '☐ Yes ☑ No') : '☐ Yes ☐ No'}</div>
+          </div>
+          <div class="qa">
+            <p class="q">5) Are you adopting for yourself or others?</p>
+            <div class="a ${adoption.adopting_for_self !== null ? 'filled' : ''}">${adoption.adopting_for_self !== null ? (adoption.adopting_for_self ? 'For myself' : 'For others') : 'Please specify who you are adopting for'}</div>
+          </div>
+          <div class="qa">
+            <p class="q">6) How will you provide a loving FURrever home?</p>
+            <div class="a ${adoption.how_can_you_give_fur_rever_home ? 'filled' : ''}">${adoption.how_can_you_give_fur_rever_home || 'Please describe how you will provide a loving forever home'}</div>
+          </div>
+          <div class="qa">
+            <p class="q">7) Where did you hear about us?</p>
+            <div class="a ${adoption.where_did_you_hear_about_us ? 'filled' : ''}">${adoption.where_did_you_hear_about_us || 'Please tell us how you found out about our shelter'}</div>
+          </div>
         </div>
-        <div class="answer-box short ${adopterData?.username ? 'filled' : ''}">
-          ${adopterData?.username || '<span class="answer-placeholder">Please write your full name</span>'}
-        </div>
-      </div>
 
-      <!-- Question 2: Age -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">2</div>
-          <p class="question-text">Age</p>
+        <div class="sig">
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div class="sig-label">Applicant Signature</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div class="sig-label">Date</div>
+          </div>
         </div>
-        <div class="answer-box short ${adopterData?.user_identification?.date_of_birth ? 'filled' : ''}">
-          ${adopterData?.user_identification?.date_of_birth 
-            ? calculateAge(adopterData.user_identification.date_of_birth)
-            : '<span class="answer-placeholder">Please write your age</span>'}
-        </div>
-      </div>
-
-      <!-- Question 3: Email address -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">3</div>
-          <p class="question-text">Email address</p>
-        </div>
-        <div class="answer-box short ${adopterData?.email ? 'filled' : ''}">
-          ${adopterData?.email || '<span class="answer-placeholder">Please write your email address</span>'}
-        </div>
-      </div>
-
-      <!-- Question 4: Contact number -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">4</div>
-          <p class="question-text">Contact number</p>
-        </div>
-        <div class="answer-box short ${adopterData?.phone_number ? 'filled' : ''}">
-          ${adopterData?.phone_number || '<span class="answer-placeholder">Please write your phone number</span>'}
-        </div>
-      </div>
-
-      <!-- Question 5: Address -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">5</div>
-          <p class="question-text">Address</p>
-        </div>
-        <div class="answer-box ${adopterData?.user_identification?.address ? 'filled' : ''}">
-          ${adopterData?.user_identification?.address || '<span class="answer-placeholder">Please write your complete address</span>'}
-        </div>
-      </div>
-
-      <!-- Question 6: What animal would you like to adopt? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">6</div>
-          <p class="question-text">What animal would you like to adopt?</p>
-        </div>
-        <div class="answer-box ${petData ? 'filled' : ''}">
-          ${petData ? `${petData.name} - ${petData.type} (${petData.breed || 'Mixed breed'})` 
-            : '<span class="answer-placeholder">Please specify the animal you would like to adopt</span>'}
-        </div>
-      </div>
-
-      <!-- Question 7: What made you decide to adopt an animal? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">7</div>
-          <p class="question-text">What made you decide to adopt an animal?</p>
-        </div>
-        <div class="answer-box tall ${adoption.reason_for_adopting ? 'filled' : ''}">
-          ${adoption.reason_for_adopting || '<span class="answer-placeholder">Please explain your motivation for adopting</span>'}
-        </div>
-      </div>
-
-      <!-- Question 8: Are you willing to visit the shelter to pick out your new fur-baby? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">8</div>
-          <p class="question-text">Are you willing to visit the shelter to pick out your new fur-baby?</p>
-        </div>
-        <div class="answer-box ${adoption.willing_to_visit_shelter !== null ? 'filled' : ''}">
-          ${adoption.willing_to_visit_shelter !== null 
-            ? (adoption.willing_to_visit_shelter ? '☑ Yes ☐ No' : '☐ Yes ☑ No')
-            : '<span class="answer-placeholder">☐ Yes ☐ No</span>'}
-        </div>
-      </div>
-
-      <!-- Question 9: Are you willing to visit us a few more times after that? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">9</div>
-          <p class="question-text">Are you willing to visit us a few more times after that? (Your chosen furry companion will need to get to know you before you take him/her home!)</p>
-        </div>
-        <div class="answer-box ${adoption.willing_to_visit_again !== null ? 'filled' : ''}">
-          ${adoption.willing_to_visit_again !== null 
-            ? (adoption.willing_to_visit_again ? '☑ Yes ☐ No' : '☐ Yes ☑ No')
-            : '<span class="answer-placeholder">☐ Yes ☐ No</span>'}
-        </div>
-      </div>
-
-      <!-- Question 10: Are you adopting for yourself or others? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">10</div>
-          <p class="question-text">Are you adopting for yourself or others?</p>
-        </div>
-        <div class="answer-box ${adoption.adopting_for_self !== null ? 'filled' : ''}">
-          ${adoption.adopting_for_self !== null 
-            ? (adoption.adopting_for_self ? 'For myself' : 'For others')
-            : '<span class="answer-placeholder">Please specify who you are adopting for</span>'}
-        </div>
-      </div>
-
-      <!-- Question 11: Will you be able to give your new furry companion a loving FURrever home? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">11</div>
-          <p class="question-text">Will you be able to give your new furry companion a loving FURrever home? Tell us how.</p>
-        </div>
-        <div class="answer-box tall ${adoption.how_can_you_give_fur_rever_home ? 'filled' : ''}">
-          ${adoption.how_can_you_give_fur_rever_home || '<span class="answer-placeholder">Please describe how you will provide a loving forever home</span>'}
-        </div>
-      </div>
-
-      <!-- Question 12: We're curious. Where did you see/hear about us? -->
-      <div class="question">
-        <div class="question-header">
-          <div class="question-number">12</div>
-          <p class="question-text">We're curious. Where did you see/hear about us?</p>
-        </div>
-        <div class="answer-box ${adoption.where_did_you_hear_about_us ? 'filled' : ''}">
-          ${adoption.where_did_you_hear_about_us || '<span class="answer-placeholder">Please tell us how you found out about our shelter</span>'}
-        </div>
-      </div>
-
-      <!-- Signatures -->
-      <div class="signature-section">
-        <div class="signature-box">
-          <div class="signature-line"></div>
-          <div class="signature-label">Applicant Signature</div>
-        </div>
-        <div class="signature-box">
-          <div class="signature-line"></div>
-          <div class="signature-label">Date</div>
-        </div>
-      </div>
-
-      <div class="footer">
-        <p>Thank you for your interest in adopting! We will review your application and contact you soon.</p>
-        <p>Form generated on ${today} for Application #${adoption.id}</p>
       </div>
     </div>
-    
     <script>
-      window.onload = function() { 
-        setTimeout(function() { 
-          window.print(); 
-        }, 500); 
-      }
+      window.onload = function(){ setTimeout(function(){ window.print(); }, 300); }
     </script>
   </body>
 </html>`;

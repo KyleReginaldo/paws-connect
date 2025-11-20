@@ -10,8 +10,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import type { Pet } from '../config/types/pet';
 import { HappinessImageDisplay } from './HappinessImageDisplay';
+import { PhotoViewer } from './PhotoViewer';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -43,6 +45,16 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
         return 'destructive'; // red
       default:
         return 'outline'; // gray
+    }
+  };
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+
+  const handleAvatarClick = (pet: Pet) => {
+    if (pet.photos && pet.photos.length > 0) {
+      setSelectedPet(pet);
+      setViewerOpen(true);
     }
   };
 
@@ -82,7 +94,11 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
               <TableCell>
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <Avatar className="h-10 w-10">
+                    <Avatar
+                      className="h-10 w-10 cursor-zoom-in"
+                      onClick={() => handleAvatarClick(pet)}
+                      title="Click to zoom or view details"
+                    >
                       <AvatarImage
                         src={(pet.photos && pet.photos.length > 0 ? pet.photos[0] : null) || ''}
                         alt={pet.name}
@@ -124,7 +140,10 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
               </TableCell>
               <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
               <TableCell>
-                <Badge variant={getStatusBadgeVariant(pet.request_status)}>
+                <Badge
+                  variant={getStatusBadgeVariant(pet.request_status)}
+                  className={`${pet.request_status === 'approved' ? 'bg-green-500' : null}`}
+                >
                   {pet.request_status || 'pending'}
                 </Badge>
               </TableCell>
@@ -158,6 +177,15 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
           ))}
         </TableBody>
       </Table>
+      {selectedPet && (
+        <PhotoViewer
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+          photoUrl={(selectedPet.photos && selectedPet.photos[0]) || ''}
+          petName={selectedPet.name}
+          detailsHref={`/manage-pet/${selectedPet.id}`}
+        />
+      )}
     </div>
   );
 }

@@ -292,17 +292,16 @@ const AdoptionPage = () => {
   const getStatusColor = (status: string | null) => {
     switch (status?.toUpperCase()) {
       case 'APPROVED':
-        return 'bg-green-500 text-white border-green-700';
+        return 'bg-green-500 text-green-50 border-green-50';
       case 'PENDING':
-        return 'bg-yellow-500 text-yellow-700 border-yellow-700';
+        return 'bg-yellow-500 text-yellow-50 border-yellow-50';
       case 'REJECTED':
-        return 'bg-red-500 text-red-700 border-red-700';
       case 'CANCELLED':
-        return 'bg-gray-500 text-gray-700 border-gray-700';
+        return 'bg-red-500 text-red-50 border-red-50';
       case 'COMPLETED':
-        return 'bg-blue-500 text-blue-700 border-blue-700';
+        return 'bg-blue-500 text-blue-50 border-blue-50';
       default:
-        return 'bg-gray-500 text-gray-700 border-gray-700';
+        return 'bg-gray-500 text-gray-50 border-gray-50';
     }
   };
 
@@ -483,16 +482,18 @@ const AdoptionPage = () => {
                 </Badge>
 
                 {/* Adoption Form Button - Available for all statuses */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white cursor-pointer"
-                  onClick={handleGenerateAdoptionForm}
-                  title="Generate and save adoption form as PDF"
-                >
-                  <FileHeart className="h-3 w-3 mr-1" />
-                  Generate Adoption Form
-                </Button>
+                {adoption.status === 'APPROVED' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white cursor-pointer"
+                    onClick={handleGenerateAdoptionForm}
+                    title="Generate and save adoption form as PDF"
+                  >
+                    <FileHeart className="h-3 w-3 mr-1" />
+                    Generate Adoption Form
+                  </Button>
+                )}
 
                 {/* Certificate Button - Only for adopted pets */}
                 {isAdopted(adoption.status) && (

@@ -118,7 +118,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       label: 'Status',
       type: 'multiselect',
       options: filterOptions.statusOptions,
-      placeholder: 'Select statuses',
+      placeholder: 'Select status',
     },
     {
       id: 'vaccinated',
@@ -140,6 +140,18 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
     },
   ];
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
   // Apply filters
   const filteredPets = useMemo(() => {
     return pets.filter((pet) => {
@@ -220,9 +232,8 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'approved':
-        return 'default'; // green
       case 'pending':
-        return 'secondary'; // yellow/orange
+        return 'default'; // green
       case 'rejected':
         return 'destructive'; // red
       default:
@@ -277,92 +288,100 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPets.map((pet) => (
-                <TableRow key={pet.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage
-                            src={(pet.photos && pet.photos.length > 0 ? pet.photos[0] : null) || ''}
-                            alt={pet.name}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="bg-muted">
-                            {pet.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {/* Show happiness image if pet is adopted and has one */}
-                        {pet.adopted && pet.adopted.happiness_image && (
-                          <div className="absolute -top-2 -right-2">
-                            <HappinessImageDisplay
-                              happinessImage={pet.adopted.happiness_image}
-                              petName={pet.name}
-                              size="sm"
-                              showLabel={false}
+              {filteredPets.map((pet, index) => {
+                const odd = index % 2 === 1;
+                return (
+                  <TableRow key={pet.id} className={`${odd ? 'bg-gray-100' : ''}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={
+                                (pet.photos && pet.photos.length > 0 ? pet.photos[0] : null) || ''
+                              }
+                              alt={pet.name}
+                              className="object-cover"
                             />
-                          </div>
-                        )}
+                            <AvatarFallback className="bg-muted">
+                              {pet.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {/* Show happiness image if pet is adopted and has one */}
+                          {pet.adopted && pet.adopted.happiness_image && (
+                            <div className="absolute -top-2 -right-2">
+                              <HappinessImageDisplay
+                                happinessImage={pet.adopted.happiness_image}
+                                petName={pet.name}
+                                size="sm"
+                                showLabel={false}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">{pet.name ? pet.name : 'No name'}</div>
+                          {pet.adopted && (
+                            <div className="text-xs text-green-600 font-medium">
+                              ✨ Adopted & Happy
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium">{pet.name ? pet.name : 'No name'}</div>
-                        {pet.adopted && (
-                          <div className="text-xs text-green-600 font-medium">
-                            ✨ Adopted & Happy
-                          </div>
-                        )}
+                    </TableCell>
+                    <TableCell>{pet.type}</TableCell>
+                    <TableCell>{pet.breed}</TableCell>
+                    <TableCell>{pet.gender}</TableCell>
+                    <TableCell>{pet.age}</TableCell>
+                    <TableCell>{pet.size}</TableCell>
+                    <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={getStatusBadgeVariant(pet.request_status)}
+                        className={`${getStatusColor(pet.request_status || '')}`}
+                      >
+                        {pet.request_status || 'pending'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{pet.is_vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</TableCell>
+                    <TableCell>
+                      {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-[8px] items-center mr-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                window.location.href = `/manage-pet/${pet.id}`;
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEdit?.(pet)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDelete?.(pet.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{pet.type}</TableCell>
-                  <TableCell>{pet.breed}</TableCell>
-                  <TableCell>{pet.gender}</TableCell>
-                  <TableCell>{pet.age}</TableCell>
-                  <TableCell>{pet.size}</TableCell>
-                  <TableCell>{pet.weight ? `${pet.weight}` : 'Not specified'}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(pet.request_status)}>
-                      {pet.request_status || 'pending'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{pet.is_vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</TableCell>
-                  <TableCell>
-                    {pet.is_spayed_or_neutured ? 'Spayed/Neutered' : 'Not Spayed/Neutered'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-[8px] items-center mr-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              window.location.href = `/manage-pet/${pet.id}`;
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onEdit?.(pet)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onDelete?.(pet.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

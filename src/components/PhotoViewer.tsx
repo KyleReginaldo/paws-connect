@@ -11,9 +11,17 @@ interface PhotoViewerProps {
   onOpenChange: (open: boolean) => void;
   photoUrl: string;
   petName: string;
+  /** Optional details page href; if provided a button will appear */
+  detailsHref?: string;
 }
 
-export function PhotoViewer({ open, onOpenChange, photoUrl, petName }: PhotoViewerProps) {
+export function PhotoViewer({
+  open,
+  onOpenChange,
+  photoUrl,
+  petName,
+  detailsHref,
+}: PhotoViewerProps) {
   const transformedPhotoUrl = transformUrlForLocalhost(photoUrl);
 
   const handleDownload = () => {
@@ -38,6 +46,16 @@ export function PhotoViewer({ open, onOpenChange, photoUrl, petName }: PhotoView
             className="w-full h-auto max-h-[80vh] object-contain"
           />
           <div className="absolute top-4 right-4 flex gap-2">
+            {detailsHref && (
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className="bg-black/50 hover:bg-black/70 text-white"
+              >
+                <a href={detailsHref}>View Details</a>
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="sm"

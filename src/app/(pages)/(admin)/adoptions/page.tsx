@@ -412,7 +412,7 @@ const AdoptionsPage = () => {
                           className={
                             adoption.status === 'APPROVED'
                               ? 'bg-green-100 text-green-800 border-green-300 font-medium hover:bg-green-200 transition-colors'
-                              : adoption.status === 'REJECTED'
+                              : adoption.status === 'REJECTED' || adoption.status === 'CANCELLED'
                                 ? 'bg-red-100 text-red-800 border-red-300 font-medium hover:bg-red-200 transition-colors'
                                 : adoption.status === 'PENDING'
                                   ? 'bg-yellow-100 text-yellow-800 border-yellow-300 font-medium hover:bg-yellow-200 transition-colors'
