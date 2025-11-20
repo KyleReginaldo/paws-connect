@@ -7,7 +7,6 @@ import { Separator } from '@radix-ui/react-separator';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import OneSignal from 'react-onesignal';
 import community from '../../public/community.png';
 import fund from '../../public/fund.png';
 import pawslogo from '../../public/pawsconnectlogo.ico';
@@ -62,36 +61,6 @@ export default function HomePage() {
 
   useEffect(() => {
     // Ensure this code runs only on the client side
-    if (typeof window !== 'undefined') {
-      OneSignal.init({
-        appId: '323cc2fb-7bab-418b-954e-a578788499bd',
-        autoRegister: true,
-        notifyButton: {
-          enable: true,
-          prenotify: true,
-          showCredit: false,
-          text: {
-            'tip.state.unsubscribed': 'Subscribe to notifications',
-            'tip.state.subscribed': "You're subscribed to notifications",
-            'tip.state.blocked': 'Unblock notifications',
-            'message.prenotify': 'Click to subscribe to notifications',
-            'message.action.subscribing': 'Thanks for subscribing!',
-            'message.action.subscribed': "Thanks! You're subscribed to notifications",
-            'message.action.resubscribed': "You're subscribed to notifications",
-            'message.action.unsubscribed': "You won't receive notifications again",
-            'dialog.main.title': 'Manage Site Notifications',
-            'dialog.main.button.subscribe': 'SUBSCRIBE',
-            'dialog.main.button.unsubscribe': 'UNSUBSCRIBE',
-            'dialog.blocked.title': 'Unblock Notifications',
-            'dialog.blocked.message': 'Follow these instructions to allow notifications:',
-          },
-        },
-        welcomeNotification: {
-          title: 'Welcome to Paws Connect!',
-          message: 'Thank you for enabling notifications.',
-        },
-      });
-    }
   }, []);
   const { userId } = useAuth();
   return (
