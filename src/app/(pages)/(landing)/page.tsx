@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import pawsdisplay from '../../../../public/paws-display.png';
+import phones from '../../../../public/phones.png';
 
 export default function HomePage() {
   const whyChooseValues = [
@@ -57,7 +57,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
       {/* Nav moved to global layout NavBar component */}
       {/* Hero Section (side-by-side even on mobile) */}
-      <div className="relative flex flex-col-reverse md:flex-row w-full min-h-[90vh] bg-[url('/hero.png')] bg-cover bg-center bg-no-repeat overflow-hidden">
+      <div className="relative flex flex-col md:flex-row w-full min-h-[70vh] md:min-h-[90vh] bg-[url('/hero.png')] bg-cover bg-center bg-no-repeat overflow-hidden">
         {/* Text Column */}
         <div className="flex-1 flex items-center justify-center px-2 sm:px-8">
           <div className="max-w-md space-y-1 text-center sm:text-left">
@@ -99,9 +99,9 @@ export default function HomePage() {
             }}
           />
           <Image
-            src={pawsdisplay}
+            src={phones}
             alt="Paws Display"
-            className="w-auto max-h-[1200px] sm:max-h-[600px] animate-in drop-shadow-2xl"
+            className="w-auto max-h-[1200px] sm:max-h-[900px] animate-in drop-shadow-2xl"
             priority
             sizes="(max-width: 640px) 70vw, (max-width: 768px) 65vw, 50vw"
           />
@@ -115,7 +115,18 @@ export default function HomePage() {
         thumbnailSrc="/pet_bg.png"
         thumbnailAlt="Dummy Video Thumbnail"
       />
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-16 relative">
+        {/* Decorative background elements */}
+        <div className="absolute top-10 left-10 w-6 h-6 bg-purple-400/20 rotate-45 animate-pulse"></div>
+        <div className="absolute top-32 right-20 w-4 h-4 bg-orange-300/20 rotate-12 animate-pulse delay-75"></div>
+        <div className="absolute bottom-20 left-1/4 w-5 h-5 bg-teal-400/20 rotate-45 animate-pulse delay-150"></div>
+        <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-blue-300/20 rotate-12 animate-pulse delay-300"></div>
+        <div className="absolute bottom-1/4 right-16 w-4 h-4 bg-pink-400/20 rotate-45 animate-pulse delay-500"></div>
+        <div className="absolute top-10 left-10 w-6 h-6 bg-purple-400/20 rotate-45 animate-pulse"></div>
+        <div className="absolute top-32 right-20 w-4 h-4 bg-orange-300/20 rotate-12 animate-pulse delay-75"></div>
+        <div className="absolute bottom-20 left-1/4 w-5 h-5 bg-teal-400/20 rotate-45 animate-pulse delay-150"></div>
+        <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-blue-300/20 rotate-12 animate-pulse delay-300"></div>
+        <div className="absolute bottom-1/4 right-16 w-4 h-4 bg-pink-400/20 rotate-45 animate-pulse delay-500"></div>
         <div className="flex flex-col gap-[16px] items-center mb-10">
           <h4 className="font-bold text-2xl">Why Choose Paws Connect?</h4>
           <div className="flex flex-wrap gap-[24px] items-start justify-center">
