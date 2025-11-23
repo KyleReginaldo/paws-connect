@@ -73,7 +73,7 @@ const page = () => {
           />
         </div>
 
-        <div className="flex flex-col items-start justify-center px-4 md:px-8 max-w-lg text-center md:text-left">
+        <div className="flex flex-col items-center md:items-start justify-center px-4 md:px-8 max-w-lg text-center md:text-left">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">{missionData.title}</h2>
           <p className="text-md md:text-lg text-gray-700">{missionData.description}</p>
         </div>
@@ -89,7 +89,7 @@ const page = () => {
             className="max-h-[300px] md:max-h-[500px] w-auto"
           />
         </div>
-        <div className="flex flex-col items-start justify-center px-4 md:px-8 max-w-lg text-center md:text-left">
+        <div className="flex flex-col items-center md:items-start justify-center px-4 md:px-8 max-w-lg text-center md:text-left">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">{visionData.title}</h2>
           <p className="text-md md:text-lg text-gray-700">{visionData.description}</p>
         </div>
