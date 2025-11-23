@@ -1,0 +1,168 @@
+'use client';
+
+import { Separator } from '@radix-ui/react-separator';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import pawslogo from '../../../public/pawsconnectlogo.ico';
+import { useAuth } from '../context/AuthContext';
+
+export default function NavBar() {
+  const { userId } = useAuth();
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Hide nav on auth and admin pages
+  if (pathname?.startsWith('/auth') || pathname?.startsWith('/dashboard')) {
+    return null;
+  }
+
+  return (
+    <nav className="sticky top-0 z-50 p-4 bg-gradient-to-br bg-white backdrop-blur-sm border-b-1">
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex md:justify-between justify-end">
+        <Link href="/">
+          <div className="flex gap-2 items-center">
+            <Image
+              src={pawslogo}
+              alt="Paws Connect Logo"
+              width={40}
+              height={25}
+              className="object-contain rounded-[4px]"
+            />
+            <p className="text-md text-orange-500">Paws Connect</p>
+          </div>
+        </Link>
+        <ul className="flex gap-6 items-center">
+          <Link href="/">
+            <li
+              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/' ? ' font-bold text-orange-500' : ''}`}
+            >
+              HOME
+            </li>
+          </Link>
+          <Link href="/download/app">
+            <li
+              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
+            >
+              DOWNLOAD APP
+            </li>
+          </Link>
+          <Link href="/about">
+            <li
+              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/about' ? ' font-bold text-orange-500' : ''}`}
+            >
+              {' '}
+              ABOUT
+            </li>
+          </Link>
+          <Link href="/contact">
+            <li
+              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/contact' ? ' font-bold text-orange-500' : ''}`}
+            >
+              {' '}
+              GET IN TOUCH
+            </li>
+          </Link>
+          <Separator orientation="vertical" className="bg-orange-500 h-6 w-[2px]" />
+          <Link href={userId ? '/dashboard' : '/auth/signin'}>
+            <li className="hover:font-bold text-orange-500 hover:text-gray-600 transition-all cursor-pointer">
+              {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
+            </li>
+          </Link>
+        </ul>
+      </div>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden flex justify-between items-center">
+        <Link href="/">
+          <div className="flex items-center gap-2">
+            <Image
+              src={pawslogo}
+              alt="Paws Connect Logo"
+              width={40}
+              height={25}
+              className="object-contain rounded-[4px]"
+            />
+            <p className="text-md text-orange-500">Paws Connect</p>
+          </div>
+        </Link>
+
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+          aria-label="Toggle menu"
+        >
+          <svg
+            className="w-6 h-6 text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isMobileMenuOpen ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-lg border-t z-50">
+          <ul className="flex flex-col p-4 space-y-4">
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+              <li
+                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/' ? ' font-bold text-orange-500' : ''}`}
+              >
+                HOME{' '}
+              </li>
+            </Link>
+            <Link href="/download/app" onClick={() => setIsMobileMenuOpen(false)}>
+              <li
+                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
+              >
+                DOWNLOAD APP
+              </li>
+            </Link>
+            <Link href="/about" onClick={() => setIsMobileMenuOpen(false)}>
+              <li
+                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/about' ? ' font-bold text-orange-500' : ''}`}
+              >
+                ABOUT
+              </li>
+            </Link>
+            <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)}>
+              <li
+                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/contact' ? ' font-bold text-orange-500' : ''}`}
+              >
+                {' '}
+                GET IN TOUCH
+              </li>
+            </Link>
+            <Link
+              href={userId ? '/dashboard' : '/auth/signin'}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <li className="py-2 text-orange-500 font-medium hover:text-gray-600 transition-all cursor-pointer">
+                {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
+              </li>
+            </Link>
+          </ul>
+        </div>
+      )}
+    </nav>
+  );
+}

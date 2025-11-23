@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const row = { ...parsed.data };
 
-    // Auto-set first address as default: check if user has any existing addresses
+    // Determine default behavior: if first address -> default; if new default requested -> demote previous default(s)
     let isFirstForUser = false;
     if (row.users && row.users.trim()) {
       console.log(`Checking existing addresses for user: ${row.users}`);
@@ -82,49 +82,45 @@ export async function POST(request: NextRequest) {
           .from('address')
           .select('*', { count: 'exact', head: true })
           .eq('users', row.users);
-
         if (countErr) {
           console.warn('Error checking existing addresses:', countErr.message);
         } else {
-          const hasExisting = count && count > 0;
+          const hasExisting = !!count && count > 0;
           console.log(`User ${row.users} has ${count || 0} existing addresses`);
-
           if (!hasExisting) {
-            console.log('This is the first address for user, setting is_default to true');
+            // First address is always default regardless of provided flag
             row.is_default = true;
             isFirstForUser = true;
+            console.log('First address: setting is_default = true');
           } else {
-            console.log('User already has addresses, keeping provided is_default value or false');
-            // If not explicitly set to true, ensure it's false when user has other addresses
-            // Prevent creating a second default address: check if a default already exists
-            try {
-              const { data: existingDefault, error: defErr } = await supabase
-                .from('address')
-                .select('id')
-                .eq('users', row.users)
-                .eq('is_default', true)
-                .limit(1);
-              if (defErr) console.warn('Error checking existing default address:', defErr.message);
-              const defaultExists = Array.isArray(existingDefault) && existingDefault.length > 0;
-              if (defaultExists && row.is_default === true) {
-                return new Response(
-                  JSON.stringify({ error: 'User already has a default address' }),
-                  { status: 400, headers: { 'Content-Type': 'application/json' } },
-                );
+            if (row.is_default === true) {
+              // User requests a new default: demote all existing defaults
+              console.log('New default requested; demoting existing default addresses');
+              try {
+                const { error: demoteErr } = await supabase
+                  .from('address')
+                  .update({ is_default: false })
+                  .eq('users', row.users)
+                  .eq('is_default', true);
+                if (demoteErr) {
+                  console.warn('Failed to demote existing default addresses:', demoteErr.message);
+                }
+              } catch (demoteCatch) {
+                console.warn('Unexpected error demoting existing defaults:', demoteCatch);
               }
-            } catch (innerErr) {
-              console.warn('Failed to check existing default address:', innerErr);
-            }
-            if (row.is_default !== true) {
+              // Keep row.is_default = true for insertion
+            } else {
+              // Not explicitly default; ensure false
               row.is_default = false;
             }
           }
         }
       } catch (e) {
-        console.warn('Failed to check existing addresses, proceeding with provided payload', e);
+        console.warn('Failed to check existing addresses; continuing without default demotion logic', e);
+        // If we cannot verify existing addresses and user requested default, proceed; DB constraints should handle conflicts if any.
       }
     } else {
-      console.log('No user ID provided, skipping auto-default logic');
+      console.log('No user ID provided; skipping default logic');
     }
 
     console.log('Address insert row (pre-insert):', row);
@@ -135,24 +131,22 @@ export async function POST(request: NextRequest) {
 
     let finalData = data;
 
-    // If we expected this to be the first address but the inserted row does not have is_default=true,
-    // enforce it explicitly (covering cases where DB defaults/constraints may override the provided value).
-    if (isFirstForUser && data && data.is_default !== true) {
+    // Post-insert enforcement only needed for first address edge case
+    if (isFirstForUser && finalData && finalData.is_default !== true) {
       try {
         const { data: updated, error: updErr } = await supabase
           .from('address')
           .update({ is_default: true })
-          .eq('id', data.id)
+          .eq('id', finalData.id)
           .select()
           .single();
-        if (updErr) {
-          console.warn('Failed to force-default address after insert:', updErr.message);
-        } else {
-          console.log('Enforced is_default on inserted address:', updated);
-          finalData = updated; // Use the updated data with is_default: true
+        if (!updErr && updated) {
+          finalData = updated;
+        } else if (updErr) {
+          console.warn('Failed enforcing default on first address after insert:', updErr.message);
         }
-      } catch (uErr) {
-        console.warn('Error enforcing is_default after insert:', uErr);
+      } catch (enfErr) {
+        console.warn('Unexpected error enforcing first address default:', enfErr);
       }
     }
 

@@ -30,7 +30,7 @@ export default function AppDownloadPage() {
           <div className="flex justify-center pt-4">
             <Button asChild size="lg" className="bg-black hover:bg-orange-800">
               <Link
-                href="https://github.com/KyleReginaldo/pawsconnect-uploads/releases"
+                href="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk"
                 target="_blank"
               >
                 <Image

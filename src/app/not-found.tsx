@@ -6,7 +6,8 @@ import { Download, Heart, PawPrint, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotFound() {
-  const downloadUrl = 'https://github.com/KyleReginaldo/pawsconnect-uploads/releases'; // You can replace this with your actual app download link
+  const downloadUrl =
+    'https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk'; // You can replace this with your actual app download link
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex items-center justify-center p-4">
