@@ -1,5 +1,4 @@
 'use client';
-import { CircleQuestionMark, MapPin } from 'lucide-react';
 import { useQRCode } from 'next-qrcode';
 import Link from 'next/link';
 
@@ -31,7 +30,6 @@ const Footer = () => {
             href="/faq"
             className="flex items-center hover:text-orange-400 font-semibold transition-colors"
           >
-            <CircleQuestionMark className="inline-block mr-1" size={15} />
             FAQs
           </Link>
           <Link
@@ -39,7 +37,6 @@ const Footer = () => {
             target="_blank"
             className="flex items-center hover:text-orange-400 font-semibold transition-colors"
           >
-            <MapPin className="inline-block mr-1" size={15} />
             Google Map
           </Link>
         </div>

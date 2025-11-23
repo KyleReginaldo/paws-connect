@@ -134,10 +134,14 @@ export default function HomePage() {
               return (
                 <div
                   key={index}
-                  className="flex gap-[16px] border-2 p-8 rounded-[8px] border-orange-50 bg-white w-full md:w-[45%]"
+                  className="flex flex-col items-center md:flex-row md:items-start gap-[16px] border-2 p-8 rounded-[8px] border-orange-50 bg-white w-full md:w-[45%]"
                 >
-                  {item.icon && <item.icon className="mb-4 text-orange-500 h-8 w-8" />}
-                  <div>
+                  {item.icon && (
+                    <div className="bg-orange-50 p-3 rounded-full">
+                      <item.icon className="text-orange-500 h-8 w-8" />
+                    </div>
+                  )}
+                  <div className="text-center md:text-left">
                     <p className="text-lg font-semibold text-black">{item.title}</p>
                     <p className="text-md text-gray-800">{item.description}</p>
                   </div>
