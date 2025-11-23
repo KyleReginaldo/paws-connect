@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Fredoka, Geist, Geist_Mono, Nunito } from 'next/font/google';
-import ClientOnly from './components/ClientOnly';
 import ClientProviders from './components/ClientProviders';
 import './global.css';
 const geistSans = Geist({
@@ -63,10 +62,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} ${nunito.variable} antialiased`}
       >
-        <ClientProviders>
-          {children}
-          <ClientOnly />
-        </ClientProviders>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { EventsProvider } from '@/app/context/EventsContext';
 import RouteGuard from '@/components/RouteGuard';
 // Removed sign-out alert dialog; sign-out now lives on the Settings page
+import ClientOnly from '@/app/components/ClientOnly';
 import {
   Sidebar,
   SidebarContent,
@@ -179,6 +180,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <main className="flex-1 overflow-auto bg-gray-50 min-w-0">
                 <Suspense fallback={<div className="text-sm text-gray-500">Loading…</div>}>
                   {children}
+                  <ClientOnly />
                 </Suspense>
               </main>
             </SidebarInset>
