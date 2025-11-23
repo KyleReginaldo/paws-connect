@@ -125,10 +125,10 @@ export default function HomePage() {
                   key={index}
                   className="flex gap-[16px] border-2 p-8 rounded-[8px] border-orange-50 bg-white w-full md:w-[45%]"
                 >
-                  {item.icon && <item.icon className="mb-4 text-orange-500" size={20} />}
+                  {item.icon && <item.icon className="mb-4 text-orange-500 h-8 w-8" />}
                   <div>
-                    <p className="text-[18px] font-semibold text-black">{item.title}</p>
-                    <p className="text-[15px] text-gray-800">{item.description}</p>
+                    <p className="text-lg font-semibold text-black">{item.title}</p>
+                    <p className="text-md text-gray-800">{item.description}</p>
                   </div>
                 </div>
               );
