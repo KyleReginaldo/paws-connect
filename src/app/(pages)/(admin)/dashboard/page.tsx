@@ -2,10 +2,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNotifications } from '@/components/ui/notification';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useDashboardData, { type ChartDataPoint, type User } from '@/hooks/useDashboardData';
@@ -14,7 +12,6 @@ import autoTable from 'jspdf-autotable';
 import {
   Activity,
   ArrowUpRight,
-  CalendarIcon,
   Dog,
   FileText,
   Heart,
@@ -25,7 +22,11 @@ import {
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { DateRange } from 'react-day-picker';
+
+interface DateRange {
+  from: Date;
+  to?: Date;
+}
 // Charts
 import {
   ChartContainer,
@@ -216,6 +217,7 @@ const Page = () => {
   const {
     users,
     campaigns,
+    adoptions,
     loading,
     error,
     stats,
@@ -226,15 +228,14 @@ const Page = () => {
   } = useDashboardData();
 
   const { success, error: showError, info } = useNotifications();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [dateRange] = useState<DateRange | undefined>(undefined);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
 
   const handleGenerateReport = async () => {
     try {
       info('Generating Report', 'Preparing comprehensive dashboard report PDF...');
 
-      // Fetch all necessary data for comprehensive report
+      // Fetch all necessary data
       const [
         fundraisingResponse,
         donationsResponse,
@@ -263,453 +264,723 @@ const Page = () => {
       const adoptions = adoptionsData.data || [];
       const allUsers = usersData.data || [];
 
-      // Create comprehensive dashboard report
-      const reportData = {
-        generated_at: new Date().toISOString(),
-        report_period: `As of ${new Date().toLocaleDateString()}`,
-
-        // Executive Summary
-        executive_summary: {
-          total_pets: pets.length,
-          available_pets: pets.filter(
-            (p: { request_status?: string }) => p.request_status === 'approved',
-          ).length,
-          total_adoptions: adoptions.length,
-          successful_adoptions: adoptions.filter(
-            (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
-          ).length,
-          pending_adoptions: adoptions.filter((a: { status?: string }) => a.status === 'PENDING')
-            .length,
-          total_users: allUsers.length,
-          total_campaigns: fundraisingCampaigns.length,
-          active_campaigns: fundraisingCampaigns.filter(
-            (c: { status?: string }) => c.status === 'ONGOING',
-          ).length,
-          total_raised: donations.reduce(
-            (sum: number, d: { amount?: number }) => sum + (d.amount || 0),
-            0,
-          ),
-          total_donations: donations.length,
-          adoption_success_rate:
-            adoptions.length > 0
-              ? (
-                  (adoptions.filter(
-                    (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
-                  ).length /
-                    adoptions.length) *
-                  100
-                ).toFixed(2) + '%'
-              : '0%',
-        },
-
-        // Pet Management Analytics
-        pet_analytics: {
-          by_type: {
-            dogs: pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'dog').length,
-            cats: pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'cat').length,
-            others: pets.filter(
-              (p: { type?: string }) => p.type && !['dog', 'cat'].includes(p.type.toLowerCase()),
-            ).length,
-          },
-          by_status: {
-            available: pets.filter(
-              (p: { request_status?: string }) => p.request_status === 'approved',
-            ).length,
-            pending: pets.filter((p: { request_status?: string }) => p.request_status === 'pending')
-              .length,
-            adopted: pets.filter((p: { request_status?: string }) => p.request_status === 'adopted')
-              .length,
-          },
-          by_size: {
-            small: pets.filter((p: { size?: string }) => p.size === 'small').length,
-            medium: pets.filter((p: { size?: string }) => p.size === 'medium').length,
-            large: pets.filter((p: { size?: string }) => p.size === 'large').length,
-          },
-          health_status: pets.map(
-            (p: {
-              id?: number;
-              name?: string;
-              health_status?: string;
-              is_vaccinated?: boolean;
-              is_spayed_or_neutured?: boolean;
-            }) => ({
-              id: p.id,
-              name: p.name,
-              health_status: p.health_status || 'Not specified',
-              is_vaccinated: p.is_vaccinated || false,
-              is_spayed_neutered: p.is_spayed_or_neutured || false,
-            }),
-          ),
-        },
-
-        // Adoption Analytics
-        adoption_analytics: adoptions.map(
-          (adoption: {
-            id?: number;
-            created_at?: string;
-            status?: string;
-            pets?: { name?: string; type?: string };
-            users?: { username?: string; email?: string };
-            type_of_residence?: string;
-          }) => ({
-            id: adoption.id,
-            date: new Date(adoption.created_at || '').toLocaleDateString(),
-            status: adoption.status,
-            pet_name: adoption.pets?.name || 'Unknown Pet',
-            pet_type: adoption.pets?.type || 'Unknown Type',
-            adopter_name: adoption.users?.username || 'Unknown User',
-            adopter_email: adoption.users?.email || 'No email',
-            residence_type: adoption.type_of_residence || 'Not specified',
-            days_since_application: Math.floor(
-              (new Date().getTime() - new Date(adoption.created_at || '').getTime()) /
-                (1000 * 60 * 60 * 24),
-            ),
-          }),
-        ),
-
-        // Fundraising Analytics
-        fundraising_analytics: {
-          campaign_performance: fundraisingCampaigns.map(
-            (campaign: {
-              id?: number;
-              title?: string;
-              status?: string;
-              target_amount?: number;
-              raised_amount?: number;
-              created_at?: string;
-            }) => {
-              const campaignDonations = donations.filter(
-                (d: { fundraising?: number }) => d.fundraising === campaign.id,
-              );
-              const progress = campaign.target_amount
-                ? (((campaign.raised_amount || 0) / campaign.target_amount) * 100).toFixed(2)
-                : '0';
-
-              return {
-                id: campaign.id,
-                title: campaign.title,
-                status: campaign.status,
-                target_amount: campaign.target_amount || 0,
-                raised_amount: campaign.raised_amount || 0,
-                progress_percentage: progress + '%',
-                donations_count: campaignDonations.length,
-                created_date: new Date(campaign.created_at || '').toLocaleDateString(),
-                days_active: Math.floor(
-                  (new Date().getTime() - new Date(campaign.created_at || '').getTime()) /
-                    (1000 * 60 * 60 * 24),
-                ),
-              };
-            },
-          ),
-          donation_trends: donations.map(
-            (d: { amount?: number; donated_at?: string; fundraising?: number }) => ({
-              amount: d.amount || 0,
-              date: new Date(d.donated_at || '').toLocaleDateString(),
-              campaign_title:
-                fundraisingCampaigns.find((c: { id?: number }) => c.id === d.fundraising)?.title ||
-                'Unknown Campaign',
-            }),
-          ),
-        },
-
-        // User Analytics
-        user_analytics: {
-          by_role: {
-            admins: allUsers.filter((u: { role?: number }) => u.role === 1).length,
-            customers: allUsers.filter((u: { role?: number }) => u.role === 3).length,
-          },
-          by_status: {
-            fully_verified: allUsers.filter(
-              (u: { status?: string }) => u.status === 'FULLY_VERIFIED',
-            ).length,
-            semi_verified: allUsers.filter((u: { status?: string }) => u.status === 'SEMI_VERIFIED')
-              .length,
-            pending: allUsers.filter((u: { status?: string }) => u.status === 'PENDING').length,
-          },
-          recent_registrations: allUsers
-            .filter((u: { created_at?: string }) => {
-              const userDate = new Date(u.created_at || '');
-              const thirtyDaysAgo = new Date();
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-              return userDate >= thirtyDaysAgo;
-            })
-            .map(
-              (u: { username?: string; email?: string; created_at?: string; status?: string }) => ({
-                username: u.username,
-                email: u.email,
-                registration_date: new Date(u.created_at || '').toLocaleDateString(),
-                status: u.status,
-              }),
-            ),
-        },
-      };
-
       // Create PDF document
       const doc = new jsPDF();
 
-      // Set orange theme colors
-      const primaryColor: [number, number, number] = [255, 167, 38]; // Orange color
-      const textColor: [number, number, number] = [51, 51, 51]; // Dark gray
+      // Define colors
+      const primaryColor: [number, number, number] = [255, 167, 38];
+      const secondaryColor: [number, number, number] = [255, 204, 128];
+      const textColor: [number, number, number] = [51, 51, 51];
+      const lightBg: [number, number, number] = [255, 250, 245];
 
-      // Page 1: Cover Page
+      // Helper function to add page header
+      const addPageHeader = (title: string, pageNum: number) => {
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, 210, 35, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title, 105, 22, { align: 'center' });
+
+        // Page number
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Page ${pageNum}`, 195, 290, { align: 'right' });
+      };
+
+      // ===========================================
+      // PAGE 1: COVER PAGE
+      // ===========================================
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, 210, 50, 'F');
+      doc.rect(0, 0, 210, 297, 'F');
 
+      // Logo/Title section
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      doc.text('PAWS CONNECT', 105, 25, { align: 'center' });
-      doc.setFontSize(16);
-      doc.text('Comprehensive Dashboard Report', 105, 35, { align: 'center' });
+      doc.setFontSize(40);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAWS CONNECT', 105, 100, { align: 'center' });
 
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Dashboard Analytics Report', 105, 120, { align: 'center' });
+
+      // Decorative line
+      doc.setDrawColor(255, 255, 255);
+      doc.setLineWidth(0.5);
+      doc.line(55, 135, 155, 135);
+
+      // Report details
       doc.setFontSize(14);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 70, { align: 'center' });
-      doc.text(`Report Period: ${reportData.report_period}`, 105, 85, { align: 'center' });
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}`,
+        105,
+        155,
+        { align: 'center' },
+      );
 
-      // Executive Summary Section
-      doc.setFontSize(18);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text('Executive Summary', 20, 110);
+      doc.text(`Time: ${new Date().toLocaleTimeString()}`, 105, 170, { align: 'center' });
+
+      // Key metrics preview box
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(30, 190, 150, 70, 3, 3, 'F');
 
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.setFontSize(12);
-      const yPos = 130;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Report Summary', 105, 205, { align: 'center' });
 
-      const summaryData = [
-        ['Metric', 'Value'],
-        ['Total Pets', reportData.executive_summary.total_pets.toString()],
-        ['Available Pets', reportData.executive_summary.available_pets.toString()],
-        ['Total Adoptions', reportData.executive_summary.total_adoptions.toString()],
-        ['Successful Adoptions', reportData.executive_summary.successful_adoptions.toString()],
-        ['Pending Adoptions', reportData.executive_summary.pending_adoptions.toString()],
-        ['Adoption Success Rate', reportData.executive_summary.adoption_success_rate],
-        ['Total Users', reportData.executive_summary.total_users.toString()],
-        ['Total Campaigns', reportData.executive_summary.total_campaigns.toString()],
-        ['Active Campaigns', reportData.executive_summary.active_campaigns.toString()],
-        ['Total Raised', `₱${reportData.executive_summary.total_raised.toLocaleString()}`],
-        ['Total Donations', reportData.executive_summary.total_donations.toString()],
-      ];
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const totalPets = pets.length;
+      const totalUsers = allUsers.length;
+      const totalDonations = donations.reduce(
+        (sum: number, d: { amount?: number }) => sum + (d.amount || 0),
+        0,
+      );
+      const totalAdoptions = adoptions.length;
 
-      autoTable(doc, {
-        head: [summaryData[0]],
-        body: summaryData.slice(1),
-        startY: yPos,
-        theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-        styles: { fontSize: 10 },
-        margin: { left: 20, right: 20 },
-      });
+      doc.text(`Total Pets: ${totalPets}`, 40, 220);
+      doc.text(`Total Users: ${totalUsers}`, 40, 230);
+      doc.text(`Total Adoptions: ${totalAdoptions}`, 40, 240);
+      doc.text(`Fundraising: ₱${totalDonations.toLocaleString()}`, 40, 250);
 
-      // Page 2: Pet Analytics
+      // ===========================================
+      // PAGE 2: EXECUTIVE DASHBOARD
+      // ===========================================
       doc.addPage();
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, 210, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.text('Pet Management Analytics', 105, 20, { align: 'center' });
+      addPageHeader('Executive Dashboard', 2);
 
-      // Pet Statistics by Type
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.setFontSize(14);
-      doc.text('Pets by Type', 20, 50);
+      const successfulAdoptions = adoptions.filter(
+        (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
+      ).length;
+      const pendingAdoptions = adoptions.filter(
+        (a: { status?: string }) => a.status === 'PENDING',
+      ).length;
+      const adoptionRate =
+        adoptions.length > 0 ? ((successfulAdoptions / adoptions.length) * 100).toFixed(1) : '0';
+      const activeCampaigns = fundraisingCampaigns.filter(
+        (c: { status?: string }) => c.status === 'ONGOING',
+      ).length;
+      const availablePets = pets.filter(
+        (p: { request_status?: string }) => p.request_status === 'approved',
+      ).length;
 
-      const petTypeData = [
-        ['Type', 'Count'],
-        ['Dogs', reportData.pet_analytics.by_type.dogs.toString()],
-        ['Cats', reportData.pet_analytics.by_type.cats.toString()],
-        ['Others', reportData.pet_analytics.by_type.others.toString()],
+      const executiveSummary = [
+        ['Metric', 'Value', 'Status'],
+        ['Total Pets in System', totalPets.toString(), availablePets + ' Available'],
+        ['Total Adoption Applications', totalAdoptions.toString(), pendingAdoptions + ' Pending'],
+        ['Successful Adoptions', successfulAdoptions.toString(), adoptionRate + '% Success Rate'],
+        [
+          'Total Registered Users',
+          totalUsers.toString(),
+          allUsers.filter((u: { status?: string }) => u.status === 'FULLY_VERIFIED').length +
+            ' Verified',
+        ],
+        ['Active Campaigns', activeCampaigns.toString(), fundraisingCampaigns.length + ' Total'],
+        ['Total Funds Raised', totalDonations.toLocaleString(), donations.length + ' Donations'],
       ];
 
       autoTable(doc, {
-        head: [petTypeData[0]],
-        body: petTypeData.slice(1),
-        startY: 60,
-        theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-        styles: { fontSize: 10 },
-        margin: { left: 20, right: 90 },
+        head: [executiveSummary[0]],
+        body: executiveSummary.slice(1),
+        startY: 45,
+        theme: 'striped',
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontSize: 11,
+          fontStyle: 'bold',
+          halign: 'left',
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: textColor,
+        },
+        alternateRowStyles: {
+          fillColor: lightBg,
+        },
+        columnStyles: {
+          0: { cellWidth: 70, fontStyle: 'bold' },
+          1: { cellWidth: 50, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60, halign: 'right', fontSize: 9 },
+        },
+        margin: { left: 15, right: 15 },
       });
 
-      // Pet Statistics by Status
-      doc.text('Pets by Status', 20, 110);
-
-      const petStatusData = [
-        ['Status', 'Count'],
-        ['Available', reportData.pet_analytics.by_status.available.toString()],
-        ['Pending', reportData.pet_analytics.by_status.pending.toString()],
-        ['Adopted', reportData.pet_analytics.by_status.adopted.toString()],
-      ];
-
-      autoTable(doc, {
-        head: [petStatusData[0]],
-        body: petStatusData.slice(1),
-        startY: 120,
-        theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-        styles: { fontSize: 10 },
-        margin: { left: 20, right: 90 },
-      });
-
-      // Pet Statistics by Size
-      doc.text('Pets by Size', 20, 170);
-
-      const petSizeData = [
-        ['Size', 'Count'],
-        ['Small', reportData.pet_analytics.by_size.small.toString()],
-        ['Medium', reportData.pet_analytics.by_size.medium.toString()],
-        ['Large', reportData.pet_analytics.by_size.large.toString()],
-      ];
-
-      autoTable(doc, {
-        head: [petSizeData[0]],
-        body: petSizeData.slice(1),
-        startY: 180,
-        theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-        styles: { fontSize: 10 },
-        margin: { left: 20, right: 90 },
-      });
-
-      // Page 3: Adoption Analytics
-      if (reportData.adoption_analytics.length > 0) {
-        doc.addPage();
-        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.rect(0, 0, 210, 30, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.text('Adoption Analytics', 105, 20, { align: 'center' });
-
-        const adoptionTableData = reportData.adoption_analytics
-          .slice(0, 20)
-          .map(
-            (adoption: {
-              id?: number;
-              date?: string;
-              status?: string;
-              pet_name?: string;
-              pet_type?: string;
-              adopter_name?: string;
-            }) => [
-              adoption.id?.toString() || 'N/A',
-              adoption.date || 'N/A',
-              adoption.status || 'N/A',
-              adoption.pet_name || 'N/A',
-              adoption.pet_type || 'N/A',
-              adoption.adopter_name || 'N/A',
-            ],
-          );
-
-        autoTable(doc, {
-          head: [['ID', 'Date', 'Status', 'Pet Name', 'Pet Type', 'Adopter']],
-          body: adoptionTableData,
-          startY: 40,
-          theme: 'grid',
-          headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-          styles: { fontSize: 8 },
-          margin: { left: 10, right: 10 },
-        });
-      }
-
-      // Page 4: Fundraising Analytics
-      if (reportData.fundraising_analytics.campaign_performance.length > 0) {
-        doc.addPage();
-        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.rect(0, 0, 210, 30, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.text('Fundraising Analytics', 105, 20, { align: 'center' });
-
-        const campaignTableData = reportData.fundraising_analytics.campaign_performance
-          .slice(0, 15)
-          .map(
-            (campaign: {
-              id?: number;
-              title?: string;
-              status?: string;
-              target_amount?: number;
-              raised_amount?: number;
-              progress_percentage?: string;
-            }) => [
-              campaign.id?.toString() || 'N/A',
-              (campaign.title || 'N/A').substring(0, 20) +
-                ((campaign.title?.length || 0) > 20 ? '...' : ''),
-              campaign.status || 'N/A',
-              `₱${(campaign.target_amount || 0).toLocaleString()}`,
-              `₱${(campaign.raised_amount || 0).toLocaleString()}`,
-              campaign.progress_percentage || '0%',
-            ],
-          );
-
-        autoTable(doc, {
-          head: [['ID', 'Title', 'Status', 'Target', 'Raised', 'Progress']],
-          body: campaignTableData,
-          startY: 40,
-          theme: 'grid',
-          headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-          styles: { fontSize: 8 },
-          margin: { left: 10, right: 10 },
-        });
-      }
-
-      // Page 5: User Analytics
+      // ===========================================
+      // PAGE 3: PET ANALYTICS DETAILED
+      // ===========================================
       doc.addPage();
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, 210, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.text('User Analytics', 105, 20, { align: 'center' });
+      addPageHeader('Pet Management Analytics', 3);
 
-      // Users by Role
+      // Summary boxes
+      doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.roundedRect(15, 45, 55, 25, 2, 2, 'F');
+      doc.roundedRect(75, 45, 55, 25, 2, 2, 'F');
+      doc.roundedRect(135, 45, 60, 25, 2, 2, 'F');
+
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.setFontSize(14);
-      doc.text('Users by Role', 20, 50);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total Pets', 42.5, 53, { align: 'center' });
+      doc.text('Available', 102.5, 53, { align: 'center' });
+      doc.text('Adopted', 165, 53, { align: 'center' });
 
-      const userRoleData = [
-        ['Role', 'Count'],
-        ['Admins', reportData.user_analytics.by_role.admins.toString()],
-        ['Customers', reportData.user_analytics.by_role.customers.toString()],
+      doc.setFontSize(18);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text(totalPets.toString(), 42.5, 65, { align: 'center' });
+      doc.text(availablePets.toString(), 102.5, 65, { align: 'center' });
+      doc.text(
+        pets
+          .filter((p: { request_status?: string }) => p.request_status === 'adopted')
+          .length.toString(),
+        165,
+        65,
+        { align: 'center' },
+      );
+
+      // Pet breakdown by type
+      const dogs = pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'dog').length;
+      const cats = pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'cat').length;
+      const others = pets.filter(
+        (p: { type?: string }) => p.type && !['dog', 'cat'].includes(p.type.toLowerCase()),
+      ).length;
+
+      const petBreakdown = [
+        ['Category', 'Count', 'Percentage'],
+        ['Dogs', dogs.toString(), ((dogs / totalPets) * 100).toFixed(1) + '%'],
+        ['Cats', cats.toString(), ((cats / totalPets) * 100).toFixed(1) + '%'],
+        ['Others', others.toString(), ((others / totalPets) * 100).toFixed(1) + '%'],
       ];
 
       autoTable(doc, {
-        head: [userRoleData[0]],
-        body: userRoleData.slice(1),
-        startY: 60,
+        head: [petBreakdown[0]],
+        body: petBreakdown.slice(1),
+        startY: 80,
         theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-        styles: { fontSize: 10 },
-        margin: { left: 20, right: 90 },
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 10 },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 60, halign: 'center', fontStyle: 'bold' },
+          2: { cellWidth: 60, halign: 'center' },
+        },
+        margin: { left: 15, right: 15 },
       });
 
-      // Users by Status
-      doc.text('Users by Verification Status', 20, 120);
-
-      const userStatusData = [
-        ['Status', 'Count'],
-        ['Fully Verified', reportData.user_analytics.by_status.fully_verified.toString()],
-        ['Semi Verified', reportData.user_analytics.by_status.semi_verified.toString()],
-        ['Pending', reportData.user_analytics.by_status.pending.toString()],
+      // Pet by size
+      const petBySize = [
+        ['Size', 'Count', 'Status Distribution'],
+        [
+          'Small',
+          pets.filter((p: { size?: string }) => p.size === 'small').length.toString(),
+          pets.filter(
+            (p: { size?: string; request_status?: string }) =>
+              p.size === 'small' && p.request_status === 'approved',
+          ).length + ' available',
+        ],
+        [
+          'Medium',
+          pets.filter((p: { size?: string }) => p.size === 'medium').length.toString(),
+          pets.filter(
+            (p: { size?: string; request_status?: string }) =>
+              p.size === 'medium' && p.request_status === 'approved',
+          ).length + ' available',
+        ],
+        [
+          'Large',
+          pets.filter((p: { size?: string }) => p.size === 'large').length.toString(),
+          pets.filter(
+            (p: { size?: string; request_status?: string }) =>
+              p.size === 'large' && p.request_status === 'approved',
+          ).length + ' available',
+        ],
       ];
 
       autoTable(doc, {
-        head: [userStatusData[0]],
-        body: userStatusData.slice(1),
-        startY: 130,
-        theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-        styles: { fontSize: 10 },
-        margin: { left: 20, right: 90 },
+        head: [petBySize[0]],
+        body: petBySize.slice(1),
+        startY:
+          (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10,
+        theme: 'striped',
+        headStyles: {
+          fillColor: secondaryColor,
+          textColor: textColor,
+          fontSize: 10,
+          fontStyle: 'bold',
+        },
+        bodyStyles: { fontSize: 9 },
+        alternateRowStyles: { fillColor: lightBg },
+        columnStyles: {
+          0: { cellWidth: 50, fontStyle: 'bold' },
+          1: { cellWidth: 40, halign: 'center' },
+          2: { cellWidth: 90, halign: 'right', fontSize: 8 },
+        },
+        margin: { left: 15, right: 15 },
       });
+
+      // Health status summary
+      const vaccinated = pets.filter((p: { is_vaccinated?: boolean }) => p.is_vaccinated).length;
+      const spayedNeutered = pets.filter(
+        (p: { is_spayed_or_neutured?: boolean }) => p.is_spayed_or_neutured,
+      ).length;
+
+      const healthData = [
+        ['Health Metric', 'Count', 'Percentage'],
+        [
+          'Vaccinated Pets',
+          vaccinated.toString(),
+          ((vaccinated / totalPets) * 100).toFixed(1) + '%',
+        ],
+        [
+          'Spayed/Neutered',
+          spayedNeutered.toString(),
+          ((spayedNeutered / totalPets) * 100).toFixed(1) + '%',
+        ],
+      ];
+
+      autoTable(doc, {
+        head: [healthData[0]],
+        body: healthData.slice(1),
+        startY:
+          (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 70, fontStyle: 'bold' },
+          1: { cellWidth: 50, halign: 'center' },
+          2: { cellWidth: 60, halign: 'center' },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // ===========================================
+      // PAGE 4: ADOPTION ANALYTICS
+      // ===========================================
+      doc.addPage();
+      addPageHeader('Adoption Analytics', 4);
+
+      // Adoption status breakdown
+      const approvedAdoptions = adoptions.filter(
+        (a: { status?: string }) => a.status === 'APPROVED',
+      ).length;
+      const completedAdoptions = adoptions.filter(
+        (a: { status?: string }) => a.status === 'COMPLETED',
+      ).length;
+      const rejectedAdoptions = adoptions.filter(
+        (a: { status?: string }) => a.status === 'REJECTED',
+      ).length;
+
+      const adoptionStatus = [
+        ['Status', 'Count', 'Percentage'],
+        [
+          'Approved',
+          approvedAdoptions.toString(),
+          ((approvedAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+        ],
+        [
+          'Completed',
+          completedAdoptions.toString(),
+          ((completedAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+        ],
+        [
+          'Pending',
+          pendingAdoptions.toString(),
+          ((pendingAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+        ],
+        [
+          'Rejected',
+          rejectedAdoptions.toString(),
+          ((rejectedAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+        ],
+        ['Total Applications', totalAdoptions.toString(), '100%'],
+      ];
+
+      autoTable(doc, {
+        head: [adoptionStatus[0]],
+        body: adoptionStatus.slice(1),
+        startY: 45,
+        theme: 'striped',
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: lightBg },
+        columnStyles: {
+          0: { cellWidth: 70, fontStyle: 'bold' },
+          1: { cellWidth: 50, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60, halign: 'center' },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // Recent adoptions table
+      const recentAdoptions = adoptions
+        .sort(
+          (a: { created_at?: string }, b: { created_at?: string }) =>
+            new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime(),
+        )
+        .slice(0, 15);
+
+      const adoptionDetails = recentAdoptions.map(
+        (a: {
+          id?: number;
+          created_at?: string;
+          status?: string;
+          pets?: { name?: string; type?: string };
+          users?: { username?: string };
+        }) => [
+          a.id?.toString() || 'N/A',
+          new Date(a.created_at || '').toLocaleDateString(),
+          (a.pets?.name || 'Unknown').substring(0, 15),
+          a.pets?.type || 'N/A',
+          (a.users?.username || 'Unknown').substring(0, 20),
+          a.status || 'N/A',
+        ],
+      );
+
+      autoTable(doc, {
+        head: [['ID', 'Date', 'Pet Name', 'Type', 'Adopter', 'Status']],
+        body: adoptionDetails,
+        startY:
+          (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
+        theme: 'grid',
+        headStyles: {
+          fillColor: secondaryColor,
+          textColor: textColor,
+          fontSize: 9,
+          fontStyle: 'bold',
+        },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center' },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 40 },
+          5: { cellWidth: 30, halign: 'center', fontSize: 7 },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // ===========================================
+      // PAGE 5: FUNDRAISING & DONATIONS
+      // ===========================================
+      doc.addPage();
+      addPageHeader('Fundraising & Donations Analytics', 5);
+
+      // Campaign summary
+      const completedCampaigns = fundraisingCampaigns.filter(
+        (c: { status?: string }) => c.status === 'COMPLETED',
+      ).length;
+      const pendingCampaigns = fundraisingCampaigns.filter(
+        (c: { status?: string }) => c.status === 'PENDING',
+      ).length;
+      const totalTarget = fundraisingCampaigns.reduce(
+        (sum: number, c: { target_amount?: number }) => sum + (c.target_amount || 0),
+        0,
+      );
+      const totalRaised = fundraisingCampaigns.reduce(
+        (sum: number, c: { raised_amount?: number }) => sum + (c.raised_amount || 0),
+        0,
+      );
+      const overallProgress =
+        totalTarget > 0 ? ((totalRaised / totalTarget) * 100).toFixed(1) : '0';
+
+      const campaignSummary = [
+        ['Metric', 'Value', 'Details'],
+        ['Total Campaigns', fundraisingCampaigns.length.toString(), activeCampaigns + ' Active'],
+        ['Completed Campaigns', completedCampaigns.toString(), pendingCampaigns + ' Pending'],
+        ['Total Target Amount', totalTarget.toLocaleString(), 'Combined goal'],
+        ['Total Raised', totalRaised.toLocaleString(), overallProgress + '% of target'],
+        [
+          'Total Donations',
+          donations.length.toString(),
+          'From ' + new Set(donations.map((d: { donor?: number }) => d.donor)).size + ' donors',
+        ],
+        ['Average Donation', (totalRaised / donations.length).toFixed(2), 'Per transaction'],
+      ];
+
+      autoTable(doc, {
+        head: [campaignSummary[0]],
+        body: campaignSummary.slice(1),
+        startY: 45,
+        theme: 'striped',
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9 },
+        alternateRowStyles: { fillColor: lightBg },
+        columnStyles: {
+          0: { cellWidth: 70, fontStyle: 'bold' },
+          1: { cellWidth: 50, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60, halign: 'right', fontSize: 8 },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // Top campaigns
+      const topCampaigns = fundraisingCampaigns
+        .sort(
+          (a: { raised_amount?: number }, b: { raised_amount?: number }) =>
+            (b.raised_amount || 0) - (a.raised_amount || 0),
+        )
+        .slice(0, 10);
+
+      const campaignDetails = topCampaigns.map(
+        (c: {
+          id?: number;
+          title?: string;
+          status?: string;
+          target_amount?: number;
+          raised_amount?: number;
+        }) => {
+          const progress = c.target_amount
+            ? (((c.raised_amount || 0) / c.target_amount) * 100).toFixed(0)
+            : '0';
+          const donationCount = donations.filter(
+            (d: { fundraising?: number }) => d.fundraising === c.id,
+          ).length;
+          return [
+            c.id?.toString() || 'N/A',
+            (c.title || 'Untitled').substring(0, 30) + ((c.title?.length || 0) > 30 ? '...' : ''),
+            c.status || 'N/A',
+            (c.target_amount || 0).toLocaleString(),
+            (c.raised_amount || 0).toLocaleString(),
+            progress + '%',
+            donationCount.toString(),
+          ];
+        },
+      );
+
+      autoTable(doc, {
+        head: [['ID', 'Campaign Title', 'Status', 'Target', 'Raised', 'Progress', 'Donors']],
+        body: campaignDetails,
+        startY:
+          (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
+        theme: 'grid',
+        headStyles: {
+          fillColor: secondaryColor,
+          textColor: textColor,
+          fontSize: 8,
+          fontStyle: 'bold',
+        },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 12, halign: 'center' },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 22, halign: 'center', fontSize: 6 },
+          3: { cellWidth: 25, halign: 'right' },
+          4: { cellWidth: 25, halign: 'right' },
+          5: { cellWidth: 18, halign: 'center' },
+          6: { cellWidth: 18, halign: 'center' },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // ===========================================
+      // PAGE 6: USER ANALYTICS
+      // ===========================================
+      doc.addPage();
+      addPageHeader('User Analytics', 6);
+
+      // User status breakdown
+      const fullyVerified = allUsers.filter(
+        (u: { status?: string }) => u.status === 'FULLY_VERIFIED',
+      ).length;
+      const semiVerified = allUsers.filter(
+        (u: { status?: string }) => u.status === 'SEMI_VERIFIED',
+      ).length;
+      const pendingUsers = allUsers.filter(
+        (u: { status?: string }) => u.status === 'PENDING',
+      ).length;
+      const admins = allUsers.filter((u: { role?: number }) => u.role === 1).length;
+      const customers = allUsers.filter((u: { role?: number }) => u.role === 3).length;
+
+      const userStats = [
+        ['Category', 'Count', 'Percentage'],
+        ['Total Users', totalUsers.toString(), '100%'],
+        [
+          'Fully Verified',
+          fullyVerified.toString(),
+          ((fullyVerified / totalUsers) * 100).toFixed(1) + '%',
+        ],
+        [
+          'Semi Verified',
+          semiVerified.toString(),
+          ((semiVerified / totalUsers) * 100).toFixed(1) + '%',
+        ],
+        [
+          'Pending Verification',
+          pendingUsers.toString(),
+          ((pendingUsers / totalUsers) * 100).toFixed(1) + '%',
+        ],
+        ['Administrators', admins.toString(), ((admins / totalUsers) * 100).toFixed(1) + '%'],
+        ['Regular Users', customers.toString(), ((customers / totalUsers) * 100).toFixed(1) + '%'],
+      ];
+
+      autoTable(doc, {
+        head: [userStats[0]],
+        body: userStats.slice(1),
+        startY: 45,
+        theme: 'striped',
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: lightBg },
+        columnStyles: {
+          0: { cellWidth: 80, fontStyle: 'bold' },
+          1: { cellWidth: 40, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60, halign: 'center' },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // Recent registrations (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentUsers = allUsers
+        .filter((u: { created_at?: string }) => new Date(u.created_at || '') >= thirtyDaysAgo)
+        .sort(
+          (a: { created_at?: string }, b: { created_at?: string }) =>
+            new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime(),
+        )
+        .slice(0, 20);
+
+      const userDetails = recentUsers.map(
+        (u: {
+          id?: number;
+          username?: string;
+          email?: string;
+          created_at?: string;
+          status?: string;
+          role?: number;
+        }) => [
+          u.id?.toString() || 'N/A',
+          (u.username || 'Unknown').substring(0, 25),
+          (u.email || 'No email').substring(0, 30),
+          new Date(u.created_at || '').toLocaleDateString(),
+          u.status || 'N/A',
+          u.role === 1 ? 'Admin' : 'User',
+        ],
+      );
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        'Recent User Registrations (Last 30 Days)',
+        15,
+        (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
+      );
+
+      autoTable(doc, {
+        head: [['ID', 'Username', 'Email', 'Registered', 'Status', 'Role']],
+        body: userDetails,
+        startY:
+          (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20,
+        theme: 'grid',
+        headStyles: {
+          fillColor: secondaryColor,
+          textColor: textColor,
+          fontSize: 8,
+          fontStyle: 'bold',
+        },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center' },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 45 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 30, halign: 'center', fontSize: 6 },
+          5: { cellWidth: 20, halign: 'center' },
+        },
+        margin: { left: 15, right: 15 },
+      });
+
+      // ===========================================
+      // PAGE 7: REPORT SUMMARY & INSIGHTS
+      // ===========================================
+      doc.addPage();
+      addPageHeader('Key Insights & Recommendations', 7);
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+
+      // Key insights section
+      let yPosition = 50;
+      doc.text('Key Performance Indicators', 15, yPosition);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      yPosition += 10;
+
+      const insights = [
+        `• Pet Adoption Success Rate: ${adoptionRate}% (${successfulAdoptions} of ${totalAdoptions} applications)`,
+        `• Average pets per type: Dogs (${dogs}), Cats (${cats}), Others (${others})`,
+        `• Fundraising effectiveness: ${overallProgress}% of total target achieved`,
+        `• User verification rate: ${((fullyVerified / totalUsers) * 100).toFixed(1)}% fully verified`,
+        `• Average donation amount: ₱${(totalRaised / donations.length).toFixed(2)} per transaction`,
+        `• Pet health compliance: ${((vaccinated / totalPets) * 100).toFixed(1)}% vaccinated, ${((spayedNeutered / totalPets) * 100).toFixed(1)}% spayed/neutered`,
+      ];
+
+      insights.forEach((insight) => {
+        doc.text(insight, 20, yPosition);
+        yPosition += 8;
+      });
+
+      yPosition += 10;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Recommendations', 15, yPosition);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      yPosition += 10;
+
+      const recommendations = [
+        `• Focus on pending adoptions: ${pendingAdoptions} applications need review`,
+        `• Promote campaigns: ${activeCampaigns} active campaigns could benefit from marketing`,
+        `• Verify users: ${pendingUsers} users are waiting for verification`,
+        `• Update pet health records: Ensure all ${totalPets} pets have current health information`,
+        `• Engage donors: ${new Set(donations.map((d: { donor?: number }) => d.donor)).size} unique donors could be thanked personally`,
+      ];
+
+      recommendations.forEach((rec) => {
+        const lines = doc.splitTextToSize(rec, 175);
+        lines.forEach((line: string) => {
+          doc.text(line, 20, yPosition);
+          yPosition += 7;
+        });
+        yPosition += 3;
+      });
+
+      // Report footer
+      yPosition += 20;
+      doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
+      doc.roundedRect(15, yPosition, 180, 40, 2, 2, 'F');
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Report Generated By:', 25, yPosition + 12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('PAWS Connect Dashboard System', 25, yPosition + 20);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 25, yPosition + 28);
+      doc.text(`Time: ${new Date().toLocaleTimeString()}`, 25, yPosition + 36);
 
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-      const filename = `paws-connect-dashboard-report-${timestamp}.pdf`;
+      const filename = `paws-connect-report-${timestamp}.pdf`;
 
       // Save the PDF file
       doc.save(filename);
 
       success(
         'Report Generated Successfully',
-        `Comprehensive dashboard report has been downloaded as ${filename}`,
+        `Comprehensive dashboard report with ${doc.internal.getNumberOfPages()} pages has been downloaded`,
         8000,
       );
     } catch (err) {
@@ -742,40 +1013,83 @@ const Page = () => {
     );
   }
 
+  // Filter data based on date range
+  const isDateInRange = (dateStr: string) => {
+    if (!dateRange?.from) return true; // No filter, show all
+
+    const date = new Date(dateStr);
+    const from = new Date(dateRange.from);
+    from.setHours(0, 0, 0, 0);
+
+    if (!dateRange.to) {
+      // Only from date, filter by that day
+      const to = new Date(from);
+      to.setHours(23, 59, 59, 999);
+      return date >= from && date <= to;
+    }
+
+    const to = new Date(dateRange.to);
+    to.setHours(23, 59, 59, 999);
+    return date >= from && date <= to;
+  };
+
+  // Get filtered data based on date range
+  const getFilteredData = () => {
+    const filteredPets = stats.totalPets; // Keep total pets count
+    const filteredUsers = users.filter((u) => isDateInRange(u.created_at));
+    const filteredCampaigns = campaigns.filter((c) => isDateInRange(c.created_at));
+    const filteredAdoptions = adoptions.filter((a) => isDateInRange(a.created_at));
+
+    return {
+      pets: filteredPets,
+      users: filteredUsers.length,
+      campaigns: filteredCampaigns,
+      adoptions: filteredAdoptions.length,
+      donations: filteredCampaigns.reduce((sum, c) => sum + (c.raised_amount || 0), 0),
+    };
+  };
+
+  const filtered = getFilteredData();
+
+  // Dashboard stats with filtered data
   const dashboardStats = [
     {
       title: 'Total Pets',
-      value: String(stats.totalPets),
+      value: String(filtered.pets),
       changeType: 'positive' as const,
       icon: Dog,
-      description: `${stats.totalPets} available pets`,
+      description: `${filtered.pets} total pets`,
       gradient: 'from-orange-200 to-orange-400',
       iconColor: 'text-white',
     },
     {
-      title: 'Adoption applications',
-      value: String(stats.adoptedPets),
+      title: 'Adoption Applications',
+      value: String(filtered.adoptions),
       changeType: 'positive' as const,
       icon: Heart,
-      description: `${stats.totalAdoptions} total applications`,
+      description: dateRange?.from
+        ? `${filtered.adoptions} applications in period`
+        : `${filtered.adoptions} total applications`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
       title: 'Total Donations',
-      value: `₱${stats.totalDonations.toLocaleString()}`,
+      value: `₱${filtered.donations.toLocaleString()}`,
       changeType: 'positive' as const,
       icon: PhilippinePeso,
-      description: `${stats.activeCampaigns} active campaigns`,
+      description: dateRange?.from
+        ? `From ${filtered.campaigns.length} campaigns in period`
+        : `From ${filtered.campaigns.length} total campaigns`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
     {
-      title: 'Active Users',
-      value: String(stats.totalUsers),
+      title: 'New Users',
+      value: String(filtered.users),
       changeType: 'positive' as const,
       icon: Users,
-      description: 'Registered users',
+      description: dateRange?.from ? 'Registered in period' : 'Total registered users',
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
     },
@@ -783,9 +1097,9 @@ const Page = () => {
 
   const recentAdoptions = generateRecentAdoptions();
   const recentActivity = generateRecentActivity();
-  console.log('Recent Activity:', campaigns);
   const ongoingCampaigns = campaigns
     .filter((c) => c.status === 'ONGOING' || c.status === 'PENDING')
+    .filter((c) => isDateInRange(c.created_at)) // Apply date filter
     .slice(0, 3)
     .map((c) => ({
       id: c.id,
@@ -812,75 +1126,13 @@ const Page = () => {
           <Button
             id="pc-dash-generate-report"
             onClick={handleGenerateReport}
-            variant="outline"
+            variant="default"
             size="sm"
-            className="cursor-pointer gap-2 border-orange-200 hover:bg-orange-25 bg-transparent rounded-full"
+            className="cursor-pointer gap-2 hover:bg-orange-600 bg-orange-500 text-white rounded-full"
           >
-            <FileText className="h-4 w-4 text-orange-500" />
+            <FileText className="h-4 w-4 text-white" />
             Generate Report
           </Button>
-          <Popover open={pickerOpen} onOpenChange={(open) => setPickerOpen(open)}>
-            <PopoverTrigger asChild className="cursor-pointer">
-              <Button
-                id="pc-dash-date-filter"
-                variant="outline"
-                size={'sm'}
-                className="border-orange-200 hover:bg-orange-25 bg-transparent whitespace-nowrap rounded-full"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4 text-orange-500 flex-shrink-0" />
-                <span className="hidden sm:inline">
-                  {dateRange?.from
-                    ? dateRange.to
-                      ? `${new Date(dateRange.from).toLocaleDateString()} - ${new Date(
-                          dateRange.to,
-                        ).toLocaleDateString()}`
-                      : `${new Date(dateRange.from).toLocaleDateString()}`
-                    : 'Today'}
-                </span>
-                <span className="sm:hidden">{dateRange?.from ? 'Custom' : 'Today'}</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <div className="p-2 cu">
-                <Calendar
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    const maybe = range as { from?: Date | null; to?: Date | null };
-                    if (!maybe?.from) {
-                      setDateRange(undefined);
-                      return;
-                    }
-                    const newRange: DateRange = { from: maybe.from as Date };
-                    if (maybe.to) newRange.to = maybe.to as Date;
-                    setDateRange(newRange);
-                    // close popover automatically if user picked both from & to
-                    if (newRange.from && newRange.to) setPickerOpen(false);
-                  }}
-                />
-                <div className="flex gap-2 mt-2 justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setDateRange(undefined);
-                    }}
-                  >
-                    Reset
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setPickerOpen(false);
-                    }}
-                  >
-                    Done
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
         </div>
       </div>
 

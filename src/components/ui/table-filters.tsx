@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, Filter, Search, X } from 'lucide-react';
+import * as React from 'react';
 import { useState } from 'react';
 
 export interface FilterOption {
@@ -200,6 +201,124 @@ interface FilterControlProps {
   onClear: () => void;
 }
 
+function DateRangeFilter({ filter, value, onChange }: Omit<FilterControlProps, 'onClear'>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [tempRange, setTempRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
+  const isSelectingRef = React.useRef(false);
+
+  const displayValue = value || tempRange;
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{filter.label}</Label>
+      <Popover
+        open={isOpen}
+        onOpenChange={(open) => {
+          // BLOCK ALL CLOSE ATTEMPTS while selecting second date
+          if (!open && isSelectingRef.current) {
+            return; // DO NOT CLOSE
+          }
+          setIsOpen(open);
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              'w-full justify-start text-left font-normal h-9',
+              !displayValue && 'text-muted-foreground',
+            )}
+            disabled={filter.disabled}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {displayValue?.from ? (
+              displayValue.to ? (
+                <>
+                  {displayValue.from.toLocaleDateString()} - {displayValue.to.toLocaleDateString()}
+                </>
+              ) : (
+                displayValue.from.toLocaleDateString()
+              )
+            ) : (
+              filter.placeholder || 'Pick a date range'
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-auto p-0"
+          align="start"
+          onInteractOutside={(e) => {
+            if (tempRange?.from && !tempRange?.to) {
+              // Block outside click while selecting end date
+              e.preventDefault();
+            }
+          }}
+        >
+          <div className="p-3">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={displayValue?.from}
+              selected={displayValue as any}
+              numberOfMonths={2}
+              onSelect={(range) => {
+                if (!range) {
+                  setTempRange(undefined);
+                  onChange(undefined);
+                  isSelectingRef.current = false;
+                  return;
+                }
+                const r = range as { from?: Date; to?: Date };
+                // First click - only from date
+                if (r.from && !r.to) {
+                  isSelectingRef.current = true; // LOCK popover open
+                  setTempRange({ from: r.from });
+                  onChange({ from: r.from });
+                  return; // keep popover open
+                }
+                // Second click - full range
+                if (r.from && r.to) {
+                  isSelectingRef.current = false; // UNLOCK
+                  setTempRange(undefined);
+                  onChange({ from: r.from, to: r.to });
+                  setIsOpen(false);
+                }
+              }}
+            />
+            <div className="flex gap-2 mt-2 justify-end border-t pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  isSelectingRef.current = false;
+                  setTempRange(undefined);
+                  onChange(undefined);
+                  setIsOpen(false);
+                }}
+              >
+                Clear
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  isSelectingRef.current = false;
+                  if (tempRange?.from && !tempRange?.to) {
+                    onChange({ from: tempRange.from });
+                  }
+                  setIsOpen(false);
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function FilterControl({ filter, value, onChange }: FilterControlProps) {
   switch (filter.type) {
     case 'select':
@@ -287,46 +406,7 @@ function FilterControl({ filter, value, onChange }: FilterControlProps) {
       );
 
     case 'daterange':
-      return (
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">{filter.label}</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  'w-full justify-start text-left font-normal h-9',
-                  !value && 'text-muted-foreground',
-                )}
-                disabled={filter.disabled}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value?.from ? (
-                  value.to ? (
-                    <>
-                      {value.from.toLocaleDateString()} - {value.to.toLocaleDateString()}
-                    </>
-                  ) : (
-                    value.from.toLocaleDateString()
-                  )
-                ) : (
-                  filter.placeholder || 'Pick a date range'
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={value?.from}
-                selected={value}
-                onSelect={onChange}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      );
+      return <DateRangeFilter filter={filter} value={value} onChange={onChange} />;
 
     default:
       return null;
