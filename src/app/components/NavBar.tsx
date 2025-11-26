@@ -53,7 +53,7 @@ export default function NavBar() {
             <li
               className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
             >
-              DOWNLOAD APP
+              GET STARTED
             </li>
           </Link>
           <Link href="/about">
@@ -155,7 +155,7 @@ export default function NavBar() {
               <li
                 className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
               >
-                DOWNLOAD APP
+                GET STARTED
               </li>
             </Link>
             <Link href="/about" onClick={() => setIsMobileMenuOpen(false)}>
