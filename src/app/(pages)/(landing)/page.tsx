@@ -122,15 +122,15 @@ export default function HomePage() {
 
       {pets && (
         <div className="flex justify-center w-full px-4">
-          <div className="flex flex-col items-center gap-4 py-8 px-4 rounded-lg max-w-6xl w-full">
+          <div className="flex flex-col items-center gap-4 md:py-8 px-4 rounded-lg md:max-w-6xl w-full">
             <h3>Available Pets</h3>
             <section className="text-start w-full">
-              <div className="flex justify-center">
+              <div className="flex flex-col justify-center">
                 <div className="flex flex-wrap gap-8 justify-center">
                   {pets.map((e) => (
                     <div
                       key={e.id}
-                      className="relative w-[80%] h-[250px] md:w-[240px] md:h-[200px] rounded-[8px] overflow-hidden"
+                      className="relative w-full h-[250px] md:w-[240px] md:h-[200px] rounded-[8px] overflow-hidden"
                     >
                       <Image
                         src={e.photos[0]}
