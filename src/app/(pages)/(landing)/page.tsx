@@ -2,6 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import { HeroVideoDialog } from '@/components/ui/hero-video-dialog';
+import { Pet } from '@/config/types/pet';
+import axios from 'axios';
 import {
   Blend,
   BookCheck,
@@ -14,9 +16,18 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import phones from '../../../../public/phones.png';
-
 export default function HomePage() {
+  const [pets, setPets] = useState<Pet[] | null>();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await axios.get('/api/v1/pets/landing');
+      setPets(response.data.data);
+    };
+    fetchData();
+  }, []);
   const whyChooseValues = [
     {
       title: 'Fast Adoption Process',
@@ -54,7 +65,8 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
       {/* Nav moved to global layout NavBar component */}
       {/* Hero Section (side-by-side even on mobile) */}
       <div className="relative flex flex-col md:flex-row w-full min-h-[70vh] md:min-h-[90vh] bg-[url('/hero.png')] bg-cover bg-center bg-no-repeat overflow-hidden">
@@ -108,8 +120,48 @@ export default function HomePage() {
         </div>
       </div>
 
+      {pets && (
+        <div className="flex justify-center w-full px-4">
+          <div className="flex flex-col items-center gap-4 py-8 px-4 rounded-lg max-w-6xl w-full">
+            <h3>Available Pets</h3>
+            <section className="text-start w-full">
+              <div className="flex justify-center">
+                <div className="flex flex-wrap gap-8 justify-center">
+                  {pets.map((e) => (
+                    <div
+                      key={e.id}
+                      className="relative w-[80%] h-[250px] md:w-[240px] md:h-[200px] rounded-[8px] overflow-hidden"
+                    >
+                      <Image
+                        src={e.photos[0]}
+                        alt={e.name}
+                        className="object-cover hover:scale-105 transition-all duration-300 hover:opacity-75"
+                        fill
+                      />
+                      <div className="absolute bottom-0 w-full p-2 bg-gradient-to-t from-black/90 to-transparent rounded-b-[8px]">
+                        <p className="text-white">{e.name}</p>
+                        <Link href={`/pet/${e.id}`}>
+                          <Button size="sm" className="mt-2 bg-orange-400 text-white">
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+            <Link href="/pets">
+              <Button className="mt-6 bg-orange-500 hover:bg-orange-600">
+                View All Available Pets
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+      <h3 className="mt-16 text-center">Get to know Tails of Freedom Animal Haven</h3>
       <HeroVideoDialog
-        className="block dark:hidden max-w-[70%] mx-auto my-16"
+        className="block dark:hidden max-w-[70%] mx-auto mb-16 mt-4"
         animationStyle="from-center"
         videoSrc="https://www.youtube.com/embed/YgDMA1HtnJQ?si=dVjhasKnoAvLmm0b"
         thumbnailSrc="/pet_bg.png"

@@ -42,6 +42,13 @@ export default function NavBar() {
               HOME
             </li>
           </Link>
+          <Link href="/pets">
+            <li
+              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/pets' ? ' font-bold text-orange-500' : ''}`}
+            >
+              PETS
+            </li>
+          </Link>
           <Link href="/download/app">
             <li
               className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
@@ -135,6 +142,13 @@ export default function NavBar() {
                 className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/' ? ' font-bold text-orange-500' : ''}`}
               >
                 HOME{' '}
+              </li>
+            </Link>
+            <Link href="/pets" onClick={() => setIsMobileMenuOpen(false)}>
+              <li
+                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/pets' ? ' font-bold text-orange-500' : ''}`}
+              >
+                PETS{' '}
               </li>
             </Link>
             <Link href="/download/app" onClick={() => setIsMobileMenuOpen(false)}>

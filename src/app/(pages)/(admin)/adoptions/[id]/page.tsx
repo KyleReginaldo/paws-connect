@@ -98,10 +98,11 @@ interface AdoptionData {
 
 const AdoptionPage = () => {
   const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const { success, error: showError } = useNotifications();
   const { userId } = useAuth();
-  const id = params.id as string;
+
   const [adoption, setAdoption] = useState<AdoptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
