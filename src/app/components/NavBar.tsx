@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { Separator } from '@radix-ui/react-separator';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -49,13 +50,7 @@ export default function NavBar() {
               PETS
             </li>
           </Link>
-          <Link href="/download/app">
-            <li
-              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
-            >
-              GET STARTED
-            </li>
-          </Link>
+
           <Link href="/about">
             <li
               className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/about' ? ' font-bold text-orange-500' : ''}`}
@@ -71,6 +66,9 @@ export default function NavBar() {
               {' '}
               GET IN TOUCH
             </li>
+          </Link>
+          <Link href="/download/app">
+            <Button className="rounded-full bg-orange-500">DOWNLOAD NOW</Button>
           </Link>
           <Separator orientation="vertical" className="bg-orange-500 h-6 w-[2px]" />
           <Link href={userId ? '/dashboard' : '/auth/signin'}>
@@ -151,13 +149,6 @@ export default function NavBar() {
                 PETS{' '}
               </li>
             </Link>
-            <Link href="/download/app" onClick={() => setIsMobileMenuOpen(false)}>
-              <li
-                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/download/app' ? ' font-bold text-orange-500' : ''}`}
-              >
-                GET STARTED
-              </li>
-            </Link>
             <Link href="/about" onClick={() => setIsMobileMenuOpen(false)}>
               <li
                 className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/about' ? ' font-bold text-orange-500' : ''}`}
@@ -173,14 +164,19 @@ export default function NavBar() {
                 GET IN TOUCH
               </li>
             </Link>
-            <Link
-              href={userId ? '/dashboard' : '/auth/signin'}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <li className="py-2 text-orange-500 font-medium hover:text-gray-600 transition-all cursor-pointer">
-                {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
-              </li>
-            </Link>
+            <div className="flex gap-[20px]">
+              <Link
+                href={userId ? '/dashboard' : '/auth/signin'}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <li className="py-2 text-orange-500 font-medium hover:text-gray-600 transition-all cursor-pointer">
+                  {userId ? 'ADMIN DASHBOARD' : 'ADMIN SIGN IN'}
+                </li>
+              </Link>{' '}
+              <Link href="/download/app" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button className="rounded-full bg-orange-500">DOWNLOAD NOW</Button>
+              </Link>
+            </div>
           </ul>
         </div>
       )}
