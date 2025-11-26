@@ -24,6 +24,7 @@ const Page = () => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [recommendedPets, setRecommendedPets] = useState<Pet[]>([]);
   const [showAdoptModal, setShowAdoptModal] = useState<boolean>(false);
+  const [showFullDescription, setShowFullDescription] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchPet = async () => {
@@ -142,7 +143,22 @@ const Page = () => {
               </p>
             </div>
 
-            <p className="text-gray-700 leading-relaxed">{pet.description}</p>
+            <div className="text-gray-700 leading-relaxed">
+              {pet.description && pet.description.length > 180 ? (
+                <>
+                  {showFullDescription ? pet.description : pet.description.slice(0, 180) + '...'}
+                  <Button
+                    variant="link"
+                    className="pl-2 text-orange-500 text-sm"
+                    onClick={() => setShowFullDescription((prev) => !prev)}
+                  >
+                    {showFullDescription ? 'See less' : 'See more'}
+                  </Button>
+                </>
+              ) : (
+                pet.description
+              )}
+            </div>
 
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-900">Details</h3>
