@@ -221,10 +221,7 @@ const Page = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-col gap-2">
-            <Link
-              href={`https://paws-connect-rho.vercel.app/pet-details/${pet.id}/adopt`}
-              className="w-full"
-            >
+            <Link href={`https://paws-connect-rho.vercel.app/adopt/${pet.id}`} className="w-full">
               <Button className="w-full bg-orange-500 hover:bg-orange-600">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Continue to App
