@@ -92,7 +92,7 @@ export default function AllPetsPage() {
                   </div>
                   <div className="p-4">
                     <h3 className="text-xl font-semibold text-gray-900 group-hover:text-orange-500 transition-colors">
-                      {pet.name}
+                      {pet.name ?? 'No name'}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       {pet.breed} • {pet.age}

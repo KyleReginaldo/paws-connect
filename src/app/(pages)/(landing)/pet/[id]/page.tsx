@@ -137,7 +137,7 @@ const Page = () => {
           {/* Pet Details */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">{pet.name}</h1>
+              <h1 className="text-4xl font-bold text-gray-900">{pet.name ?? 'No name'}</h1>
               <p className="text-xl text-gray-600 mt-2">
                 {pet.breed} • {pet.gender}
               </p>
@@ -219,7 +219,7 @@ const Page = () => {
               className="w-full md:w-fit bg-orange-500 hover:bg-orange-600"
             >
               <Heart className="w-5 h-5" />
-              Adopt {pet.name}
+              Adopt {pet.name ?? 'Me'}
             </Button>
           </div>
         </div>
