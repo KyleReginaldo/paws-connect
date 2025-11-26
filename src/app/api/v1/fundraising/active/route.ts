@@ -1,6 +1,7 @@
 import { supabase } from "@/app/supabase/supabase";
 
 export async function GET(request: Request) {
+  console.log(request.url);
   const {data,error} = await supabase
       .from('fundraising')
       .select(
@@ -13,6 +14,7 @@ export async function GET(request: Request) {
       ).eq('status', 'ONGOING')
       .order('created_at', { ascending: false });
   if (error) {
+    console.error('Error fetching fundraising data:', error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
   return new Response(JSON.stringify({ data }), { status: 200 });
