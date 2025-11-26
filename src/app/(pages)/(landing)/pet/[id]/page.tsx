@@ -108,7 +108,7 @@ const Page = () => {
             <div className="relative w-full h-[400px] rounded-lg overflow-hidden bg-gray-100">
               <Image
                 src={selectedImage || pet.photos[0]}
-                alt={pet.name}
+                alt={pet.name ?? 'Pet'}
                 fill
                 className="object-cover"
                 priority
@@ -125,7 +125,7 @@ const Page = () => {
                 >
                   <Image
                     src={photo}
-                    alt={`${pet.name} ${index + 1}`}
+                    alt={`${pet.name ?? 'pet'} ${index + 1}`}
                     fill
                     className="object-cover"
                   />
@@ -271,14 +271,14 @@ const Page = () => {
                 <div className="relative h-[200px] w-full">
                   <Image
                     src={recPet.photos[0]}
-                    alt={recPet.name}
+                    alt={recPet.name ?? 'Pet'}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
                 <div className="p-4">
                   <h3 className="text-xl font-semibold text-gray-900 group-hover:text-orange-500 transition-colors">
-                    {recPet.name}
+                    {recPet.name ?? 'No name'}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {recPet.breed} • {recPet.age}

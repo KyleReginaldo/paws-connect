@@ -31,7 +31,7 @@ export default function AllPetsPage() {
 
   const filteredPets = pets.filter(
     (pet) =>
-      pet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (pet.name && pet.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       pet.breed.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pet.type.toLowerCase().includes(searchQuery.toLowerCase()),
   );
@@ -85,7 +85,7 @@ export default function AllPetsPage() {
                   <div className="relative h-[250px] w-full">
                     <Image
                       src={pet.photos[0]}
-                      alt={pet.name}
+                      alt={pet.name ?? 'Pet'}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />

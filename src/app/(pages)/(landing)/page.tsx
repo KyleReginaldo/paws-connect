@@ -122,7 +122,7 @@ export default function HomePage() {
 
       {pets && (
         <div className="flex justify-center w-full px-4">
-          <div className="flex flex-col items-center gap-4 md:py-8 px-4 rounded-lg md:max-w-6xl w-full">
+          <div className="flex flex-col items-center gap-4 py-8 px-4 rounded-lg md:max-w-6xl w-full">
             <h3>Available Pets</h3>
             <section className="text-start w-full">
               <div className="flex flex-col justify-center">
@@ -134,7 +134,7 @@ export default function HomePage() {
                     >
                       <Image
                         src={e.photos[0]}
-                        alt={e.name}
+                        alt={e.name ?? 'Pet'}
                         className="object-cover hover:scale-105 transition-all duration-300 hover:opacity-75"
                         fill
                       />
