@@ -369,8 +369,6 @@ const useDashboardData = () => {
       .map(adoption => {
         const pet = pets.find(p => p.id === adoption.pet);
         const user = users.find(u => u.id === adoption.user);
-        
-        // Map the actual adoption status to display format
         const getDisplayStatus = (status: string | null) => {
           if (!status) return 'pending';
           const upperStatus = status.toUpperCase();

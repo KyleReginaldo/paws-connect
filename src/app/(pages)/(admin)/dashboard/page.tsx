@@ -347,7 +347,7 @@ const Page = () => {
       doc.text(`Total Pets: ${totalPets}`, 40, 220);
       doc.text(`Total Users: ${totalUsers}`, 40, 230);
       doc.text(`Total Adoptions: ${totalAdoptions}`, 40, 240);
-      doc.text(`Fundraising: ₱${totalDonations.toLocaleString()}`, 40, 250);
+      doc.text(`Fundraising: ${totalDonations.toLocaleString()}`, 40, 250);
 
       // ===========================================
       // PAGE 2: EXECUTIVE DASHBOARD
@@ -1304,25 +1304,19 @@ const Page = () => {
                     <div className="flex items-center space-x-2 flex-shrink-0">
                       <Badge
                         variant={
-                          adoption.status === 'APPROVED' || adoption.status === 'COMPLETED'
+                          adoption.status === 'approved' || adoption.status === 'completed'
                             ? 'default'
                             : 'secondary'
                         }
                         className={
-                          adoption.status === 'APPROVED' || adoption.status === 'COMPLETED'
+                          adoption.status === 'approved' || adoption.status === 'completed'
                             ? 'bg-green-50 text-green-600 border-green-100'
-                            : adoption.status === 'REJECTED'
+                            : adoption.status === 'rejected' || adoption.status === 'cancelled'
                               ? 'bg-red-50 text-red-600 border-red-100'
                               : 'bg-amber-50 text-amber-600 border-amber-100'
                         }
                       >
-                        {adoption.status === 'APPROVED'
-                          ? 'Approved'
-                          : adoption.status === 'COMPLETED'
-                            ? 'Completed'
-                            : adoption.status === 'REJECTED'
-                              ? 'Rejected'
-                              : 'Pending'}
+                        {adoption.status}
                       </Badge>
                       <span className="text-xs text-muted-foreground hidden sm:inline">
                         {adoption.timeAgo}
