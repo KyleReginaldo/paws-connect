@@ -207,20 +207,29 @@ export type Database = {
       }
       capstone_links: {
         Row: {
+          button_label: string | null
           created_at: string
+          description: string | null
           id: number
+          image_link: string | null
           link: string
           title: string
         }
         Insert: {
+          button_label?: string | null
           created_at?: string
+          description?: string | null
           id?: number
+          image_link?: string | null
           link: string
           title: string
         }
         Update: {
+          button_label?: string | null
           created_at?: string
+          description?: string | null
           id?: number
+          image_link?: string | null
           link?: string
           title?: string
         }

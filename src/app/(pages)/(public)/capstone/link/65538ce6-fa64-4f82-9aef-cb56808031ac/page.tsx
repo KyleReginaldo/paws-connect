@@ -1,8 +1,10 @@
 'use client';
 import { supabase } from '@/app/supabase/supabase';
+import { AdminImageSelector } from '@/components/AdminImageSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -11,6 +13,9 @@ export interface CapstoneLink {
   created_at: string;
   title: string;
   link: string;
+  description?: string | null;
+  image_link?: string | null;
+  button_label?: string | null;
 }
 
 const Page = () => {
@@ -18,6 +23,9 @@ const Page = () => {
   const [errorMsg, setError] = useState<string | null>(null);
   const [title, setTitle] = useState<string>('');
   const [link, setLink] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [imageLink, setImageLink] = useState<string>('');
+  const [buttonLabel, setButtonLabel] = useState<string>('');
   const fetchCapstoneLinks = async () => {
     const { data, error } = await supabase
       .from('capstone_links')
@@ -41,12 +49,23 @@ const Page = () => {
       setError('Title and Link are required');
       return;
     }
-    const { error } = await supabase.from('capstone_links').insert([{ title, link }]);
+    const { error } = await supabase.from('capstone_links').insert([
+      {
+        title,
+        link,
+        description: description || null,
+        image_link: imageLink || null,
+        button_label: buttonLabel || null,
+      },
+    ]);
     if (error) {
       setError(error.message);
     } else {
       setTitle('');
       setLink('');
+      setDescription('');
+      setImageLink('');
+      setButtonLabel('');
       fetchCapstoneLinks();
     }
   };
@@ -94,6 +113,49 @@ const Page = () => {
               setLink(e.target.value);
             }}
           />
+          <Input
+            type="text"
+            name="description"
+            id="description"
+            value={description}
+            className="border-2 rounded-[8px] p-2 mb-4 w-full bg-white"
+            placeholder="Enter description (optional)"
+            onChange={(e) => {
+              setDescription(e.target.value);
+            }}
+          />
+          <div className="flex items-center gap-4 mb-4 w-full">
+            <AdminImageSelector
+              currentImage={imageLink || undefined}
+              onImageSelect={(url) => setImageLink(url)}
+              userInitials={(title?.trim()?.slice(0, 2) || 'CL').toUpperCase()}
+            />
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 mb-2">Or paste an image URL:</p>
+              <Input
+                type="text"
+                name="image_link"
+                id="image_link"
+                value={imageLink}
+                className="border-2 rounded-[8px] p-2 w-full bg-white"
+                placeholder="Enter image URL (optional)"
+                onChange={(e) => {
+                  setImageLink(e.target.value);
+                }}
+              />
+            </div>
+          </div>
+          <Input
+            type="text"
+            name="button_label"
+            id="button_label"
+            value={buttonLabel}
+            className="border-2 rounded-[8px] p-2 mb-4 w-full bg-white"
+            placeholder="Enter button label (optional)"
+            onChange={(e) => {
+              setButtonLabel(e.target.value);
+            }}
+          />
           <Button onClick={handleSubmit} className="w-full">
             Submit
           </Button>
@@ -112,8 +174,20 @@ const Page = () => {
                 <div className="flex flex-col gap-2">
                   <h3 className="font-medium text-md">{e.title}</h3>
                   <p>Created at {new Date(e.created_at).toLocaleString()}</p>
+                  {e.description && <p className="text-sm text-gray-700">{e.description}</p>}
+                  {e.image_link && (
+                    <Image
+                      src={e.image_link}
+                      alt={e.title}
+                      width={240}
+                      height={240}
+                      className="w-full max-w-[240px] rounded-[8px] border"
+                    />
+                  )}
                   <Link href={e.link}>
-                    <Button className="bg-orange-500">Visit</Button>
+                    <Button className="bg-orange-500">
+                      {e.button_label ? e.button_label : 'Visit'}
+                    </Button>
                   </Link>
                 </div>
                 <Button
