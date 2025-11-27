@@ -22,13 +22,13 @@ import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { Json } from '../../../../../database.types';
-export enum PostCategory {
+enum PostCategory {
   SHELTER_UPDATE = 'shelter_update',
   ADOPTION_UPDATE = 'adoption_update',
   RESCUE_STORIES = 'rescue_stories',
   HEALTH_ALERTS = 'health_alerts',
 }
-export interface Post {
+interface Post {
   id: number;
   created_at?: string | null | undefined;
   title: string;
