@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_otps: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: number
+          otp: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: number
+          otp: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: number
+          otp?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       address: {
         Row: {
           city: string | null
@@ -66,49 +93,67 @@ export type Database = {
       }
       adoption: {
         Row: {
+          adopting_for_self: boolean | null
           created_at: string
           happiness_image: string | null
           has_children_in_home: boolean | null
           has_other_pets_in_home: boolean | null
           have_outdoor_space: boolean | null
           have_permission_from_landlord: boolean | null
+          how_can_you_give_fur_rever_home: string | null
           id: number
           is_renting: boolean | null
           number_of_household_members: number | null
           pet: number | null
+          reason_for_adopting: string | null
           status: Database["public"]["Enums"]["adoption_status"] | null
           type_of_residence: string | null
           user: string | null
+          where_did_you_hear_about_us: string | null
+          willing_to_visit_again: boolean | null
+          willing_to_visit_shelter: boolean | null
         }
         Insert: {
+          adopting_for_self?: boolean | null
           created_at?: string
           happiness_image?: string | null
           has_children_in_home?: boolean | null
           has_other_pets_in_home?: boolean | null
           have_outdoor_space?: boolean | null
           have_permission_from_landlord?: boolean | null
+          how_can_you_give_fur_rever_home?: string | null
           id?: number
           is_renting?: boolean | null
           number_of_household_members?: number | null
           pet?: number | null
+          reason_for_adopting?: string | null
           status?: Database["public"]["Enums"]["adoption_status"] | null
           type_of_residence?: string | null
           user?: string | null
+          where_did_you_hear_about_us?: string | null
+          willing_to_visit_again?: boolean | null
+          willing_to_visit_shelter?: boolean | null
         }
         Update: {
+          adopting_for_self?: boolean | null
           created_at?: string
           happiness_image?: string | null
           has_children_in_home?: boolean | null
           has_other_pets_in_home?: boolean | null
           have_outdoor_space?: boolean | null
           have_permission_from_landlord?: boolean | null
+          how_can_you_give_fur_rever_home?: string | null
           id?: number
           is_renting?: boolean | null
           number_of_household_members?: number | null
           pet?: number | null
+          reason_for_adopting?: string | null
           status?: Database["public"]["Enums"]["adoption_status"] | null
           type_of_residence?: string | null
           user?: string | null
+          where_did_you_hear_about_us?: string | null
+          willing_to_visit_again?: boolean | null
+          willing_to_visit_shelter?: boolean | null
         }
         Relationships: [
           {
@@ -157,6 +202,27 @@ export type Database = {
           last_used_at?: string | null
           response?: string | null
           usage_count?: number | null
+        }
+        Relationships: []
+      }
+      capstone_links: {
+        Row: {
+          created_at: string
+          id: number
+          link: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          link: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          link?: string
+          title?: string
         }
         Relationships: []
       }
@@ -829,6 +895,7 @@ export type Database = {
           first_name: string
           id: number
           id_attachment_url: string
+          id_type: string | null
           last_name: string
           middle_initial: string | null
           status: Database["public"]["Enums"]["id_status"] | null
@@ -841,6 +908,7 @@ export type Database = {
           first_name: string
           id?: number
           id_attachment_url: string
+          id_type?: string | null
           last_name: string
           middle_initial?: string | null
           status?: Database["public"]["Enums"]["id_status"] | null
@@ -853,6 +921,7 @@ export type Database = {
           first_name?: string
           id?: number
           id_attachment_url?: string
+          id_type?: string | null
           last_name?: string
           middle_initial?: string | null
           status?: Database["public"]["Enums"]["id_status"] | null
