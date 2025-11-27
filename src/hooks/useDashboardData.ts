@@ -370,11 +370,7 @@ const useDashboardData = () => {
         const pet = pets.find(p => p.id === adoption.pet);
         const user = users.find(u => u.id === adoption.user);
         const getDisplayStatus = (status: string | null) => {
-          if (!status) return 'pending';
-          const upperStatus = status.toUpperCase();
-          if (upperStatus === 'APPROVED' || upperStatus === 'COMPLETED') return 'completed';
-          if (upperStatus === 'REJECTED' || upperStatus === 'CANCELLED') return 'rejected';
-          return 'pending'; // For PENDING and any other status
+          return status?.toLocaleLowerCase(); // For PENDING and any other status
         };
         
         return {

@@ -518,6 +518,60 @@ const AdoptionPage = () => {
           {/* Left Column - Pet and Status Info */}
           <div className="lg:col-span-1 space-y-4">
             {/* Pet Information */}
+            {adoption.status === 'PENDING' && (
+              <div className="bg-orange-50 rounded-lg border border-orange-200 shadow-sm">
+                <div className="px-4 py-3 border-b border-orange-200">
+                  <h3 className="text-base font-semibold text-orange-900 flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                    Pending Approval
+                  </h3>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Review the application and take action
+                  </p>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-3">
+                    <Button
+                      size="sm"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
+                      onClick={handleApprove}
+                      disabled={actionLoading !== null}
+                    >
+                      {actionLoading === 'approve' ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve Application
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 font-medium"
+                      onClick={handleReject}
+                      disabled={actionLoading !== null}
+                    >
+                      {actionLoading === 'reject' ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-700 mr-2"></div>
+                          Rejecting...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject Application
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="bg-white border">
               <div className="px-3 py-2 border-b">
                 <h3 className="text-sm font-medium text-gray-900">Pet Information</h3>
@@ -666,62 +720,6 @@ const AdoptionPage = () => {
                 )}
               </div>
             </div>
-
-            {/* Status and Actions */}
-            {adoption.status === 'PENDING' && (
-              <div className="bg-orange-50 rounded-lg border border-orange-200 shadow-sm">
-                <div className="px-4 py-3 border-b border-orange-200">
-                  <h3 className="text-base font-semibold text-orange-900 flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-orange-600" />
-                    Pending Approval
-                  </h3>
-                  <p className="text-sm text-orange-700 mt-1">
-                    Review the application and take action
-                  </p>
-                </div>
-                <div className="p-4">
-                  <div className="space-y-3">
-                    <Button
-                      size="sm"
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
-                      onClick={handleApprove}
-                      disabled={actionLoading !== null}
-                    >
-                      {actionLoading === 'approve' ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Approving...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve Application
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 font-medium"
-                      onClick={handleReject}
-                      disabled={actionLoading !== null}
-                    >
-                      {actionLoading === 'reject' ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-700 mr-2"></div>
-                          Rejecting...
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject Application
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Right Column - Adopter Details */}

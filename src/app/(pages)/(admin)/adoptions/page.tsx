@@ -179,20 +179,10 @@ const AdoptionsPage = () => {
       });
     }
 
-    // Status filter (based on created date - newer = pending, older = completed)
+    // Status filter (match by explicit status field)
     if (statusFilter !== 'all') {
-      filtered = filtered.filter((adoption) => {
-        const daysSinceApplication = Math.floor(
-          (new Date().getTime() - new Date(adoption.created_at).getTime()) / (1000 * 60 * 60 * 24),
-        );
-
-        if (statusFilter === 'pending') {
-          return daysSinceApplication <= 7; // Applications within last 7 days are pending
-        } else if (statusFilter === 'completed') {
-          return daysSinceApplication > 7; // Applications older than 7 days are completed
-        }
-        return true;
-      });
+      const desired = statusFilter.toUpperCase();
+      filtered = filtered.filter((adoption) => adoption.status?.toUpperCase() === desired);
     }
 
     // Pet type filter
@@ -275,9 +265,10 @@ const AdoptionsPage = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
         <Select value={petTypeFilter} onValueChange={setPetTypeFilter}>

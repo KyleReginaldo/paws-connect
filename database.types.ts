@@ -878,6 +878,42 @@ export type Database = {
           },
         ]
       }
+      posts: {
+        Row: {
+          category: Database["public"]["Enums"]["post_category"]
+          comments: Json[] | null
+          created_at: string | null
+          description: string
+          id: number
+          images: string[] | null
+          links: string[] | null
+          reactions: Json[] | null
+          title: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["post_category"]
+          comments?: Json[] | null
+          created_at?: string | null
+          description: string
+          id?: number
+          images?: string[] | null
+          links?: string[] | null
+          reactions?: Json[] | null
+          title: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["post_category"]
+          comments?: Json[] | null
+          created_at?: string | null
+          description?: string
+          id?: number
+          images?: string[] | null
+          links?: string[] | null
+          reactions?: Json[] | null
+          title?: string
+        }
+        Relationships: []
+      }
       role: {
         Row: {
           created_at: string
@@ -1082,6 +1118,11 @@ export type Database = {
         | "SEAMAN_BOOK"
         | "ACR_I_CARD"
       invitation_status: "PENDING" | "APPROVED" | "REJECTED"
+      post_category:
+        | "shelter_update"
+        | "adoption_update"
+        | "rescue_stories"
+        | "health_alerts"
       user_role: "CUSTOMER" | "ADMIN" | "STAFF"
       user_status: "SEMI_VERIFIED" | "FULLY_VERIFIED" | "INDEFINITE" | "PENDING"
     }
@@ -1252,6 +1293,12 @@ export const Constants = {
         "ACR_I_CARD",
       ],
       invitation_status: ["PENDING", "APPROVED", "REJECTED"],
+      post_category: [
+        "shelter_update",
+        "adoption_update",
+        "rescue_stories",
+        "health_alerts",
+      ],
       user_role: ["CUSTOMER", "ADMIN", "STAFF"],
       user_status: ["SEMI_VERIFIED", "FULLY_VERIFIED", "INDEFINITE", "PENDING"],
     },

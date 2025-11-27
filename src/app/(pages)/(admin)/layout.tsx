@@ -24,6 +24,7 @@ import {
   HandCoins,
   Heart,
   LayoutDashboard,
+  MessageCircleHeart,
   Settings,
   UsersRound,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ const menuItems = [
   { title: 'Manage Pets', icon: Dog, path: '/manage-pet' },
   { title: 'Manage Events', icon: Calendar, path: '/manage-events' },
   { title: 'Fundraising', icon: HandCoins, path: '/fundraising' },
+  { title: 'Posts', icon: MessageCircleHeart, path: '/posts' },
 ];
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -63,6 +65,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         return 'Manage Events';
       case '/fundraising':
         return 'Fundraising';
+      case '/posts':
+        return 'Posts';
       case '/settings':
         return 'Settings';
       default:
@@ -84,6 +88,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         return 'Create and manage community events and posts';
       case '/fundraising':
         return 'Oversee fundraising campaigns and donations';
+      case '/posts':
+        return 'Manage and oversee posts';
       case '/settings':
         return 'Update your profile and password';
       default:
