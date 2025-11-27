@@ -18,27 +18,26 @@ const Page = () => {
   const [errorMsg, setError] = useState<string | null>(null);
   const [title, setTitle] = useState<string>('');
   const [link, setLink] = useState<string>('');
-
+  const fetchCapstoneLinks = async () => {
+    const { data, error } = await supabase
+      .from('capstone_links')
+      .select()
+      .order('created_at', { ascending: false });
+    if (error) {
+      setError(error.message);
+    }
+    if (data) {
+      console.log(data);
+      setCapstoneLinks(data);
+    }
+  };
   useEffect(() => {
-    const fetchCapstoneLinks = async () => {
-      const { data, error } = await supabase
-        .from('capstone_links')
-        .select()
-        .order('created_at', { ascending: false });
-      if (error) {
-        setError(error.message);
-      }
-      if (data) {
-        console.log(data);
-        setCapstoneLinks(data);
-      }
-    };
     fetchCapstoneLinks();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !link) {
+    if ((!title && title.length === 0) || !link || link.length === 0) {
       setError('Title and Link are required');
       return;
     }
@@ -48,6 +47,7 @@ const Page = () => {
     } else {
       setTitle('');
       setLink('');
+      fetchCapstoneLinks();
     }
   };
 
@@ -76,6 +76,7 @@ const Page = () => {
             id="title"
             className="border-2 rounded-[8px] p-2 mb-4 w-full bg-white"
             placeholder="Enter link title"
+            value={title}
             required
             onChange={(e) => {
               setTitle(e.target.value);
@@ -85,6 +86,7 @@ const Page = () => {
             type="text"
             name="link"
             id="link"
+            value={link}
             className="border-2 rounded-[8px] p-2 mb-4 w-full bg-white"
             placeholder="Enter link URL"
             required
