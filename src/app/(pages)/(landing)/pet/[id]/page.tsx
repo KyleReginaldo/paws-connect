@@ -137,7 +137,7 @@ const Page = () => {
           {/* Pet Details */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">{pet.name ?? 'No name'}</h1>
+              <h1 className="text-4xl font-bold text-gray-900">{pet.name ?? 'Unnamed Pet'}</h1>
               <p className="text-xl text-gray-600 mt-2">
                 {pet.breed} • {pet.gender}
               </p>
@@ -278,7 +278,7 @@ const Page = () => {
                 </div>
                 <div className="p-4">
                   <h3 className="text-xl font-semibold text-gray-900 group-hover:text-orange-500 transition-colors">
-                    {recPet.name ?? 'No name'}
+                    {recPet.name ?? 'Unnamed Pet'}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {recPet.breed} • {recPet.age}

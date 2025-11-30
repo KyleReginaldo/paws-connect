@@ -150,7 +150,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username *</Label>
+              <Label htmlFor="username">
+                Username<span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="username"
                 value={formData.username}
@@ -161,7 +163,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">
+                Email<span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -173,7 +177,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone">
+                Phone Number<span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="phone"
                 type="tel"
@@ -188,7 +194,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
               // Show role field for editing if user has permission to manage this user
               canManageUser() ? (
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
+                  <Label htmlFor="role">
+                    Role<span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={formData.role.toString()}
                     onValueChange={(value) => handleInputChange('role', parseInt(value))}
@@ -197,8 +205,6 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Only show Admin option to actual admins */}
-                      {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
                       <SelectItem value="3">User</SelectItem>
                     </SelectContent>
                   </Select>
@@ -217,7 +223,9 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
             ) : (
               // For new users, show role selection
               <div className="space-y-2">
-                <Label htmlFor="role">Role *</Label>
+                <Label htmlFor="role">
+                  Role<span className="text-red-500">*</span>
+                </Label>
                 <Select
                   value={formData.role.toString()}
                   onValueChange={(value) => handleInputChange('role', parseInt(value))}
@@ -226,8 +234,6 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Only show Admin option to actual admins */}
-                    {userRole === 1 && <SelectItem value="1">Admin</SelectItem>}
                     <SelectItem value="3">User</SelectItem>
                   </SelectContent>
                 </Select>
@@ -247,6 +253,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                   <SelectItem value="FULLY_VERIFIED">Fully Verified</SelectItem>
                   <SelectItem value="SEMI_VERIFIED">Semi Verified</SelectItem>
                   <SelectItem value="INDEFINITE">Indefinite</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </div>

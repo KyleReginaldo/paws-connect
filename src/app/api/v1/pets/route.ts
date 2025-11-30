@@ -20,6 +20,7 @@ export async function GET(request: Request) {
   const good_with = searchParams.get('good_with');
   const location = searchParams.get('location');
   const search = searchParams.get('search');
+  const is_adopted = searchParams.get('is_adopted');
   // Optional user id to compute whether each pet is favorited by this user
   const user = searchParams.get('user');
   const limit = searchParams.get('limit');
@@ -101,6 +102,18 @@ export async function GET(request: Request) {
       );
     }
 
+    // Filter by adoption status
+    if (is_adopted !== null) {
+      const adopted = is_adopted?.toLowerCase() === 'true';
+      if (adopted) {
+        // Only show pets with APPROVED adoptions
+        query = query.not('adoption', 'is', null);
+      } else {
+        // Only show pets without APPROVED adoptions
+        // This is handled after fetching since we need to check adoption.status
+      }
+    }
+
     // Apply pagination
     if (limit) {
       const limitNum = parseInt(limit);
@@ -144,7 +157,7 @@ export async function GET(request: Request) {
       adopted?: Record<string, unknown> | null;
     })[] | null;
     
-    // Add adopted field to all pets
+    // Add adopted field to all pets and filter by adoption status if needed
     if (Array.isArray(data)) {
       type AdoptionData = {
         id: number;
@@ -165,6 +178,15 @@ export async function GET(request: Request) {
         } : null;
         return { ...pet, adopted };
       });
+      
+      // Filter by is_adopted if specified
+      if (is_adopted !== null) {
+        const shouldBeAdopted = is_adopted?.toLowerCase() === 'true';
+        responseData = responseData.filter((pet) => {
+          const hasAdoption = pet.adopted !== null;
+          return shouldBeAdopted ? hasAdoption : !hasAdoption;
+        });
+      }
     }
     
     if (user && Array.isArray(responseData) && responseData.length > 0) {
@@ -208,6 +230,7 @@ export async function GET(request: Request) {
             is_vaccinated: is_vaccinated ? is_vaccinated === 'true' : null,
             is_spayed_or_neutured: is_spayed_or_neutured ? is_spayed_or_neutured === 'true' : null,
             is_trained: is_trained ? is_trained === 'true' : null,
+            is_adopted: is_adopted ? is_adopted === 'true' : null,
             health_status,
             request_status,
             good_with,

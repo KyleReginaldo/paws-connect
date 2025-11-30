@@ -304,7 +304,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                               className="object-cover"
                             />
                             <AvatarFallback className="bg-muted">
-                              {pet.name.charAt(0).toUpperCase()}
+                              {pet.name ? pet.name.charAt(0).toUpperCase() : 'Unnamed Pet'}
                             </AvatarFallback>
                           </Avatar>
                           {/* Show happiness image if pet is adopted and has one */}
@@ -320,7 +320,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                           )}
                         </div>
                         <div>
-                          <div className="font-medium">{pet.name ? pet.name : 'No name'}</div>
+                          <div className="font-medium">{pet.name ? pet.name : 'Unnamed Pet'}</div>
                           {pet.adopted && (
                             <div className="text-xs text-green-600 font-medium">
                               ✨ Adopted & Happy

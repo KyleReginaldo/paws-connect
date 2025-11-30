@@ -89,7 +89,7 @@ export function TableFilters({
   const otherFilters = filters.filter((f) => f.type !== 'search');
 
   return (
-    <div className={cn('flex items-center gap-3', className)}>
+    <div className={cn('flex flex-col items-start sm:flex-row gap-3', className)}>
       {/* Search Filters - Always visible */}
       {searchFilters.map((filter) => (
         <div key={filter.id} className="relative">
@@ -117,11 +117,11 @@ export function TableFilters({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               className={cn(
                 'gap-2 h-9 px-3',
-                activeFiltersCount > 0 && 'border-primary text-primary bg-primary/5',
+                activeFiltersCount > 0 && 'text-primary bg-primary/5 hover:bg-primary/10',
               )}
             >
               <Filter className="h-4 w-4" />
@@ -325,7 +325,7 @@ function FilterControl({ filter, value, onChange }: FilterControlProps) {
       return (
         <div className="space-y-2">
           <Label className="text-sm font-medium">{filter.label}</Label>
-          <Select value={value || ''} onValueChange={onChange} disabled={filter.disabled}>
+          <Select value={value || undefined} onValueChange={onChange} disabled={filter.disabled}>
             <SelectTrigger className="h-9">
               <SelectValue
                 placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`}

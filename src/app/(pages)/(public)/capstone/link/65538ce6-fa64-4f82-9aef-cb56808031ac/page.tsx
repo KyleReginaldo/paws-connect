@@ -26,6 +26,8 @@ const Page = () => {
   const [description, setDescription] = useState<string>('');
   const [imageLink, setImageLink] = useState<string>('');
   const [buttonLabel, setButtonLabel] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const fetchCapstoneLinks = async () => {
     const { data, error } = await supabase
       .from('capstone_links')
@@ -45,37 +47,55 @@ const Page = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!title && title.length === 0) || !link || link.length === 0) {
+    setError(null);
+
+    if (!title || title.trim().length === 0 || !link || link.trim().length === 0) {
       setError('Title and Link are required');
       return;
     }
-    const { error } = await supabase.from('capstone_links').insert([
-      {
-        title,
-        link,
-        description: description || null,
-        image_link: imageLink || null,
-        button_label: buttonLabel || null,
-      },
-    ]);
-    if (error) {
-      setError(error.message);
-    } else {
-      setTitle('');
-      setLink('');
-      setDescription('');
-      setImageLink('');
-      setButtonLabel('');
-      fetchCapstoneLinks();
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('capstone_links').insert([
+        {
+          title: title.trim(),
+          link: link.trim(),
+          description: description.trim() || null,
+          image_link: imageLink.trim() || null,
+          button_label: buttonLabel.trim() || null,
+        },
+      ]);
+      if (error) {
+        setError(error.message);
+      } else {
+        setTitle('');
+        setLink('');
+        setDescription('');
+        setImageLink('');
+        setButtonLabel('');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsSubmitting(false);
+      await fetchCapstoneLinks();
     }
   };
 
   const handleDelete = async (id: number) => {
-    const { error } = await supabase.from('capstone_links').delete().eq('id', id);
-    if (error) {
-      setError(error.message);
-    } else {
-      setCapstoneLinks(capstoneLinks?.filter((link) => link.id !== id) || null);
+    setError(null);
+    setIsDeleting(id);
+    try {
+      const { error } = await supabase.from('capstone_links').delete().eq('id', id);
+      if (error) {
+        setError(error.message);
+      } else {
+        setCapstoneLinks(capstoneLinks?.filter((link) => link.id !== id) || null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete');
+    } finally {
+      setIsDeleting(null);
     }
   };
   return (
@@ -86,7 +106,7 @@ const Page = () => {
         </div>
       )}
       <div className="flex flex-col items-center py-[40px] bg-orange-50 p-[16px] rounded-[8px]">
-        <form action="" className="flex flex-col items-start">
+        <form onSubmit={handleSubmit} className="flex flex-col items-start">
           <h1 className="text-2xl font-bold mb-4">Capstone Project Links</h1>
           <p className="mb-4">Below are links related to various capstone projects.</p>
           <Input
@@ -156,8 +176,8 @@ const Page = () => {
               setButtonLabel(e.target.value);
             }}
           />
-          <Button onClick={handleSubmit} className="w-full">
-            Submit
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? 'Submitting...' : 'Submit'}
           </Button>
         </form>
       </div>
@@ -192,10 +212,11 @@ const Page = () => {
                 </div>
                 <Button
                   onClick={() => handleDelete(e.id)}
+                  disabled={isDeleting === e.id}
                   className="bg-red-500 mt-2"
                   size={'icon'}
                 >
-                  <Trash />
+                  {isDeleting === e.id ? '...' : <Trash />}
                 </Button>
               </div>
             ))}

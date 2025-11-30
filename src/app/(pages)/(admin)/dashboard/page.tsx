@@ -2,16 +2,28 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useNotifications } from '@/components/ui/notification';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useDashboardData, { type ChartDataPoint, type User } from '@/hooks/useDashboardData';
+import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   Activity,
   ArrowUpRight,
+  CalendarIcon,
   Dog,
   FileText,
   Heart,
@@ -230,9 +242,16 @@ const Page = () => {
   const { success, error: showError, info } = useNotifications();
   const [dateRange] = useState<DateRange | undefined>(undefined);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>(undefined);
+  // const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  //   from: new Date(2025, 5, 12),
+  //   to: new Date(2025, 6, 15),
+  // });
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (selectedDateRange?: DateRange) => {
     try {
+      setReportModalOpen(false);
       info('Generating Report', 'Preparing comprehensive dashboard report PDF...');
 
       // Fetch all necessary data
@@ -263,6 +282,38 @@ const Page = () => {
       const pets = petsData.data || [];
       const adoptions = adoptionsData.data || [];
       const allUsers = usersData.data || [];
+
+      // Filter data by date range if provided
+      const filterByDateRange = <T extends Record<string, unknown>>(
+        data: T[],
+        dateField: string = 'created_at',
+      ): T[] => {
+        if (!selectedDateRange?.from) return data;
+        return data.filter((item) => {
+          const itemDate = new Date(item[dateField] as string);
+          const from = new Date(selectedDateRange.from!);
+          from.setHours(0, 0, 0, 0);
+          if (!selectedDateRange.to) {
+            const to = new Date(from);
+            to.setHours(23, 59, 59, 999);
+            return itemDate >= from && itemDate <= to;
+          }
+          const to = new Date(selectedDateRange.to);
+          to.setHours(23, 59, 59, 999);
+          return itemDate >= from && itemDate <= to;
+        });
+      };
+
+      const filteredPets = filterByDateRange(pets);
+      const filteredAdoptions = filterByDateRange(adoptions);
+      const filteredUsers = filterByDateRange(allUsers);
+      const filteredDonations = filterByDateRange(donations);
+
+      // Use filtered data for calculations
+      const reportPets = filteredPets.length > 0 ? filteredPets : pets;
+      const reportAdoptions = filteredAdoptions.length > 0 ? filteredAdoptions : adoptions;
+      const reportUsers = filteredUsers.length > 0 ? filteredUsers : allUsers;
+      const reportDonations = filteredDonations.length > 0 ? filteredDonations : donations;
 
       // Create PDF document
       const doc = new jsPDF();
@@ -302,7 +353,10 @@ const Page = () => {
 
       doc.setFontSize(24);
       doc.setFont('helvetica', 'normal');
-      doc.text('Dashboard Analytics Report', 105, 120, { align: 'center' });
+      const reportTitle = selectedDateRange?.from
+        ? `Dashboard Analytics Report\n${format(selectedDateRange.from, 'MMM dd, yyyy')}${selectedDateRange.to ? ` - ${format(selectedDateRange.to, 'MMM dd, yyyy')}` : ''}`
+        : 'Dashboard Analytics Report';
+      doc.text(reportTitle, 105, 120, { align: 'center' });
 
       // Decorative line
       doc.setDrawColor(255, 255, 255);
@@ -336,13 +390,13 @@ const Page = () => {
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      const totalPets = pets.length;
-      const totalUsers = allUsers.length;
-      const totalDonations = donations.reduce(
+      const totalPets = reportPets.length;
+      const totalUsers = reportUsers.length;
+      const totalDonations = reportDonations.reduce(
         (sum: number, d: { amount?: number }) => sum + (d.amount || 0),
         0,
       );
-      const totalAdoptions = adoptions.length;
+      const totalAdoptions = reportAdoptions.length;
 
       doc.text(`Total Pets: ${totalPets}`, 40, 220);
       doc.text(`Total Users: ${totalUsers}`, 40, 230);
@@ -355,7 +409,7 @@ const Page = () => {
       doc.addPage();
       addPageHeader('Executive Dashboard', 2);
 
-      const successfulAdoptions = adoptions.filter(
+      const successfulAdoptions = reportAdoptions.filter(
         (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
       ).length;
       const pendingAdoptions = adoptions.filter(
@@ -923,7 +977,7 @@ const Page = () => {
         `• Average pets per type: Dogs (${dogs}), Cats (${cats}), Others (${others})`,
         `• Fundraising effectiveness: ${overallProgress}% of total target achieved`,
         `• User verification rate: ${((fullyVerified / totalUsers) * 100).toFixed(1)}% fully verified`,
-        `• Average donation amount: ₱${(totalRaised / donations.length).toFixed(2)} per transaction`,
+        `• Average donation amount: ${(totalRaised / donations.length).toFixed(2)} per transaction`,
         `• Pet health compliance: ${((vaccinated / totalPets) * 100).toFixed(1)}% vaccinated, ${((spayedNeutered / totalPets) * 100).toFixed(1)}% spayed/neutered`,
       ];
 
@@ -1122,10 +1176,10 @@ const Page = () => {
     <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
-        <div className="flex items-center space-x-2 flex-shrink-0">
+        <div className="flex flex-row sm:flex-col items-center space-x-2 flex-shrink-0">
           <Button
             id="pc-dash-generate-report"
-            onClick={handleGenerateReport}
+            onClick={() => setReportModalOpen(true)}
             variant="default"
             size="sm"
             className="cursor-pointer gap-2 hover:bg-orange-600 bg-orange-500 text-white rounded-full"
@@ -1421,6 +1475,72 @@ const Page = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report Date Range Modal */}
+      <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Generate Report</DialogTitle>
+            <DialogDescription>
+              Select a date range for the report, or leave blank to include all data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium mb-1">Date Range (Optional)</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {reportDateRange?.from ? (
+                      reportDateRange.to ? (
+                        <>
+                          {format(reportDateRange.from, 'LLL dd, y')} -{' '}
+                          {format(reportDateRange.to, 'LLL dd, y')}
+                        </>
+                      ) : (
+                        format(reportDateRange.from, 'LLL dd, y')
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={reportDateRange?.from}
+                    selected={reportDateRange}
+                    onSelect={(range) => setReportDateRange(range as DateRange | undefined)}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+              {reportDateRange?.from && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setReportDateRange(undefined)}
+                  className="w-full"
+                >
+                  Clear date range
+                </Button>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleGenerateReport(reportDateRange)}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              Generate Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

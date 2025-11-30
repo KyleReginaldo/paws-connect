@@ -269,7 +269,6 @@ const Page = () => {
       if (error) throw new Error(error.message);
       console.log('[posts] post created successfully');
       setSuccessMsg('Post created successfully');
-      await fetchPosts();
       setTitle('');
       setContent('');
       setImageUrls([]);
@@ -281,6 +280,7 @@ const Page = () => {
     } finally {
       console.log('[posts] submit finished');
       setSubmitting(false);
+      await fetchPosts();
     }
   };
 

@@ -139,7 +139,7 @@ export default function HomePage() {
                         fill
                       />
                       <div className="absolute bottom-0 w-full p-2 bg-gradient-to-t from-black/90 to-transparent rounded-b-[8px]">
-                        <p className="text-white">{e.name ?? 'No name'}</p>
+                        <p className="text-white">{e.name ?? 'Unnamed Pet'}</p>
                         <Link href={`/pet/${e.id}`}>
                           <Button size="sm" className="mt-2 bg-orange-400 text-white">
                             View Details
