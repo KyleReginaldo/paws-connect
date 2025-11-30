@@ -102,18 +102,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Filter by adoption status
-    if (is_adopted !== null) {
-      const adopted = is_adopted?.toLowerCase() === 'true';
-      if (adopted) {
-        // Only show pets with APPROVED adoptions
-        query = query.not('adoption', 'is', null);
-      } else {
-        // Only show pets without APPROVED adoptions
-        // This is handled after fetching since we need to check adoption.status
-      }
-    }
-
     // Apply pagination
     if (limit) {
       const limitNum = parseInt(limit);
@@ -179,13 +167,10 @@ export async function GET(request: Request) {
         return { ...pet, adopted };
       });
       
-      // Filter by is_adopted if specified
-      if (is_adopted !== null) {
-        const shouldBeAdopted = is_adopted?.toLowerCase() === 'true';
-        responseData = responseData.filter((pet) => {
-          const hasAdoption = pet.adopted !== null;
-          return shouldBeAdopted ? hasAdoption : !hasAdoption;
-        });
+      // Filter by is_adopted if true (only show adopted pets)
+      // If false or not provided, show all pets
+      if (is_adopted?.toLowerCase() === 'true') {
+        responseData = responseData.filter((pet) => pet.adopted !== null);
       }
     }
     

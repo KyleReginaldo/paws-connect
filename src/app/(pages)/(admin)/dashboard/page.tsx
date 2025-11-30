@@ -1513,6 +1513,8 @@ const Page = () => {
                     selected={reportDateRange}
                     onSelect={(range) => setReportDateRange(range as DateRange | undefined)}
                     numberOfMonths={2}
+                    disabled={(date) => date > new Date()}
+                    toDate={new Date()}
                   />
                 </PopoverContent>
               </Popover>
