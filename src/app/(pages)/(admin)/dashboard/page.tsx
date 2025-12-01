@@ -1175,7 +1175,7 @@ const Page = () => {
   return (
     <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-2">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between space-y-4 lg:space-y-2">
         <div className="flex flex-row sm:flex-col items-center space-x-2 flex-shrink-0">
           <Button
             id="pc-dash-generate-report"
@@ -1506,13 +1506,18 @@ const Page = () => {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent
+                  className="w-auto p-0 max-h-[70vh] overflow-auto"
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                >
                   <Calendar
                     mode="range"
                     defaultMonth={reportDateRange?.from}
                     selected={reportDateRange}
                     onSelect={(range) => setReportDateRange(range as DateRange | undefined)}
-                    numberOfMonths={2}
+                    numberOfMonths={window.innerWidth < 640 ? 1 : 2}
                     disabled={(date) => date > new Date()}
                     toDate={new Date()}
                   />
