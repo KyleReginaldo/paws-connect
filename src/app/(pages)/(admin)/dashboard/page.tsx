@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useNotifications } from '@/components/ui/notification';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useDashboardData, { type ChartDataPoint, type User } from '@/hooks/useDashboardData';
@@ -23,7 +22,6 @@ import autoTable from 'jspdf-autotable';
 import {
   Activity,
   ArrowUpRight,
-  CalendarIcon,
   Dog,
   FileText,
   Heart,
@@ -1478,7 +1476,7 @@ const Page = () => {
 
       {/* Report Date Range Modal */}
       <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[700px] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generate Report</DialogTitle>
             <DialogDescription>
@@ -1487,55 +1485,21 @@ const Page = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium mb-1">Date Range (Optional)</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {reportDateRange?.from ? (
-                      reportDateRange.to ? (
-                        <>
-                          {format(reportDateRange.from, 'LLL dd, y')} -{' '}
-                          {format(reportDateRange.to, 'LLL dd, y')}
-                        </>
-                      ) : (
-                        format(reportDateRange.from, 'LLL dd, y')
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-auto p-0 max-h-[70vh] overflow-auto"
-                  align="start"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <Calendar
-                    mode="range"
-                    defaultMonth={reportDateRange?.from}
-                    selected={reportDateRange}
-                    onSelect={(range) => setReportDateRange(range as DateRange | undefined)}
-                    numberOfMonths={window.innerWidth < 640 ? 1 : 2}
-                    disabled={(date) => date > new Date()}
-                    toDate={new Date()}
-                  />
-                </PopoverContent>
-              </Popover>
-              {reportDateRange?.from && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setReportDateRange(undefined)}
-                  className="w-full"
-                >
-                  Clear date range
-                </Button>
-              )}
+              <div className="flex justify-center">
+                <Calendar
+                  mode="range"
+                  defaultMonth={reportDateRange?.from}
+                  selected={reportDateRange}
+                  onSelect={(range) => setReportDateRange(range as DateRange | undefined)}
+                  numberOfMonths={2}
+                  disabled={(date) => date > new Date()}
+                  toDate={new Date()}
+                  className="rounded-md border"
+                />
+              </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-row justify-end gap-4">
             <Button variant="outline" onClick={() => setReportModalOpen(false)}>
               Cancel
             </Button>
