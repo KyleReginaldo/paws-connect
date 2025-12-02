@@ -1174,7 +1174,7 @@ const Page = () => {
     <div className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-orange-25/50 to-orange-50/50 min-h-screen overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start justify-between space-y-4 lg:space-y-2">
-        <div className="flex flex-row sm:flex-col items-center space-x-2 flex-shrink-0">
+        <div className="flex flex-row sm:flex-col items-start space-x-2 flex-shrink-0">
           <Button
             id="pc-dash-generate-report"
             onClick={() => setReportModalOpen(true)}
