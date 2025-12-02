@@ -137,7 +137,9 @@ const Page = () => {
           {/* Pet Details */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">{pet.name ?? 'Unnamed Pet'}</h1>
+              <h1 className="text-4xl font-bold text-gray-900">
+                {pet.name && pet.name.length > 0 ? pet.name : 'Unnamed Pet'}
+              </h1>
               <p className="text-xl text-gray-600 mt-2">
                 {pet.breed} • {pet.gender}
               </p>

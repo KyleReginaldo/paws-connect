@@ -121,7 +121,9 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                     )}
                   </div>
                   <div>
-                    <div className="font-medium">{pet.name ? pet.name : 'Unnamed Pet'}</div>
+                    <div className="font-medium">
+                      {pet.name && pet.name.length > 0 ? pet.name : 'Unnamed Pet'}
+                    </div>
                     {pet.adopted && (
                       <div className="text-xs text-green-600 font-medium">✨ Adopted & Happy</div>
                     )}

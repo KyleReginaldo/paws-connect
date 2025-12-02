@@ -320,7 +320,7 @@ const useDashboardData = () => {
         id: `pet-${pet.id}`,
         type: 'pet',
         title: 'New pet added',
-        subtitle: `${pet.name || 'Unnamed Pet'} - ${pet.breed || pet.type}`,
+        subtitle: `${pet.name && pet.name.length > 0 ? pet.name : 'Unnamed Pet'} - ${pet.breed || pet.type}`,
         time: pet.created_at,
       });
     });

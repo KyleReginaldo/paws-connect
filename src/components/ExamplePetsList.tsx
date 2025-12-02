@@ -24,7 +24,7 @@ export function PetsList() {
       <button onClick={refreshPets}>Refresh</button>
       {pets?.map((pet) => (
         <div key={pet.id}>
-          <h3>{pet.name || 'Unnamed Pet'}</h3>
+          <h3>{pet.name && pet.name.length > 0 ? pet.name : 'Unnamed Pet'}</h3>
           <p>
             {pet.type} - {pet.breed}
           </p>
