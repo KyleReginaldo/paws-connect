@@ -300,11 +300,11 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                               src={
                                 (pet.photos && pet.photos.length > 0 ? pet.photos[0] : null) || ''
                               }
-                              alt={pet.name}
+                              alt={pet.name || 'Unnamed Pet'}
                               className="object-cover"
                             />
                             <AvatarFallback className="bg-muted">
-                              {pet.name ? pet.name.charAt(0).toUpperCase() : 'Unnamed Pet'}
+                              {(pet.name || 'Unnamed Pet').charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           {/* Show happiness image if pet is adopted and has one */}
@@ -312,7 +312,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                             <div className="absolute -top-2 -right-2">
                               <HappinessImageDisplay
                                 happinessImage={pet.adopted.happiness_image}
-                                petName={pet.name}
+                                petName={pet.name || 'Unnamed Pet'}
                                 size="sm"
                                 showLabel={false}
                               />
@@ -320,7 +320,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                           )}
                         </div>
                         <div>
-                          <div className="font-medium">{pet.name ? pet.name : 'Unnamed Pet'}</div>
+                          <div className="font-medium">{pet.name || 'Unnamed Pet'}</div>
                           {pet.adopted && (
                             <div className="text-xs text-green-600 font-medium">
                               ✨ Adopted & Happy

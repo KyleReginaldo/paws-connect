@@ -101,11 +101,11 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                     >
                       <AvatarImage
                         src={(pet.photos && pet.photos.length > 0 ? pet.photos[0] : null) || ''}
-                        alt={pet.name}
+                        alt={pet.name || 'Unnamed Pet'}
                         className="object-cover"
                       />
                       <AvatarFallback className="bg-muted">
-                        {pet.name.charAt(0).toUpperCase()}
+                        {(pet.name || 'Unnamed Pet').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {/* Show happiness image if pet is adopted and has one */}
@@ -113,7 +113,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
                       <div className="absolute -top-2 -right-2">
                         <HappinessImageDisplay
                           happinessImage={pet.adopted.happiness_image}
-                          petName={pet.name}
+                          petName={pet.name || 'Unnamed Pet'}
                           size="sm"
                           showLabel={false}
                         />
@@ -182,7 +182,7 @@ export function PetTable({ pets, onEdit, onDelete }: PetTableProps) {
           open={viewerOpen}
           onOpenChange={setViewerOpen}
           photoUrl={(selectedPet.photos && selectedPet.photos[0]) || ''}
-          petName={selectedPet.name}
+          petName={selectedPet.name || 'Unnamed Pet'}
           detailsHref={`/manage-pet/${selectedPet.id}`}
         />
       )}

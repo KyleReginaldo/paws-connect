@@ -320,7 +320,7 @@ const useDashboardData = () => {
         id: `pet-${pet.id}`,
         type: 'pet',
         title: 'New pet added',
-        subtitle: `${pet.name} - ${pet.breed || pet.type}`,
+        subtitle: `${pet.name || 'Unnamed Pet'} - ${pet.breed || pet.type}`,
         time: pet.created_at,
       });
     });
@@ -375,7 +375,7 @@ const useDashboardData = () => {
         
         return {
           id: adoption.id,
-          petName: pet?.name || 'Unknown Pet',
+          petName: pet?.name || 'Unnamed Pet',
           petType: pet?.breed || pet?.type || 'Unknown Type',
           adopter: user?.username || user?.email || 'Unknown User',
           timeAgo: formatTimeAgo(adoption.created_at),

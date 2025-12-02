@@ -8,7 +8,7 @@ export async function GET(){
     }
     data.forEach((pet) => {
         if(!pet.adoption){
-            console.log(`Pet name: ${pet.name} has no adoption record.`);
+            console.log(`Pet name: ${pet.name || 'Unnamed Pet'} has no adoption record.`);
         }
     });
     return new Response(JSON.stringify({data}), {status: 200});
