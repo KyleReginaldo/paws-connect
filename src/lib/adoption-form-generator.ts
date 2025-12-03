@@ -226,7 +226,7 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
 <div class="row"><div class="label">Type:</div><div class="line">${safe(petData?.type)}</div></div>
 <div class="row"><div class="label">Breed:</div><div class="line">${safe(petData?.breed)}</div></div>
 <div class="row"><div class="label">Gender:</div><div class="line">${safe(petData?.gender)}</div></div>
-<div class="row"><div class="label">Age:</div><div class="line">${petData?.age ? petData.age + ' years old' : ''}</div></div>
+<div class="row"><div class="label">Age:</div><div class="line">${petData?.age ? petData.age : ''}</div></div>
 <div class="row"><div class="label">Size:</div><div class="line">${safe(petData?.size)}</div></div>
 
 

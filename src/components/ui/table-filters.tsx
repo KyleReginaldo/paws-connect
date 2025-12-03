@@ -256,7 +256,6 @@ function DateRangeFilter({ filter, value, onChange }: Omit<FilterControlProps, '
         >
           <div className="p-3">
             <Calendar
-              initialFocus
               mode="range"
               defaultMonth={displayValue?.from}
               selected={displayValue as any}
@@ -281,7 +280,7 @@ function DateRangeFilter({ filter, value, onChange }: Omit<FilterControlProps, '
                   isSelectingRef.current = false; // UNLOCK
                   setTempRange(undefined);
                   onChange({ from: r.from, to: r.to });
-                  setIsOpen(false);
+                  // setIsOpen(false);
                 }
               }}
             />
