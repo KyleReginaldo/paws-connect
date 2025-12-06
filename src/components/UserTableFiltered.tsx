@@ -13,6 +13,9 @@ import { TableFilter, TableFilters } from '@/components/ui/table-filters';
 import { transformUrlForLocalhost } from '@/lib/url-utils';
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Edit,
   Eye,
   MoreHorizontal,
@@ -40,6 +43,7 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import { ScrollArea } from './ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { UserDetailsSheet } from './UserDetailsSheet';
 
 interface UserTableFilteredProps {
@@ -65,6 +69,7 @@ export function UserTableFiltered({
 }: UserTableFilteredProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
@@ -115,17 +120,11 @@ export function UserTableFiltered({
       type: 'boolean',
       placeholder: 'Show only users with violations',
     },
-    {
-      id: 'joinedDate',
-      label: 'Joined Date',
-      type: 'daterange',
-      placeholder: 'Select date range',
-    },
   ];
 
   // Apply filters
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
+    let filtered = users.filter((user) => {
       // Search filter
       if (filterValues.search) {
         const searchTerm = filterValues.search.toLowerCase();
@@ -173,7 +172,18 @@ export function UserTableFiltered({
 
       return true;
     });
-  }, [users, filterValues]);
+
+    // Apply sorting
+    if (sortOrder) {
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    }
+
+    return filtered;
+  }, [users, filterValues, sortOrder]);
 
   // Pagination logic
   const totalUsers = filteredUsers.length;
@@ -252,6 +262,16 @@ export function UserTableFiltered({
     });
   };
 
+  const toggleSort = () => {
+    if (sortOrder === null) {
+      setSortOrder('desc');
+    } else if (sortOrder === 'desc') {
+      setSortOrder('asc');
+    } else {
+      setSortOrder(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <TableFilters
@@ -279,7 +299,30 @@ export function UserTableFiltered({
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Violations</TableHead>
-                <TableHead>Joined</TableHead>
+                <TableHead>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={toggleSort}
+                          className="flex items-center gap-2 hover:text-foreground transition-colors"
+                        >
+                          Joined
+                          {sortOrder === null && <ArrowUpDown className="h-4 w-4" />}
+                          {sortOrder === 'asc' && <ArrowUp className="h-4 w-4" />}
+                          {sortOrder === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {sortOrder === null && 'Click to sort by newest'}
+                          {sortOrder === 'desc' && 'Sorted by newest - click for oldest'}
+                          {sortOrder === 'asc' && 'Sorted by oldest - click to clear'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

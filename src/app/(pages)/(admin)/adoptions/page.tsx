@@ -22,9 +22,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Cat,
   Check,
+  CircleCheck,
+  CircleDashed,
+  CircleDot,
+  CircleX,
   ClockFading,
+  Dog,
   Eye,
   Loader2,
   LucideProps,
@@ -112,6 +122,7 @@ const AdoptionsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [petTypeFilter, setPetTypeFilter] = useState('all');
   const [approving, setApproving] = useState<number | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
   const router = useRouter();
   const fetchAdoptions = useCallback(async () => {
@@ -193,8 +204,27 @@ const AdoptionsPage = () => {
       });
     }
 
+    // Apply sorting by application date
+    if (sortOrder) {
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    }
+
     setFilteredAdoptions(filtered);
-  }, [adoptions, searchTerm, statusFilter, petTypeFilter]);
+  }, [adoptions, searchTerm, statusFilter, petTypeFilter, sortOrder]);
+
+  const toggleSort = () => {
+    if (sortOrder === null) {
+      setSortOrder('desc');
+    } else if (sortOrder === 'desc') {
+      setSortOrder('asc');
+    } else {
+      setSortOrder(null);
+    }
+  };
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -265,10 +295,21 @@ const AdoptionsPage = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="all">
+              <CircleDot /> All Status
+            </SelectItem>
+            <SelectItem value="pending" className="text-orange-400">
+              <CircleDashed color="orange" /> Pending
+            </SelectItem>
+            <SelectItem value="approved" className="text-green-500">
+              <CircleCheck color="green" />
+              Approved
+            </SelectItem>
+            <SelectItem value="rejected" className="text-red-500">
+              {' '}
+              <CircleX color="red" />
+              Rejected
+            </SelectItem>
           </SelectContent>
         </Select>
         <Select value={petTypeFilter} onValueChange={setPetTypeFilter}>
@@ -276,13 +317,22 @@ const AdoptionsPage = () => {
             <SelectValue placeholder="Pet Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="dog">Dogs</SelectItem>
-            <SelectItem value="cat">Cats</SelectItem>
+            <SelectItem value="all">
+              <PawPrint />
+              All Types
+            </SelectItem>
+            <SelectItem value="dog" className="text-[#8B5A2B]">
+              <Dog className="text-[#8B5A2B]" />
+              Dogs
+            </SelectItem>
+            <SelectItem value="cat" className="text-[#F5A623]">
+              <Cat className="text-[#F5A623]" />
+              Cats
+            </SelectItem>
           </SelectContent>
         </Select>
         <Button
-          variant="outline"
+          variant="destructive"
           onClick={() => {
             setSearchTerm('');
             setStatusFilter('all');
@@ -312,7 +362,30 @@ const AdoptionsPage = () => {
                 <TableRow>
                   <TableHead className="w-[200px]">Pet</TableHead>
                   <TableHead className="w-[200px]">Adopter</TableHead>
-                  <TableHead>Application Date</TableHead>
+                  <TableHead>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={toggleSort}
+                            className="flex items-center gap-2 hover:text-foreground transition-colors"
+                          >
+                            Application Date
+                            {sortOrder === null && <ArrowUpDown className="h-4 w-4" />}
+                            {sortOrder === 'asc' && <ArrowUp className="h-4 w-4" />}
+                            {sortOrder === 'desc' && <ArrowDown className="h-4 w-4" />}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            {sortOrder === null && 'Click to sort by newest'}
+                            {sortOrder === 'desc' && 'Sorted by newest - click for oldest'}
+                            {sortOrder === 'asc' && 'Sorted by oldest - click to clear'}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Household</TableHead>
@@ -437,7 +510,7 @@ const AdoptionsPage = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs cursor-pointer text-gray-700 hover:bg-gray-100"
+                            className="text-xs cursor-pointer bg-gray-800 text-white hover:bg-orange-400 hover:text-white"
                             onClick={() => {
                               router.push(`/adoptions/${adoption.id}`);
                             }}

@@ -456,7 +456,9 @@ const AdoptionPage = () => {
             Back to Adoptions
           </Button>
 
-          <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div
+            className={`rounded-lg p-3 border border-gray-200 shadow-sm ${adoption.status === 'PENDING' ? 'border-orange-400 bg-orange-50' : adoption.status === 'APPROVED' ? 'border-green-400 bg-green-50' : adoption.status === 'REJECTED' ? 'border-red-400 bg-red-50' : ''}`}
+          >
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
               <div>
                 <h1 className="text-lg font-semibold mb-0.5 text-gray-900">

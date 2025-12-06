@@ -200,7 +200,12 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
 
 <div class="row">
   <div class="label">Age:</div>
-  <div class="line">${adopterData?.user_identification?.date_of_birth ? calculateAge(adopterData.user_identification.date_of_birth) : ''}</div>
+  <div class="line">${adopterData?.user_identification?.date_of_birth ? `${calculateAge(adopterData.user_identification.date_of_birth)} years old` : 'Not provided'}</div>
+</div>
+
+<div class="row">
+  <div class="label">Date of Birth:</div>
+  <div class="line">${adopterData?.user_identification?.date_of_birth ? new Date(adopterData.user_identification.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not provided'}</div>
 </div>
 
 <div class="row">

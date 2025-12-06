@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableFilter, TableFilters } from '@/components/ui/table-filters';
-import { Edit, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Edit, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Pet } from '../config/types/pet';
 import { HappinessImageDisplay } from './HappinessImageDisplay';
@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface PetTableProps {
   pets: Pet[];
@@ -31,6 +32,10 @@ interface PetTableProps {
 export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const [sortConfig, setSortConfig] = useState<{
+    column: 'age' | 'size' | 'weight' | null;
+    order: 'asc' | 'desc';
+  }>({ column: null, order: 'desc' });
 
   // Generate filter options based on available data
   const filterOptions = useMemo(() => {
@@ -154,7 +159,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   };
   // Apply filters
   const filteredPets = useMemo(() => {
-    return pets.filter((pet) => {
+    let filtered = pets.filter((pet) => {
       // Search filter
       if (filterValues.search) {
         const searchTerm = filterValues.search.toLowerCase();
@@ -227,7 +232,58 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
 
       return true;
     });
-  }, [pets, filterValues]);
+
+    // Apply sorting
+    if (sortConfig.column) {
+      filtered = [...filtered].sort((a, b) => {
+        let compareA: number;
+        let compareB: number;
+
+        switch (sortConfig.column) {
+          case 'weight':
+            // Parse weight values, treating missing/invalid weights as 0
+            compareA = parseFloat(a.weight?.replace(/[^0-9.]/g, '') || '0');
+            compareB = parseFloat(b.weight?.replace(/[^0-9.]/g, '') || '0');
+            break;
+          case 'age':
+            // Parse age values and convert to months for accurate comparison
+            // "2 years" -> 24, "4 months" -> 4, "1 year" -> 12
+            const parseAgeToMonths = (age: string | null | undefined): number => {
+              if (!age) return 0;
+              const ageLower = age.toLowerCase();
+              const num = parseFloat(ageLower.replace(/[^0-9.]/g, '') || '0');
+
+              if (ageLower.includes('year')) {
+                return num * 12; // Convert years to months
+              } else if (ageLower.includes('month')) {
+                return num; // Already in months
+              } else if (ageLower.includes('week')) {
+                return num / 4; // Convert weeks to months (approximate)
+              } else if (ageLower.includes('day')) {
+                return num / 30; // Convert days to months (approximate)
+              }
+              return num * 12; // Default to years if no unit specified
+            };
+
+            compareA = parseAgeToMonths(a.age);
+            compareB = parseAgeToMonths(b.age);
+            break;
+          case 'size':
+            // Map size strings to numbers for comparison
+            const sizeOrder = { small: 1, medium: 2, large: 3, 'extra large': 4 };
+            compareA = sizeOrder[a.size?.toLowerCase() as keyof typeof sizeOrder] || 0;
+            compareB = sizeOrder[b.size?.toLowerCase() as keyof typeof sizeOrder] || 0;
+            break;
+          default:
+            return 0;
+        }
+
+        return sortConfig.order === 'asc' ? compareA - compareB : compareB - compareA;
+      });
+    }
+
+    return filtered;
+  }, [pets, filterValues, sortConfig]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -238,6 +294,20 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
         return 'destructive'; // red
       default:
         return 'outline'; // gray
+    }
+  };
+
+  const toggleSort = (column: 'age' | 'size' | 'weight') => {
+    if (sortConfig.column === column) {
+      // Same column - cycle through: desc -> asc -> null
+      if (sortConfig.order === 'desc') {
+        setSortConfig({ column, order: 'asc' });
+      } else {
+        setSortConfig({ column: null, order: 'desc' });
+      }
+    } else {
+      // New column - start with desc
+      setSortConfig({ column, order: 'desc' });
     }
   };
 
@@ -278,9 +348,102 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                 <TableHead>Type</TableHead>
                 <TableHead>Breed/Pattern</TableHead>
                 <TableHead>Gender</TableHead>
-                <TableHead>Age</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Weight</TableHead>
+                <TableHead>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => toggleSort('age')}
+                          className="flex items-center gap-2 hover:text-foreground transition-colors"
+                        >
+                          Age
+                          {sortConfig.column !== 'age' && <ArrowUpDown className="h-4 w-4" />}
+                          {sortConfig.column === 'age' && sortConfig.order === 'asc' && (
+                            <ArrowUp className="h-4 w-4" />
+                          )}
+                          {sortConfig.column === 'age' && sortConfig.order === 'desc' && (
+                            <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {sortConfig.column !== 'age' && 'Click to sort by oldest'}
+                          {sortConfig.column === 'age' &&
+                            sortConfig.order === 'desc' &&
+                            'Sorted by oldest - click for youngest'}
+                          {sortConfig.column === 'age' &&
+                            sortConfig.order === 'asc' &&
+                            'Sorted by youngest - click to clear'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
+                <TableHead>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => toggleSort('size')}
+                          className="flex items-center gap-2 hover:text-foreground transition-colors"
+                        >
+                          Size
+                          {sortConfig.column !== 'size' && <ArrowUpDown className="h-4 w-4" />}
+                          {sortConfig.column === 'size' && sortConfig.order === 'asc' && (
+                            <ArrowUp className="h-4 w-4" />
+                          )}
+                          {sortConfig.column === 'size' && sortConfig.order === 'desc' && (
+                            <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {sortConfig.column !== 'size' && 'Click to sort by largest'}
+                          {sortConfig.column === 'size' &&
+                            sortConfig.order === 'desc' &&
+                            'Sorted by largest - click for smallest'}
+                          {sortConfig.column === 'size' &&
+                            sortConfig.order === 'asc' &&
+                            'Sorted by smallest - click to clear'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
+                <TableHead>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => toggleSort('weight')}
+                          className="flex items-center gap-2 hover:text-foreground transition-colors"
+                        >
+                          Weight
+                          {sortConfig.column !== 'weight' && <ArrowUpDown className="h-4 w-4" />}
+                          {sortConfig.column === 'weight' && sortConfig.order === 'asc' && (
+                            <ArrowUp className="h-4 w-4" />
+                          )}
+                          {sortConfig.column === 'weight' && sortConfig.order === 'desc' && (
+                            <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {sortConfig.column !== 'weight' && 'Click to sort by heaviest'}
+                          {sortConfig.column === 'weight' &&
+                            sortConfig.order === 'desc' &&
+                            'Sorted by heaviest - click for lightest'}
+                          {sortConfig.column === 'weight' &&
+                            sortConfig.order === 'asc' &&
+                            'Sorted by lightest - click to clear'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 <TableHead>Request Status</TableHead>
                 <TableHead>Vaccination Status</TableHead>
                 <TableHead>Spayed/Neutered</TableHead>
