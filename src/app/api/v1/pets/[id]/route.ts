@@ -1,9 +1,10 @@
 import { supabase } from '@/app/supabase/supabase';
 import { updatePetSchema } from '@/config/schema/petSchema';
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: number }> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await supabase.from('pets').delete().eq('id', id);
+  const petId = parseInt(id, 10);
+  const { error } = await supabase.from('pets').delete().eq('id', petId);
   console.log(req.url);
 
   if (error) {
@@ -26,10 +27,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: n
   );
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: number }> }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const petId = parseInt(id, 10);
   console.log('=== PET UPDATE START ===');
-  console.log('📝 Updating pet ID:', id);
+  console.log('📝 Updating pet ID:', petId);
 
   const contentType = req.headers.get('content-type');
   const isMultipart = contentType?.includes('multipart/form-data');
@@ -192,7 +194,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
   const { data: updatedPet, error } = await supabase
     .from('pets')
     .update(petUpdateData)
-    .eq('id', id)
+    .eq('id', petId)
     .select()
     .single();
 
