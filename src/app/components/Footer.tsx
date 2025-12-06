@@ -7,7 +7,7 @@ const Footer = () => {
     <footer className="flex flex-row gap-[32px] p-[16px] justify-center text-gray-900 py-8 transition-all">
       <div className="flex flex-col items-center gap-[8px] md:bg-gray-100 md:p-4 md:rounded-[8px]">
         <p className="font-bold text-md">Download PawsConnect!</p>
-        <QRCodeWithLogo text="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk" />
+        <QRCodeWithLogo text="https://kylereginaldo.itch.io/pawsconnect" />
       </div>
       <div className="flex flex-col md:flex-row gap-[32px]">
         <div className="flex flex-col gap-[8px]">

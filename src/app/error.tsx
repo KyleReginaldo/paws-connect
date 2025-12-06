@@ -29,10 +29,7 @@ export default function AppDownloadPage() {
           {/* Download Button */}
           <div className="flex justify-center pt-4">
             <Button asChild size="lg" className="bg-black hover:bg-orange-800">
-              <Link
-                href="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk"
-                target="_blank"
-              >
+              <Link href="https://kylereginaldo.itch.io/pawsconnect" target="_blank">
                 <Image
                   src={android}
                   alt="Android Logo"

@@ -12,8 +12,7 @@ import Link from 'next/link';
 import downloadNow from '../../../../../../public/download-now.png';
 
 export default function AppDownloadPage() {
-  const downloadUrl =
-    'https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk';
+  const downloadUrl = 'https://kylereginaldo.itch.io/pawsconnect';
   const requirements = [
     {
       icon: IdCard,
@@ -97,7 +96,7 @@ export default function AppDownloadPage() {
     //           <div className="flex justify-center pt-4">
     //             <Button asChild size="lg" className="bg-black hover:bg-orange-800">
     //               <Link
-    //                 href="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk"
+    //                 href="https://kylereginaldo.itch.io/pawsconnect"
     //                 target="_blank"
     //               >
     //                 <Image

@@ -86,7 +86,7 @@ export default function HomePage() {
                   <Mail /> Get In Touch
                 </Button>
               </Link>
-              <Link href="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk">
+              <Link href="https://kylereginaldo.itch.io/pawsconnect">
                 <Button
                   variant="default"
                   className="bg-teal-500 hover:bg-white/10 w-full xs:w-auto"
