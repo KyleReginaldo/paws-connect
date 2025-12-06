@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -27,6 +28,15 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/api/**',
       },
+    ],
+  },
+  // Optimize bundle size
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'recharts',
+      'date-fns',
     ],
   },
   // Ensure proper 404 handling
