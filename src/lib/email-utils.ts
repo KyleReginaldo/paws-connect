@@ -33,7 +33,7 @@ export async function sendStatusChangeEmail(
 
     // Send mail directly using nodemailer
     const info = await transporter.sendMail({
-      from: `"Paws Connect Support" <pawsconnecttof@gmail.com>`,
+      from: `"PawsConnect Support" <pawsconnecttof@gmail.com>`,
       to: userEmail,
       subject,
       html,

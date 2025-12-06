@@ -306,21 +306,24 @@ const Page = () => {
       const filteredAdoptions = filterByDateRange(adoptions);
       const filteredUsers = filterByDateRange(allUsers);
       const filteredDonations = filterByDateRange(donations);
+      const filteredCampaigns = filterByDateRange(fundraisingCampaigns);
 
       // Use filtered data for calculations
       const reportPets = filteredPets.length > 0 ? filteredPets : pets;
       const reportAdoptions = filteredAdoptions.length > 0 ? filteredAdoptions : adoptions;
       const reportUsers = filteredUsers.length > 0 ? filteredUsers : allUsers;
       const reportDonations = filteredDonations.length > 0 ? filteredDonations : donations;
+      const reportCampaigns =
+        filteredCampaigns.length > 0 ? filteredCampaigns : fundraisingCampaigns;
 
       // Create PDF document
       const doc = new jsPDF();
 
-      // Define colors
-      const primaryColor: [number, number, number] = [255, 167, 38];
-      const secondaryColor: [number, number, number] = [255, 204, 128];
-      const textColor: [number, number, number] = [51, 51, 51];
-      const lightBg: [number, number, number] = [255, 250, 245];
+      // Define colors - Black and White
+      const primaryColor: [number, number, number] = [0, 0, 0];
+      const secondaryColor: [number, number, number] = [128, 128, 128];
+      const textColor: [number, number, number] = [0, 0, 0];
+      const lightBg: [number, number, number] = [245, 245, 245];
 
       // Helper function to add page header
       const addPageHeader = (title: string, pageNum: number) => {
@@ -340,54 +343,30 @@ const Page = () => {
       // ===========================================
       // PAGE 1: COVER PAGE
       // ===========================================
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, 210, 297, 'F');
 
-      // Logo/Title section
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(40);
+      // Header
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('PAWS CONNECT', 105, 100, { align: 'center' });
+      doc.text('PawsConnect Analytics Report', 20, 30);
 
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'normal');
-      const reportTitle = selectedDateRange?.from
-        ? `Dashboard Analytics Report\n${format(selectedDateRange.from, 'MMM dd, yyyy')}${selectedDateRange.to ? ` - ${format(selectedDateRange.to, 'MMM dd, yyyy')}` : ''}`
-        : 'Dashboard Analytics Report';
-      doc.text(reportTitle, 105, 120, { align: 'center' });
-
-      // Decorative line
-      doc.setDrawColor(255, 255, 255);
-      doc.setLineWidth(0.5);
-      doc.line(55, 135, 155, 135);
-
-      // Report details
-      doc.setFontSize(14);
-      doc.text(
-        `Generated: ${new Date().toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })}`,
-        105,
-        155,
-        { align: 'center' },
-      );
-
-      doc.text(`Time: ${new Date().toLocaleTimeString()}`, 105, 170, { align: 'center' });
-
-      // Key metrics preview box
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(30, 190, 150, 70, 3, 3, 'F');
-
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Report Summary', 105, 205, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
+      // Date range info
+      const dateRangeText = selectedDateRange?.from
+        ? `Period: ${format(selectedDateRange.from, 'MMM dd, yyyy')}${selectedDateRange.to ? ` - ${format(selectedDateRange.to, 'MMM dd, yyyy')}` : ''}`
+        : 'Period: All Time';
       doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(dateRangeText, 20, 40);
+
+      // Thin divider line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(20, 48, 190, 48);
+
+      // Metrics grid
       const totalPets = reportPets.length;
       const totalUsers = reportUsers.length;
       const totalDonations = reportDonations.reduce(
@@ -396,10 +375,51 @@ const Page = () => {
       );
       const totalAdoptions = reportAdoptions.length;
 
-      doc.text(`Total Pets: ${totalPets}`, 40, 220);
-      doc.text(`Total Users: ${totalUsers}`, 40, 230);
-      doc.text(`Total Adoptions: ${totalAdoptions}`, 40, 240);
-      doc.text(`Fundraising: ${totalDonations.toLocaleString()}`, 40, 250);
+      // Metric boxes
+      const metricY = 70;
+      const metrics = [
+        { label: 'TOTAL PETS', value: totalPets.toString() },
+        { label: 'ADOPTIONS', value: totalAdoptions.toString() },
+        { label: 'NEW USERS', value: totalUsers.toString() },
+        { label: 'FUNDS RAISED', value: `${totalDonations.toLocaleString()}` },
+      ];
+
+      metrics.forEach((metric, index) => {
+        const xPos = 20 + (index % 2) * 90;
+        const yPos = metricY + Math.floor(index / 2) * 40;
+
+        // Metric value
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text(metric.value, xPos, yPos);
+
+        // Metric label
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(120, 120, 120);
+        doc.text(metric.label, xPos, yPos + 7);
+      });
+
+      // Footer with generation info
+      const coverFooterY = 270;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(20, coverFooterY, 190, coverFooterY);
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'normal');
+      const genDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+      const genTime = new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      doc.text(`Generated on ${genDate} at ${genTime}`, 20, coverFooterY + 6);
 
       // ===========================================
       // PAGE 2: EXECUTIVE DASHBOARD
@@ -410,31 +430,42 @@ const Page = () => {
       const successfulAdoptions = reportAdoptions.filter(
         (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
       ).length;
-      const pendingAdoptions = adoptions.filter(
+      const pendingAdoptions = reportAdoptions.filter(
         (a: { status?: string }) => a.status === 'PENDING',
       ).length;
       const adoptionRate =
-        adoptions.length > 0 ? ((successfulAdoptions / adoptions.length) * 100).toFixed(1) : '0';
-      const activeCampaigns = fundraisingCampaigns.filter(
+        totalAdoptions > 0 ? ((successfulAdoptions / totalAdoptions) * 100).toFixed(1) : '0';
+      const activeCampaigns = reportCampaigns.filter(
         (c: { status?: string }) => c.status === 'ONGOING',
       ).length;
-      const availablePets = pets.filter(
+
+      // Calculate available pets within date range (approved but not adopted)
+      const allAvailablePets = reportPets.filter(
         (p: { request_status?: string }) => p.request_status === 'approved',
+      ).length;
+
+      // Calculate adopted pets in the date range by checking adoption records
+      const adoptedPetsInRange = reportAdoptions.filter(
+        (a: { status?: string }) => a.status === 'APPROVED' || a.status === 'COMPLETED',
+      ).length;
+
+      // Calculate verified users in date range
+      const verifiedUsersInRange = reportUsers.filter(
+        (u: { status?: string }) => u.status === 'FULLY_VERIFIED',
       ).length;
 
       const executiveSummary = [
         ['Metric', 'Value', 'Status'],
-        ['Total Pets in System', totalPets.toString(), availablePets + ' Available'],
-        ['Total Adoption Applications', totalAdoptions.toString(), pendingAdoptions + ' Pending'],
-        ['Successful Adoptions', successfulAdoptions.toString(), adoptionRate + '% Success Rate'],
+        ['Total Pets', totalPets.toString(), allAvailablePets + ' Available'],
+        ['Adoption Applications', totalAdoptions.toString(), pendingAdoptions + ' Pending'],
+        ['Adopted Pets', adoptedPetsInRange.toString(), adoptionRate + '% Success Rate'],
+        ['Total Registered Users', totalUsers.toString(), verifiedUsersInRange + ' Verified'],
+        ['Active Campaigns', activeCampaigns.toString(), reportCampaigns.length + ' Total'],
         [
-          'Total Registered Users',
-          totalUsers.toString(),
-          allUsers.filter((u: { status?: string }) => u.status === 'FULLY_VERIFIED').length +
-            ' Verified',
+          'Total Funds Raised',
+          totalDonations.toLocaleString(),
+          reportDonations.length + ' Donations',
         ],
-        ['Active Campaigns', activeCampaigns.toString(), fundraisingCampaigns.length + ' Total'],
-        ['Total Funds Raised', totalDonations.toLocaleString(), donations.length + ' Donations'],
       ];
 
       autoTable(doc, {
@@ -447,19 +478,20 @@ const Page = () => {
           textColor: [255, 255, 255],
           fontSize: 11,
           fontStyle: 'bold',
-          halign: 'left',
+          halign: 'center',
         },
         bodyStyles: {
           fontSize: 10,
           textColor: textColor,
+          halign: 'center',
         },
         alternateRowStyles: {
           fillColor: lightBg,
         },
         columnStyles: {
           0: { cellWidth: 70, fontStyle: 'bold' },
-          1: { cellWidth: 50, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
-          2: { cellWidth: 60, halign: 'right', fontSize: 9 },
+          1: { cellWidth: 50, fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60, fontSize: 9 },
         },
         margin: { left: 15, right: 15 },
       });
@@ -481,33 +513,42 @@ const Page = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Total Pets', 42.5, 53, { align: 'center' });
       doc.text('Available', 102.5, 53, { align: 'center' });
-      doc.text('Adopted', 165, 53, { align: 'center' });
+      doc.text('Adopted in Range', 165, 53, { align: 'center' });
 
       doc.setFontSize(18);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text(totalPets.toString(), 42.5, 65, { align: 'center' });
-      doc.text(availablePets.toString(), 102.5, 65, { align: 'center' });
-      doc.text(
-        pets
-          .filter((p: { request_status?: string }) => p.request_status === 'adopted')
-          .length.toString(),
-        165,
-        65,
-        { align: 'center' },
-      );
+      doc.text(allAvailablePets.toString(), 102.5, 65, { align: 'center' });
+      doc.text(adoptedPetsInRange.toString(), 165, 65, { align: 'center' });
 
-      // Pet breakdown by type
-      const dogs = pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'dog').length;
-      const cats = pets.filter((p: { type?: string }) => p.type?.toLowerCase() === 'cat').length;
-      const others = pets.filter(
+      // Pet breakdown by type (from reportPets)
+      const dogs = reportPets.filter(
+        (p: { type?: string }) => p.type?.toLowerCase() === 'dog',
+      ).length;
+      const cats = reportPets.filter(
+        (p: { type?: string }) => p.type?.toLowerCase() === 'cat',
+      ).length;
+      const others = reportPets.filter(
         (p: { type?: string }) => p.type && !['dog', 'cat'].includes(p.type.toLowerCase()),
       ).length;
 
       const petBreakdown = [
         ['Category', 'Count', 'Percentage'],
-        ['Dogs', dogs.toString(), ((dogs / totalPets) * 100).toFixed(1) + '%'],
-        ['Cats', cats.toString(), ((cats / totalPets) * 100).toFixed(1) + '%'],
-        ['Others', others.toString(), ((others / totalPets) * 100).toFixed(1) + '%'],
+        [
+          'Dogs',
+          dogs.toString(),
+          totalPets > 0 ? ((dogs / totalPets) * 100).toFixed(1) + '%' : '0%',
+        ],
+        [
+          'Cats',
+          cats.toString(),
+          totalPets > 0 ? ((cats / totalPets) * 100).toFixed(1) + '%' : '0%',
+        ],
+        [
+          'Others',
+          others.toString(),
+          totalPets > 0 ? ((others / totalPets) * 100).toFixed(1) + '%' : '0%',
+        ],
       ];
 
       autoTable(doc, {
@@ -515,42 +556,42 @@ const Page = () => {
         body: petBreakdown.slice(1),
         startY: 80,
         theme: 'grid',
-        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 10 },
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 10, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 60 },
-          1: { cellWidth: 60, halign: 'center', fontStyle: 'bold' },
-          2: { cellWidth: 60, halign: 'center' },
+          1: { cellWidth: 60, fontStyle: 'bold' },
+          2: { cellWidth: 60 },
         },
         margin: { left: 15, right: 15 },
       });
 
-      // Pet by size
+      // Pet by size (from reportPets)
       const petBySize = [
         ['Size', 'Count', 'Status Distribution'],
         [
           'Small',
-          pets.filter((p: { size?: string }) => p.size === 'small').length.toString(),
-          pets.filter(
+          reportPets.filter((p: { size?: string }) => p.size === 'small').length.toString(),
+          reportPets.filter(
             (p: { size?: string; request_status?: string }) =>
               p.size === 'small' && p.request_status === 'approved',
-          ).length + ' available',
+          ).length + ' approved',
         ],
         [
           'Medium',
-          pets.filter((p: { size?: string }) => p.size === 'medium').length.toString(),
-          pets.filter(
+          reportPets.filter((p: { size?: string }) => p.size === 'medium').length.toString(),
+          reportPets.filter(
             (p: { size?: string; request_status?: string }) =>
               p.size === 'medium' && p.request_status === 'approved',
-          ).length + ' available',
+          ).length + ' approved',
         ],
         [
           'Large',
-          pets.filter((p: { size?: string }) => p.size === 'large').length.toString(),
-          pets.filter(
+          reportPets.filter((p: { size?: string }) => p.size === 'large').length.toString(),
+          reportPets.filter(
             (p: { size?: string; request_status?: string }) =>
               p.size === 'large' && p.request_status === 'approved',
-          ).length + ' available',
+          ).length + ' approved',
         ],
       ];
 
@@ -565,20 +606,23 @@ const Page = () => {
           textColor: textColor,
           fontSize: 10,
           fontStyle: 'bold',
+          halign: 'center',
         },
-        bodyStyles: { fontSize: 9 },
+        bodyStyles: { fontSize: 9, halign: 'center' },
         alternateRowStyles: { fillColor: lightBg },
         columnStyles: {
           0: { cellWidth: 50, fontStyle: 'bold' },
-          1: { cellWidth: 40, halign: 'center' },
-          2: { cellWidth: 90, halign: 'right', fontSize: 8 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 90, fontSize: 8 },
         },
         margin: { left: 15, right: 15 },
       });
 
-      // Health status summary
-      const vaccinated = pets.filter((p: { is_vaccinated?: boolean }) => p.is_vaccinated).length;
-      const spayedNeutered = pets.filter(
+      // Health status summary (from reportPets)
+      const vaccinated = reportPets.filter(
+        (p: { is_vaccinated?: boolean }) => p.is_vaccinated,
+      ).length;
+      const spayedNeutered = reportPets.filter(
         (p: { is_spayed_or_neutured?: boolean }) => p.is_spayed_or_neutured,
       ).length;
 
@@ -587,12 +631,12 @@ const Page = () => {
         [
           'Vaccinated Pets',
           vaccinated.toString(),
-          ((vaccinated / totalPets) * 100).toFixed(1) + '%',
+          totalPets > 0 ? ((vaccinated / totalPets) * 100).toFixed(1) + '%' : '0%',
         ],
         [
           'Spayed/Neutered',
           spayedNeutered.toString(),
-          ((spayedNeutered / totalPets) * 100).toFixed(1) + '%',
+          totalPets > 0 ? ((spayedNeutered / totalPets) * 100).toFixed(1) + '%' : '0%',
         ],
       ];
 
@@ -602,12 +646,12 @@ const Page = () => {
         startY:
           (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10,
         theme: 'grid',
-        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 9 },
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 9, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 70, fontStyle: 'bold' },
-          1: { cellWidth: 50, halign: 'center' },
-          2: { cellWidth: 60, halign: 'center' },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 60 },
         },
         margin: { left: 15, right: 15 },
       });
@@ -618,38 +662,49 @@ const Page = () => {
       doc.addPage();
       addPageHeader('Adoption Analytics', 4);
 
-      // Adoption status breakdown
-      const approvedAdoptions = adoptions.filter(
+      // Adoption status breakdown (from reportAdoptions)
+      const approvedAdoptionsInRange = reportAdoptions.filter(
         (a: { status?: string }) => a.status === 'APPROVED',
       ).length;
-      const completedAdoptions = adoptions.filter(
+      const completedAdoptionsInRange = reportAdoptions.filter(
         (a: { status?: string }) => a.status === 'COMPLETED',
       ).length;
-      const rejectedAdoptions = adoptions.filter(
+      const rejectedAdoptionsInRange = reportAdoptions.filter(
         (a: { status?: string }) => a.status === 'REJECTED',
+      ).length;
+      const pendingAdoptionsInRange = reportAdoptions.filter(
+        (a: { status?: string }) => a.status === 'PENDING',
       ).length;
 
       const adoptionStatus = [
         ['Status', 'Count', 'Percentage'],
         [
           'Approved',
-          approvedAdoptions.toString(),
-          ((approvedAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+          approvedAdoptionsInRange.toString(),
+          totalAdoptions > 0
+            ? ((approvedAdoptionsInRange / totalAdoptions) * 100).toFixed(1) + '%'
+            : '0%',
         ],
         [
           'Completed',
-          completedAdoptions.toString(),
-          ((completedAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+          completedAdoptionsInRange.toString(),
+          totalAdoptions > 0
+            ? ((completedAdoptionsInRange / totalAdoptions) * 100).toFixed(1) + '%'
+            : '0%',
         ],
         [
           'Pending',
-          pendingAdoptions.toString(),
-          ((pendingAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+          pendingAdoptionsInRange.toString(),
+          totalAdoptions > 0
+            ? ((pendingAdoptionsInRange / totalAdoptions) * 100).toFixed(1) + '%'
+            : '0%',
         ],
         [
           'Rejected',
-          rejectedAdoptions.toString(),
-          ((rejectedAdoptions / totalAdoptions) * 100).toFixed(1) + '%',
+          rejectedAdoptionsInRange.toString(),
+          totalAdoptions > 0
+            ? ((rejectedAdoptionsInRange / totalAdoptions) * 100).toFixed(1) + '%'
+            : '0%',
         ],
         ['Total Applications', totalAdoptions.toString(), '100%'],
       ];
@@ -659,19 +714,19 @@ const Page = () => {
         body: adoptionStatus.slice(1),
         startY: 45,
         theme: 'striped',
-        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 10 },
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 10, halign: 'center' },
         alternateRowStyles: { fillColor: lightBg },
         columnStyles: {
           0: { cellWidth: 70, fontStyle: 'bold' },
-          1: { cellWidth: 50, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
-          2: { cellWidth: 60, halign: 'center' },
+          1: { cellWidth: 50, fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60 },
         },
         margin: { left: 15, right: 15 },
       });
 
-      // Recent adoptions table
-      const recentAdoptions = adoptions
+      // Recent adoptions table (from reportAdoptions)
+      const recentAdoptions = reportAdoptions
         .sort(
           (a: { created_at?: string }, b: { created_at?: string }) =>
             new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime(),
@@ -706,15 +761,16 @@ const Page = () => {
           textColor: textColor,
           fontSize: 9,
           fontStyle: 'bold',
+          halign: 'center',
         },
-        bodyStyles: { fontSize: 8 },
+        bodyStyles: { fontSize: 8, halign: 'center' },
         columnStyles: {
-          0: { cellWidth: 15, halign: 'center' },
+          0: { cellWidth: 15 },
           1: { cellWidth: 25 },
           2: { cellWidth: 35 },
           3: { cellWidth: 25 },
           4: { cellWidth: 40 },
-          5: { cellWidth: 30, halign: 'center', fontSize: 7 },
+          5: { cellWidth: 30, fontSize: 7 },
         },
         margin: { left: 15, right: 15 },
       });
@@ -725,18 +781,18 @@ const Page = () => {
       doc.addPage();
       addPageHeader('Fundraising & Donations Analytics', 5);
 
-      // Campaign summary
-      const completedCampaigns = fundraisingCampaigns.filter(
+      // Campaign summary (using reportCampaigns and reportDonations)
+      const completedCampaigns = reportCampaigns.filter(
         (c: { status?: string }) => c.status === 'COMPLETED',
       ).length;
-      const pendingCampaigns = fundraisingCampaigns.filter(
+      const pendingCampaigns = reportCampaigns.filter(
         (c: { status?: string }) => c.status === 'PENDING',
       ).length;
-      const totalTarget = fundraisingCampaigns.reduce(
+      const totalTarget = reportCampaigns.reduce(
         (sum: number, c: { target_amount?: number }) => sum + (c.target_amount || 0),
         0,
       );
-      const totalRaised = fundraisingCampaigns.reduce(
+      const totalRaised = reportCampaigns.reduce(
         (sum: number, c: { raised_amount?: number }) => sum + (c.raised_amount || 0),
         0,
       );
@@ -745,16 +801,22 @@ const Page = () => {
 
       const campaignSummary = [
         ['Metric', 'Value', 'Details'],
-        ['Total Campaigns', fundraisingCampaigns.length.toString(), activeCampaigns + ' Active'],
+        ['Total Campaigns', reportCampaigns.length.toString(), activeCampaigns + ' Active'],
         ['Completed Campaigns', completedCampaigns.toString(), pendingCampaigns + ' Pending'],
         ['Total Target Amount', totalTarget.toLocaleString(), 'Combined goal'],
         ['Total Raised', totalRaised.toLocaleString(), overallProgress + '% of target'],
         [
           'Total Donations',
-          donations.length.toString(),
-          'From ' + new Set(donations.map((d: { donor?: number }) => d.donor)).size + ' donors',
+          reportDonations.length.toString(),
+          'From ' +
+            new Set(reportDonations.map((d: { donor?: number }) => d.donor)).size +
+            ' donors',
         ],
-        ['Average Donation', (totalRaised / donations.length).toFixed(2), 'Per transaction'],
+        [
+          'Average Donation',
+          reportDonations.length > 0 ? (totalRaised / reportDonations.length).toFixed(2) : '0',
+          'Per transaction',
+        ],
       ];
 
       autoTable(doc, {
@@ -762,19 +824,19 @@ const Page = () => {
         body: campaignSummary.slice(1),
         startY: 45,
         theme: 'striped',
-        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 9 },
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 9, halign: 'center' },
         alternateRowStyles: { fillColor: lightBg },
         columnStyles: {
           0: { cellWidth: 70, fontStyle: 'bold' },
-          1: { cellWidth: 50, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
-          2: { cellWidth: 60, halign: 'right', fontSize: 8 },
+          1: { cellWidth: 50, fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60, fontSize: 8 },
         },
         margin: { left: 15, right: 15 },
       });
 
-      // Top campaigns
-      const topCampaigns = fundraisingCampaigns
+      // Top campaigns (using reportCampaigns)
+      const topCampaigns = reportCampaigns
         .sort(
           (a: { raised_amount?: number }, b: { raised_amount?: number }) =>
             (b.raised_amount || 0) - (a.raised_amount || 0),
@@ -792,7 +854,7 @@ const Page = () => {
           const progress = c.target_amount
             ? (((c.raised_amount || 0) / c.target_amount) * 100).toFixed(0)
             : '0';
-          const donationCount = donations.filter(
+          const donationCount = reportDonations.filter(
             (d: { fundraising?: number }) => d.fundraising === c.id,
           ).length;
           return [
@@ -818,16 +880,17 @@ const Page = () => {
           textColor: textColor,
           fontSize: 8,
           fontStyle: 'bold',
+          halign: 'center',
         },
-        bodyStyles: { fontSize: 7 },
+        bodyStyles: { fontSize: 7, halign: 'center' },
         columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
+          0: { cellWidth: 12 },
           1: { cellWidth: 60 },
-          2: { cellWidth: 22, halign: 'center', fontSize: 6 },
-          3: { cellWidth: 25, halign: 'right' },
-          4: { cellWidth: 25, halign: 'right' },
-          5: { cellWidth: 18, halign: 'center' },
-          6: { cellWidth: 18, halign: 'center' },
+          2: { cellWidth: 22, fontSize: 6 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 18 },
+          6: { cellWidth: 18 },
         },
         margin: { left: 15, right: 15 },
       });
@@ -838,18 +901,18 @@ const Page = () => {
       doc.addPage();
       addPageHeader('User Analytics', 6);
 
-      // User status breakdown
-      const fullyVerified = allUsers.filter(
+      // User status breakdown (using reportUsers)
+      const fullyVerified = reportUsers.filter(
         (u: { status?: string }) => u.status === 'FULLY_VERIFIED',
       ).length;
-      const semiVerified = allUsers.filter(
+      const semiVerified = reportUsers.filter(
         (u: { status?: string }) => u.status === 'SEMI_VERIFIED',
       ).length;
-      const pendingUsers = allUsers.filter(
+      const pendingUsersInRange = reportUsers.filter(
         (u: { status?: string }) => u.status === 'PENDING',
       ).length;
-      const admins = allUsers.filter((u: { role?: number }) => u.role === 1).length;
-      const customers = allUsers.filter((u: { role?: number }) => u.role === 3).length;
+      const admins = reportUsers.filter((u: { role?: number }) => u.role === 1).length;
+      const customers = reportUsers.filter((u: { role?: number }) => u.role === 3).length;
 
       const userStats = [
         ['Category', 'Count', 'Percentage'],
@@ -857,20 +920,28 @@ const Page = () => {
         [
           'Fully Verified',
           fullyVerified.toString(),
-          ((fullyVerified / totalUsers) * 100).toFixed(1) + '%',
+          totalUsers > 0 ? ((fullyVerified / totalUsers) * 100).toFixed(1) + '%' : '0%',
         ],
         [
           'Semi Verified',
           semiVerified.toString(),
-          ((semiVerified / totalUsers) * 100).toFixed(1) + '%',
+          totalUsers > 0 ? ((semiVerified / totalUsers) * 100).toFixed(1) + '%' : '0%',
         ],
         [
           'Pending Verification',
-          pendingUsers.toString(),
-          ((pendingUsers / totalUsers) * 100).toFixed(1) + '%',
+          pendingUsersInRange.toString(),
+          totalUsers > 0 ? ((pendingUsersInRange / totalUsers) * 100).toFixed(1) + '%' : '0%',
         ],
-        ['Administrators', admins.toString(), ((admins / totalUsers) * 100).toFixed(1) + '%'],
-        ['Regular Users', customers.toString(), ((customers / totalUsers) * 100).toFixed(1) + '%'],
+        [
+          'Administrators',
+          admins.toString(),
+          totalUsers > 0 ? ((admins / totalUsers) * 100).toFixed(1) + '%' : '0%',
+        ],
+        [
+          'Regular Users',
+          customers.toString(),
+          totalUsers > 0 ? ((customers / totalUsers) * 100).toFixed(1) + '%' : '0%',
+        ],
       ];
 
       autoTable(doc, {
@@ -878,23 +949,19 @@ const Page = () => {
         body: userStats.slice(1),
         startY: 45,
         theme: 'striped',
-        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 10 },
+        headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { fontSize: 10, halign: 'center' },
         alternateRowStyles: { fillColor: lightBg },
         columnStyles: {
           0: { cellWidth: 80, fontStyle: 'bold' },
-          1: { cellWidth: 40, halign: 'center', fontStyle: 'bold', textColor: primaryColor },
-          2: { cellWidth: 60, halign: 'center' },
+          1: { cellWidth: 40, fontStyle: 'bold', textColor: primaryColor },
+          2: { cellWidth: 60 },
         },
         margin: { left: 15, right: 15 },
       });
 
-      // Recent registrations (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const recentUsers = allUsers
-        .filter((u: { created_at?: string }) => new Date(u.created_at || '') >= thirtyDaysAgo)
+      // Recent users in date range (using reportUsers)
+      const recentUsers = reportUsers
         .sort(
           (a: { created_at?: string }, b: { created_at?: string }) =>
             new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime(),
@@ -939,89 +1006,36 @@ const Page = () => {
           textColor: textColor,
           fontSize: 8,
           fontStyle: 'bold',
+          halign: 'center',
         },
-        bodyStyles: { fontSize: 7 },
+        bodyStyles: { fontSize: 7, halign: 'center' },
         columnStyles: {
-          0: { cellWidth: 15, halign: 'center' },
+          0: { cellWidth: 15 },
           1: { cellWidth: 35 },
           2: { cellWidth: 45 },
           3: { cellWidth: 25 },
-          4: { cellWidth: 30, halign: 'center', fontSize: 6 },
-          5: { cellWidth: 20, halign: 'center' },
+          4: { cellWidth: 30, fontSize: 6 },
+          5: { cellWidth: 20 },
         },
         margin: { left: 15, right: 15 },
       });
 
-      // ===========================================
-      // PAGE 7: REPORT SUMMARY & INSIGHTS
-      // ===========================================
-      doc.addPage();
-      addPageHeader('Key Insights & Recommendations', 7);
+      // Report footer on Page 6
+      const footerY =
+        (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 30;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(15, footerY, 195, footerY);
 
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-
-      // Key insights section
-      let yPosition = 50;
-      doc.text('Key Performance Indicators', 15, yPosition);
-
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      yPosition += 10;
-
-      const insights = [
-        `• Pet Adoption Success Rate: ${adoptionRate}% (${successfulAdoptions} of ${totalAdoptions} applications)`,
-        `• Average pets per type: Dogs (${dogs}), Cats (${cats}), Others (${others})`,
-        `• Fundraising effectiveness: ${overallProgress}% of total target achieved`,
-        `• User verification rate: ${((fullyVerified / totalUsers) * 100).toFixed(1)}% fully verified`,
-        `• Average donation amount: ${(totalRaised / donations.length).toFixed(2)} per transaction`,
-        `• Pet health compliance: ${((vaccinated / totalPets) * 100).toFixed(1)}% vaccinated, ${((spayedNeutered / totalPets) * 100).toFixed(1)}% spayed/neutered`,
-      ];
-
-      insights.forEach((insight) => {
-        doc.text(insight, 20, yPosition);
-        yPosition += 8;
-      });
-
-      yPosition += 10;
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Recommendations', 15, yPosition);
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      yPosition += 10;
-
-      const recommendations = [
-        `• Focus on pending adoptions: ${pendingAdoptions} applications need review`,
-        `• Promote campaigns: ${activeCampaigns} active campaigns could benefit from marketing`,
-        `• Verify users: ${pendingUsers} users are waiting for verification`,
-        `• Update pet health records: Ensure all ${totalPets} pets have current health information`,
-        `• Engage donors: ${new Set(donations.map((d: { donor?: number }) => d.donor)).size} unique donors could be thanked personally`,
-      ];
-
-      recommendations.forEach((rec) => {
-        const lines = doc.splitTextToSize(rec, 175);
-        lines.forEach((line: string) => {
-          doc.text(line, 20, yPosition);
-          yPosition += 7;
-        });
-        yPosition += 3;
-      });
-
-      // Report footer
-      yPosition += 20;
-      doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
-      doc.roundedRect(15, yPosition, 180, 40, 2, 2, 'F');
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Report Generated By:', 25, yPosition + 12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('PAWS Connect Dashboard System', 25, yPosition + 20);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, 25, yPosition + 28);
-      doc.text(`Time: ${new Date().toLocaleTimeString()}`, 25, yPosition + 36);
+      doc.text('PawsConnect Dashboard System', 15, footerY + 8);
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
+        15,
+        footerY + 14,
+      );
 
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
@@ -1031,9 +1045,9 @@ const Page = () => {
       doc.save(filename);
 
       success(
-        'Report Generated Successfully',
-        `Comprehensive dashboard report with ${doc.internal.getNumberOfPages()} pages has been downloaded`,
-        8000,
+        'Report Generated',
+        `Report with ${doc.internal.getNumberOfPages()} pages has been downloaded successfully`,
+        6000,
       );
     } catch (err) {
       console.error('Report generation failed:', err);

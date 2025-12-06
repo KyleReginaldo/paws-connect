@@ -5,16 +5,15 @@
 import Image from 'next/image';
 // import Link from 'next/link';
 // import android from '../../../../../../public/android.png';
-// import playstore from '../../../../../../public/playstore.png';
+import QRCodeWithLogo from '@/components/QRCodeWithLogo';
 import { Button } from '@/components/ui/button';
 import { BadgeCheck, IdCard, Smartphone } from 'lucide-react';
-import { useQRCode } from 'next-qrcode';
 import Link from 'next/link';
 import downloadNow from '../../../../../../public/download-now.png';
+
 export default function AppDownloadPage() {
   const downloadUrl =
     'https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk';
-  const { SVG } = useQRCode();
   const requirements = [
     {
       icon: IdCard,
@@ -51,22 +50,8 @@ export default function AppDownloadPage() {
               Get Started
             </Button>
           </Link>
-          <h4 className="font-bold">DOWNLOAD THE PAWS CONNECT APP</h4>
-          <div className="bg-white w-fit p-[8px]">
-            <SVG
-              text={
-                'https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/apk/pawsconnect/v1/pawsconnect.apk'
-              }
-              options={{
-                margin: 1,
-                width: 120,
-                color: {
-                  dark: '#000000',
-                  light: '#FFFFFF',
-                },
-              }}
-            />
-          </div>
+          <h4 className="font-bold">DOWNLOAD THE PawsConnect APP</h4>
+          <QRCodeWithLogo text={downloadUrl} />
         </div>
       </div>
       <div className="bg-white flex flex-col items-center pt-16 mb-[100px]">
@@ -101,9 +86,9 @@ export default function AppDownloadPage() {
 
     //           {/* Title & Subtitle */}
     //           <div className="space-y-4">
-    //             <h1 className="text-2xl font-bold text-gray-800">Get Paws Connect</h1>
+    //             <h1 className="text-2xl font-bold text-gray-800">Get PawsConnect</h1>
     //             <p className="text-gray-600 text-base">
-    //               Access the full Paws Connect experience on your mobile device. Track donations,
+    //               Access the full PawsConnect experience on your mobile device. Track donations,
     //               adopt pets, and stay connected with the community anytime, anywhere.
     //             </p>
     //           </div>

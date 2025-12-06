@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     try {
         // Send mail with defined transport object
         const info = await transporter.sendMail({
-            from: `"Paws Connect Support" <pawsconnecttof@gmail.com>`, // sender address
+            from: `"PawsConnect Support" <pawsconnecttof@gmail.com>`, // sender address
             to,
             subject, 
             html: text, 

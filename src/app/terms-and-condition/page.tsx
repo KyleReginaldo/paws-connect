@@ -2,8 +2,8 @@ import Image from 'next/image';
 import pawslogo from '../../../public/pawsconnectlogo.ico';
 
 export const metadata = {
-  title: 'Terms & Conditions - Paws Connect',
-  description: 'Terms and Conditions and Privacy Policy for Paws Connect mobile app',
+  title: 'Terms & Conditions - PawsConnect',
+  description: 'Terms and Conditions and Privacy Policy for PawsConnect mobile app',
 };
 
 export default function TermsPage() {
@@ -15,7 +15,7 @@ export default function TermsPage() {
             <div className="w-12 h-12 flex-shrink-0">
               <Image
                 src={pawslogo}
-                alt="Paws Connect"
+                alt="PawsConnect"
                 width={48}
                 height={48}
                 className="rounded-md object-contain"
@@ -33,7 +33,7 @@ export default function TermsPage() {
 
           <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
             Welcome to PawsConnect, a mobile-first platform designed to support adoption, welfare
-            support, and fundraising for Tails of Freedom Animal Haven in Bacoor City, Cavite. By
+            support, and fundraising for Humanity for Animals in Bacoor City, Cavite. By
             downloading, accessing, or using our app, you agree to the following Terms and
             Conditions, which also include our Privacy Policy. Please read carefully before use.
           </p>

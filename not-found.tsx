@@ -55,7 +55,7 @@ export default function GlobalNotFound() {
                 </div>
               </div>
 
-              <h3 className="text-xl font-semibold text-gray-800">Get the Paws Connect App</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Get the PawsConnect App</h3>
               <p className="text-gray-600">
                 Find your perfect furry companion, donate to causes you care about, and stay
                 connected with our pet community – all from your phone!

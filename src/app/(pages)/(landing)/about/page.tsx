@@ -49,7 +49,7 @@ const page = () => {
       <div className="relative w-full h-[500px]">
         <div className="absolute -z-10  w-full h-[400px] bg-[linear-gradient(to_right,#ddd_1px,transparent_1px),linear-gradient(to_bottom,#ddd_1px,transparent_1px)] bg-[size:40px_40px]  [mask-image:linear-gradient(to_bottom,white,transparent)]"></div>
         <div className="flex flex-col gap-[20px] items-center justify-center text-center px-4 py-[24px] max-w-4xl mx-auto">
-          <h5 className="text-lg text-orange-500">Welcome to Paws Connect</h5>
+          <h5 className="text-lg text-orange-500">Welcome to PawsConnect</h5>
           <p className="text-4xl font-extrabold text-center">
             Bringing hope to stray dogs with a <span className="text-orange-600">mobile</span> app
             that simplifies adoption, fundraising, and community action

@@ -111,7 +111,7 @@ export function adoptionMailerBody(dto: AdoptionMailerDto): string{
   <body>
     <div class="container">
       <div style="text-align: center; margin-bottom: 15px;">
-        <img src="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/playstore.png" alt="Paws Connect Logo" height="60" class="logo" style=""/>
+        <img src="https://fjogjfdhtszaycqirwpm.supabase.co/storage/v1/object/public/files/playstore.png" alt="PawsConnect Logo" height="60" class="logo" style=""/>
       </div>
       <p>Congratulations ${adopterName}!🎉</p>
       <p>You have been approved for adoption ${adoptedPetName}(${adoptedPetBreed})</p>

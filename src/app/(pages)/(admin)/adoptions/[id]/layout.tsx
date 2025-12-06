@@ -18,10 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Adoptions Management - Paws Connect',
+  title: 'Adoptions Management - PawsConnect',
   description: 'Manage pet adoptions and applications',
   icons: {
-    icon: '/pawsconnectlogo.ico',
+    icon: '/playstore.png',
   },
 };
 

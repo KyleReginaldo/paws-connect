@@ -19,7 +19,7 @@ type Step = {
 
 const steps: Step[] = [
   {
-    title: 'Welcome to Paws Connect',
+    title: 'Welcome to PawsConnect',
     description:
       'Find pets to love, manage events, and support fundraising efforts all in one place.',
   },

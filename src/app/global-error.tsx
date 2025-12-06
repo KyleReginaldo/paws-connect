@@ -21,9 +21,9 @@ export default function AppDownloadPage() {
 
               {/* Title & Subtitle */}
               <div className="space-y-4">
-                <h1 className="text-3xl font-bold text-gray-800">Get Paws Connect</h1>
+                <h1 className="text-3xl font-bold text-gray-800">Get PawsConnect</h1>
                 <p className="text-gray-600 text-lg">
-                  Access the full Paws Connect experience on your mobile device. Track donations,
+                  Access the full PawsConnect experience on your mobile device. Track donations,
                   adopt pets, and stay connected with the community anytime, anywhere.
                 </p>
               </div>

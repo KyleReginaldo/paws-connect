@@ -159,7 +159,7 @@ export default function HomePage() {
           </div>
         </div>
       )}
-      <h3 className="mt-16 text-center">Get to know Tails of Freedom Animal Haven</h3>
+      <h3 className="mt-16 text-center">Get to know Humanity for Animals</h3>
       <HeroVideoDialog
         className="block dark:hidden max-w-[70%] mx-auto mb-16 mt-4"
         animationStyle="from-center"
@@ -180,7 +180,7 @@ export default function HomePage() {
         <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-blue-300/20 rotate-12 animate-pulse delay-300"></div>
         <div className="absolute bottom-1/4 right-16 w-4 h-4 bg-pink-400/20 rotate-45 animate-pulse delay-500"></div>
         <div className="flex flex-col gap-[16px] items-center mb-10">
-          <h4 className="font-bold text-2xl">Why Choose Paws Connect?</h4>
+          <h4 className="font-bold text-2xl">Why Choose PawsConnect?</h4>
           <div className="flex flex-wrap gap-[24px] items-start justify-center">
             {whyChooseValues.map((item, index) => {
               return (

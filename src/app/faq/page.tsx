@@ -8,9 +8,9 @@ import Image from 'next/image';
 import pawslogo from '../../../public/pawsconnectlogo.ico';
 
 export const metadata = {
-  title: 'FAQ - Paws Connect',
+  title: 'FAQ - PawsConnect',
   description:
-    'Frequently Asked Questions about Paws Connect - Pet adoption, donations, and animal welfare',
+    'Frequently Asked Questions about PawsConnect - Pet adoption, donations, and animal welfare',
 };
 
 export default function FAQPage() {
@@ -25,7 +25,7 @@ export default function FAQPage() {
       id: 'faq-2',
       question: 'Who manages PawsConnect?',
       answer:
-        'PawsConnect is managed by a non-government organization (NGO) animal shelter Tails of Freedom Animal Haven located in Silang, Cavite. The Tails of Freedom Animal Haven currently cares for around 200 dogs and 50 cats, including kittens, most of which are rescued strays or surrendered pets.',
+        'PawsConnect is managed by a non-government organization (NGO) animal shelter Humanity for Animals located in GMA, Cavite. The Humanity for Animals currently cares for around 200 dogs and 50 cats, including kittens, most of which are rescued strays or surrendered pets.',
     },
     {
       id: 'faq-3',
@@ -103,7 +103,7 @@ export default function FAQPage() {
       id: 'faq-15',
       question: 'How can I contact the shelter or PawsConnect support team?',
       answer:
-        "You can reach the shelter through the app's built-in contact form, email, or social media pages. Visits are also welcome at the Silang, Cavite location during operating hours.",
+        "You can reach the shelter through the app's built-in contact form, email, or social media pages. Visits are also welcome at the GMA, Cavite location during operating hours.",
     },
   ];
 
@@ -115,7 +115,7 @@ export default function FAQPage() {
             <div className="w-12 h-12 flex-shrink-0">
               <Image
                 src={pawslogo}
-                alt="Paws Connect"
+                alt="PawsConnect"
                 width={48}
                 height={48}
                 className="rounded-md object-contain"
@@ -163,8 +163,8 @@ export default function FAQPage() {
             </h3>
             <p className="text-sm text-orange-800 dark:text-orange-200">
               If you can&apos;t find the answer you&apos;re looking for, please don&apos;t hesitate
-              to contact us through the app&apos;s contact form or visit us at our shelter in
-              Silang, Cavite.
+              to contact us through the app&apos;s contact form or visit us at our shelter in GMA,
+              Cavite.
             </p>
           </div>
         </div>

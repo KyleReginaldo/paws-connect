@@ -228,7 +228,7 @@ const ContactPage = () => {
                     href="/about"
                     className="block text-orange-600 hover:text-orange-700 font-medium transition"
                   >
-                    → About Paws Connect
+                    → About PawsConnect
                   </a>
                   <a
                     href="/download/app"

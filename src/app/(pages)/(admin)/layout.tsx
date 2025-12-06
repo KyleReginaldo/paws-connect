@@ -110,21 +110,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <SidebarProvider defaultOpen={true} style={sidebarVars}>
           <div className="flex h-screen w-full overflow-x-hidden min-w-0">
             <Sidebar collapsible="icon" className="bg-slate-900 border-r border-slate-700">
-              <SidebarHeader className="p-4 bg-slate-900">
-                <div className="flex justify-center">
+              <SidebarHeader className="p-2 bg-slate-900">
+                <div className="flex justify-center items-center">
                   <Image
                     src={logoHorizontal}
                     alt="Logo"
-                    height={30}
+                    height={50}
                     className="group-data-[collapsible=icon]:hidden"
                   />
-                  <Image
-                    src={playstore}
-                    alt="Playstore Logo"
-                    height={48}
-                    width={48}
-                    className="group-data-[collapsible=icon]:block hidden"
-                  />
+                  <div className="group-data-[collapsible=icon]:block hidden">
+                    <Image src={playstore} alt="Playstore Logo" height={50} width={50} />
+                  </div>
                 </div>
               </SidebarHeader>
               <SidebarContent className="bg-slate-900">

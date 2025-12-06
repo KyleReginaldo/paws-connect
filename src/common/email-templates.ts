@@ -9,7 +9,7 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
         return {
           title: '🎉 Account Fully Verified!',
           message: 'Congratulations! Your account has been fully verified.',
-          description: 'You now have complete access to all features on Paws Connect. You can adopt pets, create events, start fundraising campaigns, and enjoy the full experience.',
+          description: 'You now have complete access to all features on PawsConnect. You can adopt pets, create events, start fundraising campaigns, and enjoy the full experience.',
           color: '#10B981', // green
           icon: '✅'
         };
@@ -273,7 +273,7 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
                 <div class="divider"></div>
                 
                 <p style="margin-top: 20px; font-size: 12px;">
-                    © 2025 Paws Connect. All rights reserved.<br />
+                    © 2025 PawsConnect. All rights reserved.<br />
                     This email was sent because your account status was updated.
                 </p>
             </div>

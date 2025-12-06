@@ -233,7 +233,7 @@ const Page = () => {
           <DialogHeader>
             <DialogTitle className="text-xl">Continue on Mobile App</DialogTitle>
             <DialogDescription className="text-base pt-2">
-              This will take you to the Paws Connect mobile app to continue the adoption process.
+              This will take you to the PawsConnect mobile app to continue the adoption process.
               Currently, we only support adoption applications through our mobile app for the best
               experience.
             </DialogDescription>

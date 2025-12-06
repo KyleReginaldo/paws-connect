@@ -22,27 +22,27 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: 'Paws Connect',
+  title: 'PawsConnect',
   description:
     'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
   keywords: ['pets', 'adoption', 'dogs', 'cats', 'animal rescue', 'fundraising'],
-  authors: [{ name: 'Paws Connect Team' }],
+  authors: [{ name: 'PawsConnect Team' }],
 
-  creator: 'Paws Connect',
-  publisher: 'Paws Connect',
+  creator: 'PawsConnect',
+  publisher: 'PawsConnect',
   openGraph: {
-    title: 'Paws Connect - Find Your Perfect Pet Companion',
+    title: 'PawsConnect - Find Your Perfect Pet Companion',
     description:
       'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
     type: 'website',
     locale: 'en_US',
   },
   icons: {
-    icon: '/pawsconnectlogo.ico',
+    icon: '/playstore.png',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Paws Connect - Find Your Perfect Pet Companion',
+    title: 'PawsConnect - Find Your Perfect Pet Companion',
     description:
       'Connect with adorable pets looking for their forever homes. Support fundraising campaigns and join our pet-loving community.',
   },

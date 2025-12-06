@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import pawslogo from '../../../public/pawsconnectlogo.ico';
+import playstore from '../../../public/playstore.png';
 import { useAuth } from '../context/AuthContext';
 
 export default function NavBar() {
@@ -26,13 +26,13 @@ export default function NavBar() {
         <Link href="/">
           <div className="flex gap-2 items-center">
             <Image
-              src={pawslogo}
-              alt="Paws Connect Logo"
+              src={playstore}
+              alt="PawsConnect Logo"
               width={40}
               height={25}
               className="object-contain rounded-[4px]"
             />
-            <p className="text-md text-orange-500">Paws Connect</p>
+            <p className="text-md font-bold text-black">PawsConnect</p>
           </div>
         </Link>
         <ul className="flex gap-6 items-center">
@@ -84,13 +84,13 @@ export default function NavBar() {
         <Link href="/">
           <div className="flex items-center gap-2">
             <Image
-              src={pawslogo}
-              alt="Paws Connect Logo"
+              src={playstore}
+              alt="PawsConnect Logo"
               width={40}
               height={25}
               className="object-contain rounded-[4px]"
             />
-            <p className="text-md text-orange-500">Paws Connect</p>
+            <p className="text-md font-bold text-black">PawsConnect</p>
           </div>
         </Link>
 
