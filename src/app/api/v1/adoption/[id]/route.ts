@@ -64,6 +64,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         adopting_for_self: z.boolean().nullable().optional(),
         how_can_you_give_fur_rever_home: z.string().nullable().optional(),
         where_did_you_hear_about_us: z.string().nullable().optional(),
+        adoption_form: z.string().nullable().optional(),
+        adoption_certificate: z.string().nullable().optional(),
       })
       .strict();
 
@@ -92,6 +94,56 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { data, error } = await supabase
       .from('adoption')
       .update(updatePayload)
+      .eq('id', pathId)
+      .select()
+      .single();
+    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+
+    return new Response(JSON.stringify({ data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: 'Internal Server Error', message: (err as Error).message }),
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const pathId = Number(id ?? NaN);
+    if (Number.isNaN(pathId))
+      return new Response(JSON.stringify({ error: 'Invalid id' }), { status: 400 });
+
+    const body = await parseJson(request);
+    if (!body) return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
+
+    const patchSchema = z
+      .object({
+        adoption_form: z.string().nullable().optional(),
+        adoption_certificate: z.string().nullable().optional(),
+      })
+      .strict();
+
+    const parsed = patchSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: 'Validation error', details: parsed.error.issues }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('adoption')
+      .update(parsed.data)
       .eq('id', pathId)
       .select()
       .single();

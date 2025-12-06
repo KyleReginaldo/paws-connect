@@ -94,7 +94,10 @@ export type Database = {
       adoption: {
         Row: {
           adopting_for_self: boolean | null
+          adoption_certificate: string | null
+          adoption_form: string | null
           created_at: string
+          followed_up: boolean | null
           happiness_image: string | null
           has_children_in_home: boolean | null
           has_other_pets_in_home: boolean | null
@@ -115,7 +118,10 @@ export type Database = {
         }
         Insert: {
           adopting_for_self?: boolean | null
+          adoption_certificate?: string | null
+          adoption_form?: string | null
           created_at?: string
+          followed_up?: boolean | null
           happiness_image?: string | null
           has_children_in_home?: boolean | null
           has_other_pets_in_home?: boolean | null
@@ -136,7 +142,10 @@ export type Database = {
         }
         Update: {
           adopting_for_self?: boolean | null
+          adoption_certificate?: string | null
+          adoption_form?: string | null
           created_at?: string
+          followed_up?: boolean | null
           happiness_image?: string | null
           has_children_in_home?: boolean | null
           has_other_pets_in_home?: boolean | null

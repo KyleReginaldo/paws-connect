@@ -1,5 +1,6 @@
 'use client';
 import { useAuth } from '@/app/context/AuthContext';
+import { supabase } from '@/app/supabase/supabase';
 import { HappinessImageUpload } from '@/components/HappinessImageUpload';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -227,7 +228,7 @@ const AdoptionPage = () => {
     printWindow.focus();
   };
 
-  const handleGenerateAdoptionForm = () => {
+  const handleGenerateAdoptionForm = async () => {
     if (!adoption) return;
 
     // Create formatted date for filename
@@ -238,16 +239,52 @@ const AdoptionPage = () => {
       String(today.getMonth() + 1).padStart(2, '0') +
       '-' +
       String(today.getDate()).padStart(2, '0');
-    const filename = `adoption_form_${dateString}`;
+    const filename = `adoption_form_${adoption.id}_${dateString}.html`;
 
     // Generate the HTML content
-    import('@/lib/adoption-form-generator').then(({ generateAdoptionForm }) => {
+    import('@/lib/adoption-form-generator').then(async ({ generateAdoptionForm }) => {
       const htmlContent = generateAdoptionForm(adoption);
-      downloadPDF(htmlContent, filename);
+
+      // Show the PDF for printing
+      downloadPDF(htmlContent, filename.replace('.html', ''));
+
+      // Upload HTML to Supabase storage
+      try {
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const filePath = `adoption-forms/${filename}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('files')
+          .upload(filePath, blob, {
+            contentType: 'text/html',
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          showError('Failed to save adoption form');
+          return;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage.from('files').getPublicUrl(uploadData.path);
+
+        // Save URL to database
+        await fetch(`/api/v1/adoption/${adoption.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adoption_form: urlData.publicUrl }),
+        });
+
+        success('Adoption form generated and saved successfully');
+      } catch (error) {
+        console.error('Failed to save adoption form:', error);
+        showError('Failed to save adoption form');
+      }
     });
   };
 
-  const handleGenerateCertificate = () => {
+  const handleGenerateCertificate = async () => {
     if (!adoption) return;
     const recipient = adoption.users?.username || 'Adopter';
     const petName = adoption.pets?.name || adoption.pet?.name || 'your new friend';
@@ -270,7 +307,43 @@ const AdoptionPage = () => {
     const filename = `certificate_${dateString}`;
 
     const html = buildCertificateHTML(recipient, petName, adopterRealName);
+
+    // Show the PDF for printing
     downloadPDF(html, filename);
+
+    // Upload HTML to Supabase storage and save URL
+    try {
+      const blob = new Blob([html], { type: 'text/html' });
+      const filePath = `adoption-certificates/certificate_${adoption.id}_${dateString}.html`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('files')
+        .upload(filePath, blob, {
+          contentType: 'text/html',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        showError('Failed to save certificate');
+        return;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from('files').getPublicUrl(uploadData.path);
+
+      // Save URL to database
+      await fetch(`/api/v1/adoption/${adoption.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adoption_certificate: urlData.publicUrl }),
+      });
+
+      success('Certificate generated and saved successfully');
+    } catch (error) {
+      console.error('Failed to save certificate:', error);
+      showError('Failed to save certificate');
+    }
   };
 
   useEffect(() => {
