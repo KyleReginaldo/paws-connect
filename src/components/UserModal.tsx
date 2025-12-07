@@ -20,7 +20,9 @@ import {
 } from '@/components/ui/select';
 import { User } from '@/config/models/users';
 import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Alert, AlertDescription } from './ui/alert';
 
 interface UserModalProps {
   open: boolean;
@@ -36,9 +38,10 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
     phone_number: '',
     role: 3, // Default to regular user
     password: '',
-    status: 'ACTIVE',
+    status: 'PENDING',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { userId, userRole } = useAuth();
 
   // Permission helper - Only admins can manage users
@@ -64,14 +67,16 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
         phone_number: '',
         role: 3,
         password: '',
-        status: 'ACTIVE',
+        status: 'PENDING',
       });
     }
+    setFormError(null);
   }, [editingUser, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError(null);
 
     try {
       if (editingUser) {
@@ -123,6 +128,8 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting user data:', error);
+      const message = error instanceof Error ? error.message : 'Failed to save user.';
+      setFormError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -148,6 +155,13 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="username">

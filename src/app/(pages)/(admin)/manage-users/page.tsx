@@ -2,13 +2,18 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { useUsers } from '@/app/context/UsersContext';
+import {
+  BulkUserUploadModal,
+  type BulkUploadResult,
+  type BulkUserDraft,
+} from '@/components/BulkUserUploadModal';
 import { UserModal } from '@/components/UserModal';
 import { UserTableFiltered } from '@/components/UserTableFiltered';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/components/ui/notification';
 import { User } from '@/config/models/users';
 import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
-import { Download, Plus, RefreshCw, Shield, UserCheck, Users } from 'lucide-react';
+import { Download, Plus, RefreshCw, Shield, Upload, UserCheck, Users } from 'lucide-react';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -19,8 +24,10 @@ const ManageStaff = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userStatusChanging, setUserStatusChanging] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkUploadResult | null>(null);
 
-  const { warning } = useNotifications();
+  const { warning, success: notifySuccess, error: notifyError } = useNotifications();
 
   const canManageUser = (targetUserRole: number) => {
     if (userRole === 1) return true;
@@ -44,6 +51,11 @@ const ManageStaff = () => {
   const openAddModal = () => {
     setEditingUser(null);
     setModalOpen(true);
+  };
+
+  const openBulkModal = () => {
+    setBulkResult(null);
+    setBulkModalOpen(true);
   };
 
   const handleExport = () => {
@@ -185,6 +197,106 @@ const ManageStaff = () => {
     0;
   const adminUsers = users?.filter((user) => user.role === 1).length || 0;
 
+  const handleBulkSubmit = async (drafts: BulkUserDraft[]): Promise<BulkUploadResult> => {
+    const result: BulkUploadResult = { successes: [], failures: [] };
+
+    if (!drafts.length) {
+      warning('No users detected in the uploaded file.');
+      return result;
+    }
+
+    if (!userId) {
+      const message = 'Active admin session is required to add users.';
+      drafts.forEach((draft) => {
+        result.failures.push({
+          rowNumber: draft.rowNumber,
+          identifier: draft.email || draft.username || `Row ${draft.rowNumber}`,
+          message,
+        });
+      });
+      notifyError('Unable to create users', message);
+      return result;
+    }
+
+    for (const draft of drafts) {
+      const identifier = draft.email || draft.username || `Row ${draft.rowNumber}`;
+
+      try {
+        if (!draft.username || !draft.email || !draft.phone_number) {
+          throw new Error('Username, email, and phone number are required.');
+        }
+
+        const normalizedUsername = draft.username.replace(/\s+/g, '').trim();
+        if (!normalizedUsername) {
+          throw new Error('Username must contain at least one non-space character.');
+        }
+
+        const normalizedEmail = draft.email.trim();
+        const normalizedPhone = draft.phone_number.trim();
+        if (!normalizedEmail) {
+          throw new Error('Email cannot be empty.');
+        }
+        if (!normalizedPhone) {
+          throw new Error('Phone number cannot be empty.');
+        }
+
+        const payload: CreateUserDto = {
+          username: normalizedUsername,
+          email: normalizedEmail,
+          phone_number: normalizedPhone,
+          role: draft.role === 1 && canCreateAdmin() ? 1 : 3,
+          status: draft.status || 'PENDING',
+          password: draft.password ?? '',
+          created_by: userId,
+        };
+
+        if (!payload.password || payload.password.length < 8) {
+          const rand = Math.random().toString(36).slice(2, 8);
+          payload.password = `A@${rand}1`;
+        }
+
+        const created = await addUser(payload);
+        result.successes.push({
+          rowNumber: draft.rowNumber,
+          identifier: created.email || created.username || identifier,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to create user.';
+        result.failures.push({
+          rowNumber: draft.rowNumber,
+          identifier,
+          message,
+        });
+      }
+    }
+
+    if (result.successes.length > 0) {
+      notifySuccess(
+        `Created ${result.successes.length} user${result.successes.length === 1 ? '' : 's'}`,
+        result.failures.length
+          ? `${result.failures.length} entr${result.failures.length === 1 ? 'y' : 'ies'} require attention.`
+          : undefined,
+      );
+    }
+
+    if (result.failures.length > 0) {
+      notifyError(
+        'Some users were not created',
+        result.failures
+          .slice(0, 3)
+          .map(
+            (failure: BulkUploadResult['failures'][number]) =>
+              `${failure.identifier}: ${failure.message}`,
+          )
+          .join(' • ') || undefined,
+      );
+    }
+
+    setBulkResult(result);
+    await refreshUsers();
+    return result;
+  };
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -225,7 +337,17 @@ const ManageStaff = () => {
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
             </Button>
-
+            {canCreateAdmin() && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={openBulkModal}
+                className="rounded-full cursor-pointer gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Import
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -274,8 +396,17 @@ const ManageStaff = () => {
               warning('You do not have permission to create admin users.');
               return;
             }
-
-            await addUser(createData);
+            try {
+              const created = await addUser({ ...createData, created_by: userId || undefined });
+              notifySuccess(
+                'User created',
+                `${created.email || created.username} added successfully.`,
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Failed to create user.';
+              notifyError('Unable to create user', message);
+              throw error;
+            }
           } else {
             const updateData = userData as UpdateUserDto;
 
@@ -288,11 +419,37 @@ const ManageStaff = () => {
               warning('You do not have permission to assign admin role.');
               return;
             }
-
-            await updateUser(editingUser.id, updateData);
+            try {
+              const updated = await updateUser(editingUser.id, updateData);
+              if (!updated) {
+                throw new Error('No changes were saved.');
+              }
+              notifySuccess(
+                'User updated',
+                `${updated.email || updated.username} updated successfully.`,
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Failed to update user.';
+              notifyError('Unable to update user', message);
+              throw error;
+            }
           }
         }}
         editingUser={editingUser}
+      />
+
+      <BulkUserUploadModal
+        open={bulkModalOpen}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            setBulkResult(null);
+          }
+          setBulkModalOpen(open);
+        }}
+        onSubmit={handleBulkSubmit}
+        result={bulkResult}
+        canCreateAdmin={canCreateAdmin()}
+        existingUsers={users ?? []}
       />
     </div>
   );

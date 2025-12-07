@@ -1,4 +1,4 @@
-import { supabase } from '@/app/supabase/supabase';
+import { supabaseServer } from '@/app/supabase/supabase-server';
 import { UserStatus } from '@/config/enum/user.enum';
 import { USER_QUERY_WITH_ID } from '@/config/query/query';
 import { createUserSchema } from '@/config/schema/userChema';
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     return await searchUsers(username, role);
   } else {
     // Get all users or filter by role
-    let query = supabase.from('users').select(USER_QUERY_WITH_ID);
+    let query = supabaseServer.from('users').select(USER_QUERY_WITH_ID);
 
     // Add role filter if provided
     if (role) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   }
 }
 async function searchUsers(query: string, role?: string | null): Promise<Response> {
-  let supabaseQuery = supabase.from('users').select().ilike('username', `%${query}%`);
+  let supabaseQuery = supabaseServer.from('users').select().ilike('username', `%${query}%`);
 
   // Add role filter if provided
   if (role) {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       created_by?: string;
       status?: UserStatus;
     };
-    const { email, username, role } = parsed;
+    const { email, username, role = 3 } = parsed;
     const phone_number = parsed.phone_number;
     let password = parsed.password;
 
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     }
     console.log('Creating user with data:', { email, username, phone_number, role, password });
 
-    const { data, error } = await supabase.auth.admin.createUser({
+    const { data, error } = await supabaseServer.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
     };
     console.log('📝 User insert data:', insertData);
 
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await supabaseServer
       .from('users')
       .insert(insertData)
       .select()
@@ -370,7 +370,7 @@ export async function POST(request: NextRequest) {
       if (createdAuthUserId) {
         try {
           console.log('🧹 Cleaning up: Deleting auth user due to database error...');
-          const { error: deleteError } = await supabase.auth.admin.deleteUser(createdAuthUserId);
+          const { error: deleteError } = await supabaseServer.auth.admin.deleteUser(createdAuthUserId);
           if (deleteError) {
             console.error('❌ Failed to cleanup auth user:', deleteError);
           } else {
@@ -414,7 +414,7 @@ export async function POST(request: NextRequest) {
     if (createdAuthUserId) {
       try {
         console.log('🧹 Cleaning up auth user due to unexpected error...');
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(createdAuthUserId);
+          const { error: deleteError } = await supabaseServer.auth.admin.deleteUser(createdAuthUserId);
         if (deleteError) {
           console.error('❌ Failed to cleanup auth user:', deleteError);
         } else {

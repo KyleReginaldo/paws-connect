@@ -6,7 +6,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 interface UsersContextType {
   users: User[] | null;
   status: 'loading' | 'success' | 'error';
-  addUser: (userData: CreateUserDto) => Promise<User | null>;
+  addUser: (userData: CreateUserDto) => Promise<User>;
   updateUser: (userId: string, userData: UpdateUserDto) => Promise<User | null>;
   deleteUser: (userId: string) => Promise<boolean>;
   updateUserStatus: (userId: string, status: string) => Promise<boolean>;
@@ -50,7 +50,7 @@ export function UsersProvider({ children }: UsersProviderProps) {
     }
   };
 
-  const addUser = async (userData: CreateUserDto): Promise<User | null> => {
+  const addUser = async (userData: CreateUserDto): Promise<User> => {
     try {
       const response = await fetch('/api/v1/users', {
         method: 'POST',
@@ -61,12 +61,13 @@ export function UsersProvider({ children }: UsersProviderProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create user');
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.message || errorData?.error || 'Failed to create user';
+        throw new Error(message);
       }
 
       const result = await response.json();
-      const newUser = result.data;
+      const newUser = result.data as User;
 
       setUsers((prevUsers) => {
         if (!prevUsers) return [newUser];
@@ -77,7 +78,7 @@ export function UsersProvider({ children }: UsersProviderProps) {
       return newUser;
     } catch (error) {
       console.error('Error adding user:', error);
-      return null;
+      throw error instanceof Error ? error : new Error('Failed to add user');
     }
   };
 
