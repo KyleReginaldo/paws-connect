@@ -132,3 +132,165 @@ export async function regenerateEventSuggestions(
   const suggestions = await generateEventSuggestions(title, description);
   return suggestions;
 }
+
+/**
+ * Extract payment information from payment proof image using OCR
+ * @param imageBase64 - Base64 encoded image string (with data URL prefix)
+ * @returns Extracted payment information (amount and reference number)
+ */
+export async function extractPaymentInfo(
+  imageBase64: string
+): Promise<{ amount: string | null; referenceNumber: string | null }> {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured');
+      return { amount: null, referenceNumber: null };
+    }
+
+    const systemPrompt = `You are an OCR assistant specialized in extracting payment information from transaction receipts, payment proofs, bank transfer screenshots, e-wallet confirmations, and payment confirmations from services like GCash, PayMaya, PayPal, bank apps, etc.
+
+Your task is to analyze the image and extract:
+1. The transaction amount - Look for:
+   - Amount, Total, Paid, Sent, Received
+   - Currency symbols: PHP, ₱, $, USD
+   - Numbers with decimals (e.g., 500.00, 1,234.56)
+   - Could be labeled as "Amount Sent", "Total Amount", "Transfer Amount", etc.
+   
+2. The reference number - Look for:
+   - Reference Number, Ref No, Transaction ID, Receipt No
+   - Confirmation Number, Transaction Reference, Receipt ID
+   - Alphanumeric codes (e.g., ABC123456, TXN-12345, 1234567890123)
+   - Could be any unique identifier in the receipt
+
+IMPORTANT:
+- Extract ONLY the numeric value for amount (remove currency symbols, commas)
+- Extract the complete reference/transaction number (include all characters)
+- Look carefully at ALL text in the image, including small text
+- If you see any numbers or codes that could be payment-related, extract them
+- If a field is not found, return null for that field
+
+Respond ONLY with a valid JSON object in this exact format:
+{
+  "amount": "500.00",
+  "referenceNumber": "ABC123456789"
+}
+
+Examples:
+{
+  "amount": "1500",
+  "referenceNumber": "TXN123456789"
+}
+{
+  "amount": null,
+  "referenceNumber": "REF987654"
+}`;
+
+    const requestBody = {
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Please extract the payment amount and reference number from this payment proof image."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageBase64,
+                detail: "high"
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 300,
+      temperature: 0.1
+    };
+
+    console.log('[OCR] Calling OpenAI Vision API...');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI Vision API error:', response.status, response.statusText, errorText);
+      return { amount: null, referenceNumber: null };
+    }
+
+    const data: OpenAIResponse = await response.json();
+    const generatedContent = data.choices[0]?.message?.content;
+    
+    console.log('[OCR] OpenAI response:', generatedContent);
+    
+    if (!generatedContent) {
+      console.error('[OCR] No content in response');
+      return { amount: null, referenceNumber: null };
+    }
+
+    // Parse the JSON response
+    try {
+      // Try to extract JSON from markdown code blocks if present
+      let jsonContent = generatedContent.trim();
+      
+      // Remove markdown code blocks
+      const jsonMatch = generatedContent.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim();
+      }
+      
+      // Remove any leading/trailing text that's not part of JSON
+      const jsonStartIndex = jsonContent.indexOf('{');
+      const jsonEndIndex = jsonContent.lastIndexOf('}');
+      
+      if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+        jsonContent = jsonContent.substring(jsonStartIndex, jsonEndIndex + 1);
+      }
+      
+      console.log('[OCR] Attempting to parse JSON:', jsonContent);
+      
+      const extracted = JSON.parse(jsonContent);
+      console.log('[OCR] Extracted data:', extracted);
+      
+      return {
+        amount: extracted.amount || null,
+        referenceNumber: extracted.referenceNumber || null
+      };
+    } catch (parseError) {
+      console.error('[OCR] Failed to parse response:', parseError);
+      console.error('[OCR] Raw content:', generatedContent);
+      
+      // Fallback: Try to extract values manually
+      try {
+        const amountMatch = generatedContent.match(/"amount"\s*:\s*"?([0-9.,]+)"?/i);
+        const refMatch = generatedContent.match(/"referenceNumber"\s*:\s*"?([A-Za-z0-9-]+)"?/i);
+        
+        if (amountMatch || refMatch) {
+          console.log('[OCR] Using fallback extraction');
+          return {
+            amount: amountMatch ? amountMatch[1] : null,
+            referenceNumber: refMatch ? refMatch[1] : null
+          };
+        }
+      } catch (fallbackError) {
+        console.error('[OCR] Fallback extraction also failed:', fallbackError);
+      }
+      
+      return { amount: null, referenceNumber: null };
+    }
+  } catch (error) {
+    console.error('Error extracting payment info:', error);
+    return { amount: null, referenceNumber: null };
+  }
+}

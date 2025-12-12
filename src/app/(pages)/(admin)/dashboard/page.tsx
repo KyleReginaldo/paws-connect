@@ -1046,7 +1046,7 @@ const Page = () => {
 
       success(
         'Report Generated',
-        `Report with ${doc.internal.getNumberOfPages()} pages has been downloaded successfully`,
+        `Report with ${doc.getNumberOfPages()} pages has been downloaded successfully`,
         6000,
       );
     } catch (err) {

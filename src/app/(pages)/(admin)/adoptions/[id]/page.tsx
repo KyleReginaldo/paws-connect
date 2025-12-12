@@ -108,6 +108,9 @@ const AdoptionPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfType, setPdfType] = useState<'form' | 'certificate' | null>(null);
 
   const isAdopted = (status: string | null) => {
     const s = (status || '').toUpperCase();
@@ -181,111 +184,140 @@ const AdoptionPage = () => {
         </div>
       </div>
     </div>
-    <script>
-      window.onload = function(){ setTimeout(function(){ window.print(); }, 300); }
-    </script>
   </body>
 </html>`;
-  };
-
-  const downloadPDF = async (htmlContent: string, filename: string) => {
-    // Create a new window for generating PDF
-    const printWindow = window.open('', '_blank', 'width=1000,height=800');
-    if (!printWindow) {
-      alert('Please allow popups to generate PDF');
-      return;
-    }
-
-    // Update the HTML to include PDF download functionality
-    const htmlWithDownload = htmlContent
-      .replace(
-        '<script>',
-        `<script>
-      // Function to trigger PDF download
-      function downloadAsPDF() {
-        document.title = '${filename}';
-        
-        // Automatically trigger print dialog which allows saving as PDF
-        window.print();
-        
-        // Optional: Close window after a delay
-        setTimeout(() => {
-          if (confirm('PDF generated successfully. Close this window?')) {
-            window.close();
-          }
-        }, 1000);
-      }
-      `,
-      )
-      .replace(
-        'window.onload = function(){ setTimeout(function(){ window.print(); }, 300); }',
-        'window.onload = function(){ setTimeout(downloadAsPDF, 500); }',
-      );
-
-    printWindow.document.open();
-    printWindow.document.write(htmlWithDownload);
-    printWindow.document.close();
-    printWindow.focus();
   };
 
   const handleGenerateAdoptionForm = async () => {
     if (!adoption) return;
 
-    // Create formatted date for filename
-    const today = new Date();
-    const dateString =
-      today.getFullYear() +
-      '-' +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(today.getDate()).padStart(2, '0');
-    const filename = `adoption_form_${adoption.id}_${dateString}.html`;
+    setPdfGenerating(true);
+    setPdfUrl(null);
+    setPdfType('form');
 
-    // Generate the HTML content
-    import('@/lib/adoption-form-generator').then(async ({ generateAdoptionForm }) => {
+    try {
+      // Create formatted date for filename
+      const today = new Date();
+      const dateString =
+        today.getFullYear() +
+        '-' +
+        String(today.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(today.getDate()).padStart(2, '0');
+      const filename = `adoption_form_${adoption.id}_${dateString}.pdf`;
+
+      // Generate the HTML content
+      const { generateAdoptionForm } = await import('@/lib/adoption-form-generator');
       const htmlContent = generateAdoptionForm(adoption);
 
-      // Show the PDF for printing
-      downloadPDF(htmlContent, filename.replace('.html', ''));
+      // Create a temporary iframe to render HTML for PDF generation
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.width = '210mm'; // A4 width
+      iframe.style.height = '297mm'; // A4 height
+      iframe.style.left = '-9999px';
+      document.body.appendChild(iframe);
 
-      // Upload HTML to Supabase storage
-      try {
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const filePath = `adoption-forms/${filename}`;
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        document.body.removeChild(iframe);
+        showError('Failed to generate PDF');
+        setPdfGenerating(false);
+        return;
+      }
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('files')
-          .upload(filePath, blob, {
-            contentType: 'text/html',
-            upsert: true,
-          });
+      iframeDoc.open();
+      iframeDoc.write(htmlContent);
+      iframeDoc.close();
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          showError('Failed to save adoption form');
-          return;
-        }
+      // Wait for content to load
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-        // Get public URL
-        const { data: urlData } = supabase.storage.from('files').getPublicUrl(uploadData.path);
+      // Use html2canvas and jsPDF
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
 
-        // Save URL to database
-        await fetch(`/api/v1/adoption/${adoption.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adoption_form: urlData.publicUrl }),
+      const canvas = await html2canvas(iframeDoc.body, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= 297; // A4 height in mm
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      // Get PDF as blob
+      const pdfBlob = pdf.output('blob');
+
+      // Clean up iframe
+      document.body.removeChild(iframe);
+
+      // Upload PDF to Supabase storage
+      const filePath = `adoption-forms/${filename}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('files')
+        .upload(filePath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: true,
         });
 
-        success('Adoption form generated and saved successfully');
-      } catch (error) {
-        console.error('Failed to save adoption form:', error);
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
         showError('Failed to save adoption form');
+        setPdfGenerating(false);
+        return;
       }
-    });
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from('files').getPublicUrl(uploadData.path);
+
+      // Save URL to database
+      await fetch(`/api/v1/adoption/${adoption.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adoption_form: urlData.publicUrl }),
+      });
+
+      // Display PDF in embedded viewer
+      setPdfUrl(urlData.publicUrl);
+      setPdfGenerating(false);
+      success('Adoption form generated and saved successfully');
+    } catch (error) {
+      console.error('Failed to generate adoption form:', error);
+      showError('Failed to generate adoption form');
+      setPdfGenerating(false);
+    }
   };
 
   const handleGenerateCertificate = async () => {
     if (!adoption) return;
+
+    setPdfGenerating(true);
+    setPdfUrl(null);
+    setPdfType('certificate');
+
     const recipient = adoption.users?.username || 'Adopter';
     const petName = adoption.pets?.name || adoption.pet?.name || 'your new friend';
 
@@ -304,22 +336,68 @@ const AdoptionPage = () => {
       String(today.getMonth() + 1).padStart(2, '0') +
       '-' +
       String(today.getDate()).padStart(2, '0');
-    const filename = `certificate_${dateString}`;
+    const filename = `certificate_${adoption.id}_${dateString}.pdf`;
 
     const html = buildCertificateHTML(recipient, petName, adopterRealName);
 
-    // Show the PDF for printing
-    downloadPDF(html, filename);
+    // Create a temporary iframe to render HTML for PDF generation
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '297mm'; // A4 landscape width
+    iframe.style.height = '210mm'; // A4 landscape height
+    iframe.style.left = '-9999px';
+    document.body.appendChild(iframe);
 
-    // Upload HTML to Supabase storage and save URL
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      document.body.removeChild(iframe);
+      showError('Failed to generate certificate');
+      return;
+    }
+
+    iframeDoc.open();
+    iframeDoc.write(html);
+    iframeDoc.close();
+
+    // Wait for content to load
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     try {
-      const blob = new Blob([html], { type: 'text/html' });
-      const filePath = `adoption-certificates/certificate_${adoption.id}_${dateString}.html`;
+      // Use html2canvas and jsPDF
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+
+      const canvas = await html2canvas(iframeDoc.body, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 297; // A4 landscape width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+      // Get PDF as blob
+      const pdfBlob = pdf.output('blob');
+
+      // Clean up iframe
+      document.body.removeChild(iframe);
+
+      // Upload PDF to Supabase storage
+      const filePath = `adoption-certificates/${filename}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('files')
-        .upload(filePath, blob, {
-          contentType: 'text/html',
+        .upload(filePath, pdfBlob, {
+          contentType: 'application/pdf',
           upsert: true,
         });
 
@@ -339,10 +417,14 @@ const AdoptionPage = () => {
         body: JSON.stringify({ adoption_certificate: urlData.publicUrl }),
       });
 
+      // Display PDF in embedded viewer
+      setPdfUrl(urlData.publicUrl);
+      setPdfGenerating(false);
       success('Certificate generated and saved successfully');
     } catch (error) {
       console.error('Failed to save certificate:', error);
       showError('Failed to save certificate');
+      setPdfGenerating(false);
     }
   };
 
@@ -1340,6 +1422,48 @@ const AdoptionPage = () => {
           </div>
         </div>
       </div>
+
+      {/* PDF Loading Overlay */}
+      {pdfGenerating && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <p className="text-lg font-medium text-gray-900">
+              Generating {pdfType === 'form' ? 'Adoption Form' : 'Certificate'}...
+            </p>
+            <p className="text-sm text-gray-600">Please wait, this may take a few seconds</p>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Viewer Modal */}
+      {pdfUrl && !pdfGenerating && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {pdfType === 'form' ? 'Adoption Form' : 'Certificate'} - Application #{adoption?.id}
+              </h2>
+              <button
+                onClick={() => {
+                  setPdfUrl(null);
+                  setPdfType(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={pdfUrl}
+                className="w-full h-full border-none"
+                title={pdfType === 'form' ? 'Adoption Form' : 'Certificate'}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

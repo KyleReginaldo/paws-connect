@@ -163,11 +163,13 @@ export async function POST(request: NextRequest) {
                 .eq('id', eventData.created_by)
                 .single();
             creatorName = creator?.username;
+            console.log('📧 Event creator:', creatorName);
         }
 
         // Notify all users about the new event (run in background)
+        console.log('📤 Triggering event notifications for:', eventData.title);
         notifyAllUsersNewEvent(eventData.title, data.id.toString(), creatorName || undefined).catch(error => {
-            console.error('Failed to send event notifications:', error);
+            console.error('❌ Failed to send event notifications:', error);
         });
 
         console.log('=== EVENT CREATE END ===');

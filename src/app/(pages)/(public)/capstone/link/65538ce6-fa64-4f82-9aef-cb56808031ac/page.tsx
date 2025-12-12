@@ -56,17 +56,24 @@ const Page = () => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('capstone_links').insert([
-        {
+      const response = await fetch('/api/v1/capstone-links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           title: title.trim(),
           link: link.trim(),
           description: description.trim() || null,
           image_link: imageLink.trim() || null,
           button_label: buttonLabel.trim() || null,
-        },
-      ]);
-      if (error) {
-        setError(error.message);
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.message || 'Failed to create capstone link');
       } else {
         setTitle('');
         setLink('');
@@ -86,9 +93,14 @@ const Page = () => {
     setError(null);
     setIsDeleting(id);
     try {
-      const { error } = await supabase.from('capstone_links').delete().eq('id', id);
-      if (error) {
-        setError(error.message);
+      const response = await fetch(`/api/v1/capstone-links?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.message || 'Failed to delete capstone link');
       } else {
         setCapstoneLinks(capstoneLinks?.filter((link) => link.id !== id) || null);
       }

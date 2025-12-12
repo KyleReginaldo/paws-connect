@@ -208,17 +208,28 @@ const Page = () => {
       .filter((t) => t.length > 0);
     try {
       setEditSubmitting(true);
-      const { error } = await supabase
-        .from('posts')
-        .update({
+
+      const response = await fetch('/api/v1/posts', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editingPost.id,
           title: editTitle,
           description: editContent,
           category: editCategory,
           links: linkArray.length ? linkArray : null,
           images: editImageUrls.length ? editImageUrls : null,
-        })
-        .eq('id', editingPost.id);
-      if (error) throw new Error(error.message);
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to update post');
+      }
+
       await fetchPosts();
       setSuccessMsg('Post updated successfully');
       setEditOpen(false);
@@ -257,16 +268,26 @@ const Page = () => {
       const payload = {
         title,
         category,
-        // DB expects text[]; send array when present
         images: imageUrls.length ? imageUrls : null,
         links: linkArray.length ? linkArray : null,
         description: content,
       };
       console.log('[posts] creating post with payload:', payload);
-      const { error } = await supabase.from('posts').insert({
-        ...payload,
+
+      const response = await fetch('/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
-      if (error) throw new Error(error.message);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to create post');
+      }
+
       console.log('[posts] post created successfully');
       setSuccessMsg('Post created successfully');
       setTitle('');
@@ -303,8 +324,17 @@ const Page = () => {
     setSuccessMsg(null);
     try {
       setDeletingId(id);
-      const { error } = await supabase.from('posts').delete().eq('id', id);
-      if (error) throw new Error(error.message);
+
+      const response = await fetch(`/api/v1/posts?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to delete post');
+      }
+
       await fetchPosts();
       setSuccessMsg('Post deleted');
     } catch (err) {

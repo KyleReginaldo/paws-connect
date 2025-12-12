@@ -50,6 +50,13 @@ export default function NavBar() {
               PETS
             </li>
           </Link>
+          <Link href="/donation">
+            <li
+              className={`hover:font-bold hover:text-orange-500 transition-all cursor-pointer${pathname === '/donation' ? ' font-bold text-orange-500' : ''}`}
+            >
+              DONATE NOW
+            </li>
+          </Link>
 
           <Link href="/about">
             <li
@@ -147,6 +154,13 @@ export default function NavBar() {
                 className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/pets' ? ' font-bold text-orange-500' : ''}`}
               >
                 PETS{' '}
+              </li>
+            </Link>
+            <Link href="/donation" onClick={() => setIsMobileMenuOpen(false)}>
+              <li
+                className={`py-2 border-b border-gray-100 hover:text-orange-500 transition-all cursor-pointer${pathname === '/donation' ? ' font-bold text-orange-500' : ''}`}
+              >
+                DONATE NOW{' '}
               </li>
             </Link>
             <Link href="/about" onClick={() => setIsMobileMenuOpen(false)}>

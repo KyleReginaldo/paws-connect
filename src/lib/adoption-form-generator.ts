@@ -125,12 +125,16 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
   .line {
     border-bottom: 1px solid #000;
     width: 100%;
-    height: 16px;
+    min-height: 20px;
+    padding-bottom: 2px;
+    display: inline-block;
+    vertical-align: bottom;
+    line-height: 18px;
   }
 
   .row {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     margin: 6px 0;
     gap: 10px;
   }
@@ -139,6 +143,7 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
     width: 180px;
     font-size: 14px;
     font-weight: bold;
+    padding-bottom: 2px;
   }
 
   textarea.answer {
@@ -275,10 +280,6 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
     Date
   </div>
 </div>
-
-<script>
-  window.onload = () => setTimeout(() => window.print(), 300);
-</script>
 
 </body>
 </html>
