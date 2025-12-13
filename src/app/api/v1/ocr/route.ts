@@ -1,5 +1,5 @@
-import { extractPaymentInfo } from '@/lib/openai-utils';
 import { NextRequest, NextResponse } from 'next/server';
+import Tesseract from 'tesseract.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30; // OCR might take a bit longer
@@ -7,8 +7,8 @@ export const maxDuration = 30; // OCR might take a bit longer
 export async function POST(req: NextRequest) {
   try {
     console.log('[OCR API] Received request');
-    const body = await req.json();
-    const { image } = body;
+    const formData = await req.formData();
+    const image = formData.get('image') as File;
 
     if (!image) {
       return NextResponse.json(
@@ -17,33 +17,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate that it's a base64 data URL
-    if (!image.startsWith('data:image/')) {
-      return NextResponse.json(
-        { error: 'Invalid image format. Expected base64 data URL' },
-        { status: 400 }
-      );
-    }
+    console.log('[OCR API] Processing image:', image.name, image.size, 'bytes');
 
-    console.log('[OCR API] Image size:', image.length, 'characters');
-    
-    // Check if OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('[OCR API] OPENAI_API_KEY not configured');
-      return NextResponse.json(
-        { error: 'OCR service not configured. Please contact administrator.' },
-        { status: 503 }
-      );
-    }
+    // Convert File to Buffer
+    const buffer = Buffer.from(await image.arrayBuffer());
 
-    // Extract payment information using OpenAI Vision
-    const result = await extractPaymentInfo(image);
-    
-    console.log('[OCR API] Extraction result:', result);
+    // Perform OCR using Tesseract.js
+    const result = await Tesseract.recognize(buffer, 'eng', {
+      logger: (m) => console.log('[Tesseract]', m),
+    });
+
+    const text = result.data.text;
+    console.log('[OCR API] Extracted text:', text);
+
+    // Extract payment information from the text
+    const paymentInfo = extractPaymentInfoFromText(text);
+    console.log('[OCR API] Extraction result:', paymentInfo);
 
     return NextResponse.json({
       success: true,
-      data: result
+      data: paymentInfo,
+      rawText: text,
     });
   } catch (error) {
     console.error('[OCR API] Error:', error);
@@ -52,4 +46,45 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function extractPaymentInfoFromText(text: string): {
+  amount?: string;
+  referenceNumber?: string;
+} {
+  const result: { amount?: string; referenceNumber?: string } = {};
+
+  // Extract amount - look for patterns like: ₱500, PHP 500, 500.00, P500
+  const amountPatterns = [
+    /₱\s*([\d,]+\.?\d*)/i,
+    /PHP\s*([\d,]+\.?\d*)/i,
+    /P\s*([\d,]+\.?\d*)/i,
+    /amount[:\s]*₱?\s*([\d,]+\.?\d*)/i,
+    /total[:\s]*₱?\s*([\d,]+\.?\d*)/i,
+  ];
+
+  for (const pattern of amountPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      result.amount = match[1].replace(/,/g, '');
+      break;
+    }
+  }
+
+  // Extract reference number - look for patterns like: Ref: 123456, Reference Number: 123456
+  const refPatterns = [
+    /ref(?:erence)?\s*(?:no|number)?[:\s]*([A-Z0-9]{6,})/i,
+    /transaction\s*(?:id|number)?[:\s]*([A-Z0-9]{6,})/i,
+    /confirmation[:\s]*([A-Z0-9]{6,})/i,
+  ];
+
+  for (const pattern of refPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      result.referenceNumber = match[1];
+      break;
+    }
+  }
+
+  return result;
 }

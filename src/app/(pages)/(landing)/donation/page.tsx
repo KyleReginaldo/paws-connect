@@ -7,19 +7,29 @@ import { useEffect, useState } from 'react';
 const page = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fundraisings, setFundraisings] = useState<Fundraising[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<number, boolean>>({});
-  const fundraising = async () => {
-    const response = await axios.get('/api/v1/fundraising');
-    if (response.status === 200) {
-      console.log(response.data);
-      setFundraisings(response.data.data);
-    } else {
-      setErrorMsg('Failed to load fundraising data');
-    }
-  };
   useEffect(() => {
+    const fundraising = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get('/api/v1/fundraising');
+        if (response.status === 200) {
+          console.log(response.data);
+          setFundraisings(response.data.data);
+          setErrorMsg(null);
+        } else {
+          setErrorMsg('Failed to load fundraising data');
+        }
+      } catch (error) {
+        setErrorMsg('Failed to load fundraising data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fundraising();
-  });
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -40,7 +50,51 @@ const page = () => {
       [id]: !prev[id],
     }));
   };
+  if (loading) {
+    return (
+      <div className="w-[100wh] md:bg-orange-50 pb-10">
+        <h1 className="text-3xl font-bold text-center pt-10">Fundraising</h1>
+        <div className="flex flex-wrap justify-center md:mt-10 md:gap-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-fit bg-white rounded-lg shadow-md p-6 w-full md:w-80 border-b-[1px] md:border-none animate-pulse"
+            >
+              {/* Image Skeleton */}
+              <div className="w-full h-[200px] mb-4 rounded-lg bg-gray-200"></div>
 
+              {/* Status Skeleton */}
+              <div className="h-4 w-20 bg-gray-200 rounded mb-4"></div>
+
+              {/* Title Skeleton */}
+              <div className="h-6 w-3/4 bg-gray-200 rounded mb-4"></div>
+
+              {/* Description Skeleton */}
+              <div className="mb-4 space-y-2">
+                <div className="h-4 w-full bg-gray-200 rounded"></div>
+                <div className="h-4 w-full bg-gray-200 rounded"></div>
+                <div className="h-4 w-2/3 bg-gray-200 rounded"></div>
+              </div>
+
+              {/* Amount Skeleton */}
+              <div className="h-5 w-48 bg-gray-200 rounded mb-2"></div>
+              <div className="h-5 w-48 bg-gray-200 rounded mb-4"></div>
+
+              {/* E-Wallets Skeleton */}
+              <div className="mt-4">
+                <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 w-full bg-gray-200 rounded mb-1"></div>
+                <div className="h-3 w-3/4 bg-gray-200 rounded"></div>
+              </div>
+
+              {/* Button Skeleton */}
+              <div className="mt-4 h-10 w-full bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="w-[100wh] md:bg-orange-50 pb-10">
       <h1 className="text-3xl font-bold text-center pt-10">Fundraising</h1>

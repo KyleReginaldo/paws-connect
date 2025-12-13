@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/components/ui/notification';
 import { useState } from 'react';
+import Tesseract from 'tesseract.js';
 
 interface Props {
   fundraisingId: number | string;
@@ -37,50 +38,91 @@ export default function FundraisingDonate({ fundraisingId }: Props) {
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setPreviewUrl(base64String);
-        // Automatically extract payment info
-        extractPaymentInfo(base64String);
       };
       reader.readAsDataURL(file);
+      // Automatically extract payment info
+      extractPaymentInfo(file);
     }
   };
 
-  const extractPaymentInfo = async (base64Image: string) => {
+  const extractPaymentInfo = async (file: File) => {
     setExtracting(true);
     try {
-      const res = await fetch('/api/v1/ocr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ image: base64Image }),
+      // Perform OCR directly in the browser using Tesseract.js
+      const result = await Tesseract.recognize(file, 'eng', {
+        logger: (m) => console.log('[Tesseract]', m.status, m.progress),
       });
 
-      if (!res.ok) {
-        console.error('OCR failed:', res.status);
-        return;
-      }
+      const text = result.data.text;
+      console.log('[OCR] Extracted text:', text);
 
-      const json = await res.json();
-      if (json.success && json.data) {
-        // Auto-fill the form fields if values were extracted
-        if (json.data.amount) {
-          setAmount(json.data.amount);
-          success('Amount extracted from image!');
-        }
-        if (json.data.referenceNumber) {
-          setReferenceNumber(json.data.referenceNumber);
-          success('Reference number extracted from image!');
-        }
-        if (!json.data.amount && !json.data.referenceNumber) {
-          warning('Could not extract donation details from image');
-        }
+      // Extract payment information from the text
+      const paymentInfo = extractPaymentInfoFromText(text);
+      console.log('[OCR] Extraction result:', paymentInfo);
+
+      // Auto-fill the form fields if values were extracted
+      if (paymentInfo.amount) {
+        setAmount(paymentInfo.amount);
+        success('Amount extracted from image!');
+      }
+      if (paymentInfo.referenceNumber) {
+        setReferenceNumber(paymentInfo.referenceNumber);
+        success('Reference number extracted from image!');
+      }
+      if (!paymentInfo.amount && !paymentInfo.referenceNumber) {
+        warning('Could not extract donation details from image');
       }
     } catch (err) {
       console.error('OCR extraction error:', err);
+      warning('Failed to extract data from image');
       // Silently fail - user can still manually enter the values
     } finally {
       setExtracting(false);
     }
+  };
+
+  const extractPaymentInfoFromText = (
+    text: string,
+  ): {
+    amount?: string;
+    referenceNumber?: string;
+  } => {
+    const result: { amount?: string; referenceNumber?: string } = {};
+
+    // Extract amount - look for patterns like: ₱15.00, PHP 15.00, 15.00
+    const amountPatterns = [
+      /₱\s*([\d,]+\.\d{2})/i,
+      /PHP\s*([\d,]+\.\d{2})/i,
+      /P\s*([\d,]+\.\d{2})/i,
+      /amount[:\s]*₱?\s*([\d,]+\.\d{2})/i,
+      /total[:\s]*₱?\s*([\d,]+\.\d{2})/i,
+      /sent[:\s]*₱?\s*([\d,]+\.\d{2})/i,
+    ];
+
+    for (const pattern of amountPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        result.amount = match[1].replace(/,/g, '');
+        break;
+      }
+    }
+
+    // Extract reference number - look for patterns like: Ref No. 3035 133 488780
+    const refPatterns = [
+      /ref(?:erence)?\s*(?:no\.?|number)?[:\s]*([\d\s]{10,})/i,
+      /transaction\s*(?:id|number)?[:\s]*([A-Z0-9]{6,})/i,
+      /confirmation[:\s]*([A-Z0-9]{6,})/i,
+    ];
+
+    for (const pattern of refPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        result.referenceNumber = match[1].trim().replace(/\s+/g, '');
+        break;
+      }
+    }
+
+    return result;
   };
 
   const handleDonate = async () => {
@@ -164,6 +206,12 @@ export default function FundraisingDonate({ fundraisingId }: Props) {
                 className="cursor-pointer"
                 disabled={extracting}
               />
+              <p className="italic text-[12px] mt-1 text-gray-500">
+                Note: Please upload a clear image of your proof of donation for accurate analysis.
+              </p>
+              <p className="italic text-[12px] text-gray-500">
+                Image extraction is not perfect and may require manual verification.
+              </p>
               {previewUrl && (
                 <div className="mt-2">
                   <img
