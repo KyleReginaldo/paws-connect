@@ -139,13 +139,13 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   const healthFilters: TableFilter[] = [
     {
       id: 'vaccinated',
-      label: 'Vaccinated Only',
+      label: 'Vaccinated',
       type: 'boolean',
       placeholder: 'Show only vaccinated pets',
     },
     {
       id: 'spayed',
-      label: 'Spayed/Neutered Only',
+      label: 'Spayed/Neutered',
       type: 'boolean',
       placeholder: 'Show only spayed/neutered pets',
     },
@@ -155,7 +155,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   const adoptionFilters: TableFilter[] = [
     {
       id: 'adopted',
-      label: 'Adopted Only',
+      label: 'Adopted',
       type: 'boolean',
       placeholder: 'Show only adopted pets',
     },
