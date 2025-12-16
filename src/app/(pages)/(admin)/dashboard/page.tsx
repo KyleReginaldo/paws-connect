@@ -45,6 +45,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { DashboardSkeleton } from '@/components/ui/skeleton-patterns';
+import Link from 'next/link';
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis } from 'recharts';
 
 const chartConfig: ChartConfig = {
@@ -456,10 +457,25 @@ const Page = () => {
 
       const executiveSummary = [
         ['Metric', 'Value', 'Status'],
-        ['Total Pets', totalPets.toString(), allAvailablePets + ' Available'],
-        ['Adoption Applications', totalAdoptions.toString(), pendingAdoptions + ' Pending'],
+        [
+          'Total Pets',
+          totalPets.toString(),
+          allAvailablePets + ' Available',
+          'adoption-application',
+        ],
+        [
+          'Adoption Applications',
+          totalAdoptions.toString(),
+          pendingAdoptions + ' Pending',
+          'adoption-application',
+        ],
         ['Adopted Pets', adoptedPetsInRange.toString(), adoptionRate + '% Success Rate'],
-        ['Total Registered Users', totalUsers.toString(), verifiedUsersInRange + ' Verified'],
+        [
+          'Total Registered Users',
+          totalUsers.toString(),
+          verifiedUsersInRange + ' Verified',
+          'user-growth',
+        ],
         ['Active Campaigns', activeCampaigns.toString(), reportCampaigns.length + ' Total'],
         [
           'Total Funds Raised',
@@ -811,6 +827,7 @@ const Page = () => {
           'From ' +
             new Set(reportDonations.map((d: { donor?: number }) => d.donor)).size +
             ' donors',
+          'donation-analytics',
         ],
         [
           'Average Donation',
@@ -1127,6 +1144,7 @@ const Page = () => {
       description: `${filtered.pets} total pets`,
       gradient: 'from-orange-200 to-orange-400',
       iconColor: 'text-white',
+      link: 'manage-pet',
     },
     {
       title: 'Adoption Applications',
@@ -1138,6 +1156,7 @@ const Page = () => {
         : `${filtered.adoptions} total applications`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
+      link: '#adoption-application',
     },
     {
       title: 'Total Donations',
@@ -1149,15 +1168,17 @@ const Page = () => {
         : `From ${filtered.campaigns.length} total campaigns`,
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
+      link: '#donation-analytics',
     },
     {
-      title: 'New Users',
+      title: 'All Users',
       value: String(filtered.users),
       changeType: 'positive' as const,
       icon: Users,
       description: dateRange?.from ? 'Registered in period' : 'Total registered users',
       gradient: 'from-orange-25 to-orange-50',
       iconColor: 'text-orange-500',
+      link: '#user-growth',
     },
   ];
 
@@ -1208,27 +1229,29 @@ const Page = () => {
         className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
       >
         {dashboardStats.map((stat, index) => (
-          <Card
-            key={index}
-            className={`bg-gradient-to-br ${stat.gradient} border-0 shadow-sm hover:shadow-md transition-shadow`}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle
-                className={`text-sm font-medium ${index === 0 ? 'text-gray-900' : 'text-gray-700'} truncate pr-2`}
-              >
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.iconColor} flex-shrink-0`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                {stat.value}
-              </div>
-              <div className="flex items-center text-xs mt-2">
-                <span className="text-gray-600 truncate">{stat.description}</span>
-              </div>
-            </CardContent>
-          </Card>
+          <Link href={stat.link}>
+            <Card
+              key={index}
+              className={`bg-gradient-to-br ${stat.gradient} border-0 shadow-sm hover:shadow-md transition-shadow`}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle
+                  className={`text-sm font-medium ${index === 0 ? 'text-gray-900' : 'text-gray-700'} truncate pr-2`}
+                >
+                  {stat.title}
+                </CardTitle>
+                <stat.icon className={`h-5 w-5 ${stat.iconColor} flex-shrink-0`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                  {stat.value}
+                </div>
+                <div className="flex items-center text-xs mt-2">
+                  <span className="text-gray-600 truncate">{stat.description}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -1271,7 +1294,10 @@ const Page = () => {
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3 xl:grid-cols-3">
           {/* Enhanced User Analytics */}
-          <Card className="lg:col-span-2 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+          <Card
+            id="user-growth"
+            className="lg:col-span-2 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm"
+          >
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <Users className="h-5 w-5 text-orange-500 flex-shrink-0" />
@@ -1307,7 +1333,10 @@ const Page = () => {
           </Card>
 
           {/* Enhanced Donation Analytics */}
-          <Card className="lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+          <Card
+            id="donation-analytics"
+            className="lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm"
+          >
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
                 <PhilippinePeso className="h-5 w-5 text-orange-500 flex-shrink-0" />
@@ -1330,7 +1359,10 @@ const Page = () => {
 
       {/* Recent Adoptions */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
-        <Card className="col-span-1 lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm">
+        <Card
+          id="adoption-application"
+          className="col-span-1 lg:col-span-4 shadow-sm hover:shadow-md transition-shadow border-0 bg-white/80 backdrop-blur-sm"
+        >
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-gray-900 text-base sm:text-lg">
               <PawPrint className="h-5 w-5 text-orange-500 flex-shrink-0" />

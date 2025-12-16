@@ -10,7 +10,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableFilter, TableFilters } from '@/components/ui/table-filters';
-import { ArrowDown, ArrowUp, ArrowUpDown, Edit, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Dog,
+  Edit,
+  Eye,
+  MoreHorizontal,
+  Stethoscope,
+  Trash2,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Pet } from '../config/types/pet';
 import { HappinessImageDisplay } from './HappinessImageDisplay';
@@ -30,14 +40,12 @@ interface PetTableProps {
 }
 
 export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<{
     column: 'age' | 'size' | 'weight' | null;
     order: 'asc' | 'desc';
   }>({ column: null, order: 'desc' });
 
-  // Generate filter options based on available data
   const filterOptions = useMemo(() => {
     const typeOptions = [...new Set(pets.map((pet) => pet.type))].map((type) => ({
       label: type,
@@ -82,8 +90,8 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
     };
   }, [pets]);
 
-  // Define filters
-  const filters: TableFilter[] = [
+  // Basic search and general filters
+  const basicFilters: TableFilter[] = [
     {
       id: 'search',
       label: 'Search',
@@ -125,6 +133,10 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       options: filterOptions.statusOptions,
       placeholder: 'Select status',
     },
+  ];
+
+  // Health-related filters
+  const healthFilters: TableFilter[] = [
     {
       id: 'vaccinated',
       label: 'Vaccinated Only',
@@ -137,6 +149,10 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       type: 'boolean',
       placeholder: 'Show only spayed/neutered pets',
     },
+  ];
+
+  // Adoption status filter
+  const adoptionFilters: TableFilter[] = [
     {
       id: 'adopted',
       label: 'Adopted Only',
@@ -145,22 +161,16 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
     },
   ];
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'pending':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  const getStatusColor = (adopted: boolean) => {
+    if (adopted) {
+      return 'bg-green-100 text-green-500 border-green-500';
+    } else {
+      return 'bg-blue-100 text-blue-500 border-blue-500';
     }
   };
-  // Apply filters
+
   const filteredPets = useMemo(() => {
     let filtered = pets.filter((pet) => {
-      // Search filter
       if (filterValues.search) {
         const searchTerm = filterValues.search.toLowerCase();
         const searchableText = [
@@ -179,35 +189,30 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
         }
       }
 
-      // Type filter
       if (filterValues.type && filterValues.type.length > 0) {
         if (!filterValues.type.includes(pet.type.toLowerCase())) {
           return false;
         }
       }
 
-      // Breed filter
       if (filterValues.breed && filterValues.breed.length > 0) {
         if (!pet.breed || !filterValues.breed.includes(pet.breed.toLowerCase())) {
           return false;
         }
       }
 
-      // Gender filter
       if (filterValues.gender && filterValues.gender.length > 0) {
         if (!filterValues.gender.includes(pet.gender.toLowerCase())) {
           return false;
         }
       }
 
-      // Size filter
       if (filterValues.size && filterValues.size.length > 0) {
         if (!filterValues.size.includes(pet.size.toLowerCase())) {
           return false;
         }
       }
 
-      // Status filter
       if (filterValues.status && filterValues.status.length > 0) {
         if (
           !pet.request_status ||
@@ -217,7 +222,6 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
         }
       }
 
-      // Boolean filters
       if (filterValues.vaccinated && !pet.is_vaccinated) {
         return false;
       }
@@ -233,7 +237,6 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       return true;
     });
 
-    // Apply sorting
     if (sortConfig.column) {
       filtered = [...filtered].sort((a, b) => {
         let compareA: number;
@@ -241,35 +244,31 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
 
         switch (sortConfig.column) {
           case 'weight':
-            // Parse weight values, treating missing/invalid weights as 0
             compareA = parseFloat(a.weight?.replace(/[^0-9.]/g, '') || '0');
             compareB = parseFloat(b.weight?.replace(/[^0-9.]/g, '') || '0');
             break;
           case 'age':
-            // Parse age values and convert to months for accurate comparison
-            // "2 years" -> 24, "4 months" -> 4, "1 year" -> 12
             const parseAgeToMonths = (age: string | null | undefined): number => {
               if (!age) return 0;
               const ageLower = age.toLowerCase();
               const num = parseFloat(ageLower.replace(/[^0-9.]/g, '') || '0');
 
               if (ageLower.includes('year')) {
-                return num * 12; // Convert years to months
+                return num * 12;
               } else if (ageLower.includes('month')) {
-                return num; // Already in months
+                return num;
               } else if (ageLower.includes('week')) {
-                return num / 4; // Convert weeks to months (approximate)
+                return num / 4;
               } else if (ageLower.includes('day')) {
-                return num / 30; // Convert days to months (approximate)
+                return num / 30;
               }
-              return num * 12; // Default to years if no unit specified
+              return num * 12;
             };
 
             compareA = parseAgeToMonths(a.age);
             compareB = parseAgeToMonths(b.age);
             break;
           case 'size':
-            // Map size strings to numbers for comparison
             const sizeOrder = { small: 1, medium: 2, large: 3, 'extra large': 4 };
             compareA = sizeOrder[a.size?.toLowerCase() as keyof typeof sizeOrder] || 0;
             compareB = sizeOrder[b.size?.toLowerCase() as keyof typeof sizeOrder] || 0;
@@ -289,24 +288,22 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
     switch (status?.toLowerCase()) {
       case 'approved':
       case 'pending':
-        return 'default'; // green
+        return 'default';
       case 'rejected':
-        return 'destructive'; // red
+        return 'destructive';
       default:
-        return 'outline'; // gray
+        return 'outline';
     }
   };
 
   const toggleSort = (column: 'age' | 'size' | 'weight') => {
     if (sortConfig.column === column) {
-      // Same column - cycle through: desc -> asc -> null
       if (sortConfig.order === 'desc') {
         setSortConfig({ column, order: 'asc' });
       } else {
         setSortConfig({ column: null, order: 'desc' });
       }
     } else {
-      // New column - start with desc
       setSortConfig({ column, order: 'desc' });
     }
   };
@@ -322,20 +319,47 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Filters */}
-      <TableFilters
-        filters={filters}
-        onFiltersChange={setFilterValues}
-        onClearAll={() => setFilterValues({})}
-        className="w-full"
-      />
+      <div className="flex flex-wrap gap-4 items-start">
+        <TableFilters
+          filters={basicFilters}
+          onFiltersChange={setFilterValues}
+          onClearAll={() => {}}
+          values={filterValues}
+          label="General"
+        />
+        <TableFilters
+          filters={healthFilters}
+          onFiltersChange={setFilterValues}
+          onClearAll={() => {}}
+          values={filterValues}
+          label="Health Status"
+          bgColor="bg-emerald-500"
+          icon={<Stethoscope className="h-4 w-4" />}
+        />
 
-      {/* Results count */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
+        <TableFilters
+          filters={adoptionFilters}
+          onFiltersChange={setFilterValues}
+          onClearAll={() => {}}
+          values={filterValues}
+          label="Adoption Info"
+          bgColor="bg-orange-600"
+          icon={<Dog className="h-4 w-4" />}
+        />
+      </div>
+
+      {/* Results count and Clear All */}
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">
           Showing {filteredPets.length} of {pets.length} pets
         </span>
+        {Object.keys(filterValues).length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => setFilterValues({})}>
+            Clear All
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -454,7 +478,10 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
               {filteredPets.map((pet, index) => {
                 const odd = index % 2 === 1;
                 return (
-                  <TableRow key={pet.id} className={`${odd ? 'bg-gray-100' : ''}`}>
+                  <TableRow
+                    key={pet.id}
+                    className={`${pet.adopted ? 'bg-green-50' : odd ? 'bg-gray-100' : ''}`}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="relative">
@@ -503,9 +530,9 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                     <TableCell>
                       <Badge
                         variant={getStatusBadgeVariant(pet.request_status)}
-                        className={`${getStatusColor(pet.request_status || '')}`}
+                        className={`${getStatusColor(pet.adopted !== null)}`}
                       >
-                        {pet.request_status || 'pending'}
+                        {pet.adopted ? 'Adopted' : 'For adoption'}
                       </Badge>
                     </TableCell>
                     <TableCell>{pet.is_vaccinated ? 'Vaccinated' : 'Not Vaccinated'}</TableCell>
@@ -529,17 +556,21 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                               <Eye className="h-4 w-4 mr-2" />
                               Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onEdit?.(pet)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onDelete?.(pet.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
+                            {!pet.adopted && (
+                              <DropdownMenuItem onClick={() => onEdit?.(pet)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {!pet.adopted && (
+                              <DropdownMenuItem
+                                onClick={() => onDelete?.(pet.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

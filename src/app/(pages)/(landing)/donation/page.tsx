@@ -179,7 +179,7 @@ const page = () => {
                       href={link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline block mb-1"
+                      className="text-sm text-blue-600 hover:underline block mb-1 max-w-[90%] truncate"
                     >
                       {link}
                     </a>

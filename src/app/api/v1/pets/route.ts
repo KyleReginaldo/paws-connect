@@ -172,6 +172,15 @@ export async function GET(request: Request) {
       if (is_adopted?.toLowerCase() === 'true') {
         responseData = responseData.filter((pet) => pet.adopted !== null);
       }
+      
+      // Sort so adopted pets appear at the bottom
+      responseData.sort((a, b) => {
+        // Non-adopted pets (null) come before adopted pets (non-null)
+        if (a.adopted === null && b.adopted !== null) return -1;
+        if (a.adopted !== null && b.adopted === null) return 1;
+        // If both are adopted or both are not adopted, maintain created_at order
+        return 0;
+      });
     }
     
     if (user && Array.isArray(responseData) && responseData.length > 0) {

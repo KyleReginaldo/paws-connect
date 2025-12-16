@@ -47,6 +47,10 @@ export interface TableFiltersProps {
   onFiltersChange: (filters: Record<string, any>) => void;
   onClearAll?: () => void;
   className?: string;
+  label?: string;
+  bgColor?: string;
+  icon?: React.ReactNode;
+  values?: Record<string, any>;
 }
 
 export function TableFilters({
@@ -54,33 +58,48 @@ export function TableFilters({
   onFiltersChange,
   onClearAll,
   className,
+  label,
+  bgColor,
+  icon,
+  values,
 }: TableFiltersProps) {
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const [internalFilterValues, setInternalFilterValues] = useState<Record<string, any>>({});
+  const filterValues = values ?? internalFilterValues;
   const [open, setOpen] = useState(false);
 
-  const activeFiltersCount = Object.entries(filterValues).filter(([, value]) => {
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object' && value !== null) {
-      return Object.values(value).some((v) => v !== undefined && v !== null && v !== '');
-    }
-    return value !== undefined && value !== null && value !== '';
-  }).length;
+  // Only count filters that belong to this filter group
+  const filterIds = filters.map((f) => f.id);
+  const activeFiltersCount = Object.entries(filterValues)
+    .filter(([key]) => filterIds.includes(key))
+    .filter(([, value]) => {
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'object' && value !== null) {
+        return Object.values(value).some((v) => v !== undefined && v !== null && v !== '');
+      }
+      return value !== undefined && value !== null && value !== '';
+    }).length;
 
   const updateFilter = (filterId: string, value: any) => {
     const newValues = { ...filterValues, [filterId]: value };
-    setFilterValues(newValues);
+    if (!values) {
+      setInternalFilterValues(newValues);
+    }
     onFiltersChange(newValues);
   };
 
   const clearFilter = (filterId: string) => {
     const newValues = { ...filterValues };
     delete newValues[filterId];
-    setFilterValues(newValues);
+    if (!values) {
+      setInternalFilterValues(newValues);
+    }
     onFiltersChange(newValues);
   };
 
   const clearAllFilters = () => {
-    setFilterValues({});
+    if (!values) {
+      setInternalFilterValues({});
+    }
     onFiltersChange({});
     onClearAll?.();
   };
@@ -122,10 +141,11 @@ export function TableFilters({
               className={cn(
                 'gap-2 h-9 px-3',
                 activeFiltersCount > 0 && 'text-primary bg-primary/5 hover:bg-primary/10',
+                bgColor,
               )}
             >
-              <Filter className="h-4 w-4" />
-              Filter
+              {icon ?? <Filter className="h-4 w-4" />}
+              {label ?? 'Filter'}
               {activeFiltersCount > 0 && (
                 <Badge variant="secondary" className="h-5 px-1.5 text-xs ml-1">
                   {activeFiltersCount}
