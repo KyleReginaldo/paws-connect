@@ -40,6 +40,9 @@ interface AdoptionFormData {
       date_of_birth: string | null;
       status: string | null;
       created_at: string;
+      first_name: string | null;
+      middle_initial: string | null;
+      last_name: string | null;
     } | null;
   } | null;
   pet: PetData | null;
@@ -95,6 +98,19 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
     return String(v);
   };
 
+  const fullName =
+    adoption.users?.user_identification?.first_name &&
+    adoption.users?.user_identification.last_name
+      ? [
+          adoption.users.user_identification.first_name,
+          adoption.users.user_identification.middle_initial,
+          adoption.users.user_identification.last_name,
+        ]
+          .filter(Boolean)
+          .join(' ')
+      : '';
+  const recipient = fullName || adoption?.users?.username || 'Adopter';
+  console.log(`recipient: ${recipient}`);
   return `
 <!doctype html>
 <html lang="en">
@@ -106,16 +122,17 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
   body {
     font-family: Arial, sans-serif;
     padding: 32px;
-    background: #ffffff;
+    background: #fff;
     color: #000;
     line-height: 1.4;
   }
 
   h1, h2 {
     font-weight: bold;
-    margin-bottom: 8px;
-    margin-top: 22px;
+    margin: 8px 0;
   }
+
+  h2 { margin-top: 22px; }
 
   .header {
     text-align: center;
@@ -127,8 +144,6 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
     width: 100%;
     min-height: 20px;
     padding-bottom: 2px;
-    display: inline-block;
-    vertical-align: bottom;
     line-height: 18px;
   }
 
@@ -143,7 +158,6 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
     width: 180px;
     font-size: 14px;
     font-weight: bold;
-    padding-bottom: 2px;
   }
 
   textarea.answer {
@@ -175,13 +189,6 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
   .sig-line {
     border-bottom: 1px solid #000;
     margin: 40px 0 6px;
-    height: 0;
-  }
-
-  @media print {
-    body {
-      background: #fff;
-    }
   }
 </style>
 </head>
@@ -200,7 +207,7 @@ export const generateAdoptionForm = (adoption: AdoptionFormData): string => {
 
 <div class="row">
   <div class="label">Full Name:</div>
-  <div class="line">${safe(adopterData?.username)}</div>
+  <div class="line">${safe(recipient)}</div>
 </div>
 
 <div class="row">

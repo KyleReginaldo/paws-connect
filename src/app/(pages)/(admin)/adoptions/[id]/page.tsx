@@ -95,6 +95,9 @@ interface AdoptionData {
   adopting_for_self?: boolean | null;
   how_can_you_give_fur_rever_home?: string | null;
   where_did_you_hear_about_us?: string | null;
+  // PDF URLs
+  adoption_form?: string | null;
+  adoption_certificate?: string | null;
 }
 
 const AdoptionPage = () => {
@@ -188,8 +191,15 @@ const AdoptionPage = () => {
 </html>`;
   };
 
-  const handleGenerateAdoptionForm = async () => {
+  const handleGenerateAdoptionForm = async (forceRegenerate = false) => {
     if (!adoption) return;
+
+    // Check if adoption form already exists (unless forcing regeneration)
+    if (adoption.adoption_form && !forceRegenerate) {
+      setPdfUrl(adoption.adoption_form);
+      setPdfType('form');
+      return;
+    }
 
     setPdfGenerating(true);
     setPdfUrl(null);
@@ -230,24 +240,27 @@ const AdoptionPage = () => {
       iframeDoc.write(htmlContent);
       iframeDoc.close();
 
-      // Wait for content to load
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Use html2canvas and jsPDF
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
+      // Load libraries in parallel while DOM settles
+      const [html2canvas, jsPDF] = await Promise.all([
+        import('html2canvas').then((m) => m.default),
+        import('jspdf').then((m) => m.default),
+        new Promise((resolve) => setTimeout(resolve, 50)),
+      ]);
 
       const canvas = await html2canvas(iframeDoc.body, {
-        scale: 1.5,
+        scale: 1.0, // Reduced to 1.0 for fastest rendering
         useCORS: true,
         logging: false,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.85); // JPEG with 85% quality for smaller size
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
+        compress: true,
       });
 
       const imgWidth = 210; // A4 width in mm
@@ -300,6 +313,9 @@ const AdoptionPage = () => {
         body: JSON.stringify({ adoption_form: urlData.publicUrl }),
       });
 
+      // Update local state with the new URL
+      setAdoption((prev) => (prev ? { ...prev, adoption_form: urlData.publicUrl } : null));
+
       // Display PDF in embedded viewer
       setPdfUrl(urlData.publicUrl);
       setPdfGenerating(false);
@@ -314,11 +330,24 @@ const AdoptionPage = () => {
   const handleGenerateCertificate = async () => {
     if (!adoption) return;
 
+    // Check if certificate already exists
+    if (adoption.adoption_certificate) {
+      setPdfUrl(adoption.adoption_certificate);
+      setPdfType('certificate');
+      return;
+    }
+
     setPdfGenerating(true);
     setPdfUrl(null);
     setPdfType('certificate');
-
-    const recipient = adoption.users?.username || 'Adopter';
+    const fullName =
+      adoption.users?.user_identification?.first_name &&
+      adoption.users?.user_identification.last_name
+        ? adoption.users?.user_identification.first_name +
+          adoption.users.user_identification.middle_initial +
+          adoption.users?.user_identification.last_name
+        : '';
+    const recipient = fullName || adoption?.users?.username || 'Adopter';
     const petName = adoption.pets?.name || adoption.pet?.name || 'your new friend';
 
     // Get the adopter's real name from user identification
@@ -359,25 +388,28 @@ const AdoptionPage = () => {
     iframeDoc.write(html);
     iframeDoc.close();
 
-    // Wait for content to load
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
     try {
-      // Use html2canvas and jsPDF
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
+      // Load libraries in parallel while DOM settles
+      const [html2canvas, jsPDF] = await Promise.all([
+        import('html2canvas').then((m) => m.default),
+        import('jspdf').then((m) => m.default),
+        new Promise((resolve) => setTimeout(resolve, 50)),
+      ]);
 
       const canvas = await html2canvas(iframeDoc.body, {
-        scale: 1.5,
+        scale: 1.0, // Reduced to 1.0 for fastest rendering
         useCORS: true,
         logging: false,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.9); // JPEG with 90% quality
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4',
+        compress: true,
       });
 
       const imgWidth = 297; // A4 landscape width in mm
@@ -416,6 +448,9 @@ const AdoptionPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adoption_certificate: urlData.publicUrl }),
       });
+
+      // Update local state with the new URL
+      setAdoption((prev) => (prev ? { ...prev, adoption_certificate: urlData.publicUrl } : null));
 
       // Display PDF in embedded viewer
       setPdfUrl(urlData.publicUrl);
@@ -641,16 +676,33 @@ const AdoptionPage = () => {
 
                 {/* Adoption Form Button - Available for all statuses */}
                 {adoption.status === 'APPROVED' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white cursor-pointer"
-                    onClick={handleGenerateAdoptionForm}
-                    title="Generate and save adoption form as PDF"
-                  >
-                    <FileHeart className="h-3 w-3 mr-1" />
-                    Generate Adoption Form
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white cursor-pointer"
+                      onClick={() => handleGenerateAdoptionForm(!adoption.adoption_form)}
+                      title={
+                        adoption.adoption_form
+                          ? 'View adoption form'
+                          : 'Generate and save adoption form as PDF'
+                      }
+                    >
+                      <FileHeart className="h-3 w-3 mr-1" />
+                      {adoption.adoption_form ? 'View' : 'Generate'} Adoption Form
+                    </Button>
+                    {/* {adoption.adoption_form && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 text-gray-500 hover:text-orange-500"
+                        onClick={() => handleGenerateAdoptionForm(true)}
+                        title="Regenerate adoption form"
+                      >
+                        🔄
+                      </Button>
+                    )} */}
+                  </>
                 )}
 
                 {/* Certificate Button - Only for adopted pets */}
@@ -660,10 +712,14 @@ const AdoptionPage = () => {
                     size="sm"
                     className="text-xs h-7 bg-orange-500 text-white hover:bg-orange-700 cursor-pointer"
                     onClick={handleGenerateCertificate}
-                    title="Generate and save certificate as PDF"
+                    title={
+                      adoption.adoption_certificate
+                        ? 'View certificate'
+                        : 'Generate and save certificate as PDF'
+                    }
                   >
                     <FileBadge className="h-3 w-3 mr-1" />
-                    Generate Certificate
+                    {adoption.adoption_certificate ? 'View' : 'Generate'} Certificate
                   </Button>
                 )}
               </div>
