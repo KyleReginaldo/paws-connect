@@ -114,6 +114,8 @@ const AdoptionPage = () => {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfType, setPdfType] = useState<'form' | 'certificate' | null>(null);
+  const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
+  const [imageModalTitle, setImageModalTitle] = useState<string>('');
 
   const isAdopted = (status: string | null) => {
     const s = (status || '').toUpperCase();
@@ -1059,21 +1061,23 @@ const AdoptionPage = () => {
                         {adoption.users.user_identification.id_attachment_url && (
                           <div className="mt-4">
                             <p className="text-xs text-gray-500 mb-2">ID Document</p>
-                            <div className="relative group inline-block">
+                            <div
+                              className="relative group inline-block cursor-pointer"
+                              onClick={() => {
+                                setImageModalUrl(
+                                  adoption.users!.user_identification!.id_attachment_url,
+                                );
+                                setImageModalTitle('ID Document');
+                              }}
+                            >
                               <Image
                                 src={adoption.users.user_identification.id_attachment_url}
                                 alt={`${adoption.users.user_identification.id_attachment_url.replaceAll('10.0.2.2', '127.0.0.1')} - Valid ID`}
                                 width={200}
                                 height={120}
-                                className="rounded border border-gray-300 object-cover cursor-pointer hover:border-blue-400 transition-colors"
-                                onClick={() =>
-                                  window.open(
-                                    adoption.users!.user_identification!.id_attachment_url,
-                                    '_blank',
-                                  )
-                                }
+                                className="rounded border border-gray-300 object-cover hover:border-blue-400 transition-colors"
                               />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                                 <div className="bg-white px-2 py-1 rounded text-xs text-gray-700 shadow">
                                   Click to enlarge
                                 </div>
@@ -1106,15 +1110,20 @@ const AdoptionPage = () => {
                           key={index}
                           className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:border-purple-300 transition-colors"
                         >
-                          <div className="aspect-square relative cursor-pointer">
+                          <div
+                            className="aspect-square relative cursor-pointer"
+                            onClick={() => {
+                              setImageModalUrl(imageUrl);
+                              setImageModalTitle(`House Image ${index + 1}`);
+                            }}
+                          >
                             <Image
                               src={imageUrl}
                               alt={`House image ${index + 1}`}
                               fill
                               className="object-cover transition-transform group-hover:scale-105"
-                              onClick={() => window.open(imageUrl, '_blank')}
                             />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                               <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded text-xs text-gray-700 font-medium">
                                 View Full Size
                               </div>
@@ -1515,6 +1524,38 @@ const AdoptionPage = () => {
                 src={pdfUrl}
                 className="w-full h-full border-none"
                 title={pdfType === 'form' ? 'Adoption Form' : 'Certificate'}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {imageModalUrl && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
+          onClick={() => setImageModalUrl(null)}
+        >
+          <div
+            className="relative max-w-5xl max-h-[90vh] w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-white">{imageModalTitle}</h2>
+              <button
+                onClick={() => setImageModalUrl(null)}
+                className="text-white hover:text-gray-300 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="relative bg-white rounded-lg overflow-hidden">
+              <Image
+                src={imageModalUrl}
+                alt={imageModalTitle}
+                width={1200}
+                height={800}
+                className="w-full h-auto max-h-[80vh] object-contain"
               />
             </div>
           </div>
