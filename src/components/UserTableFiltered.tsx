@@ -552,12 +552,12 @@ export function UserTableFiltered({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-2 py-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 py-4">
           <div className="text-sm text-muted-foreground">
             Showing {startIndex + 1} to {Math.min(endIndex, totalUsers)} of {totalUsers} users
           </div>
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="flex-wrap gap-1">
               <PaginationItem>
                 <PaginationPrevious
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -567,17 +567,66 @@ export function UserTableFiltered({
                 />
               </PaginationItem>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <PaginationItem key={page}>
-                  <PaginationLink
-                    onClick={() => setCurrentPage(page)}
-                    isActive={currentPage === page}
-                    className="cursor-pointer"
-                  >
-                    {page}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+              {(() => {
+                const pageNumbers = [];
+                const maxVisible = 5; // Maximum number of page buttons to show
+
+                if (totalPages <= maxVisible + 2) {
+                  // Show all pages if total is small
+                  for (let i = 1; i <= totalPages; i++) {
+                    pageNumbers.push(i);
+                  }
+                } else {
+                  // Always show first page
+                  pageNumbers.push(1);
+
+                  if (currentPage <= 3) {
+                    // Near the start
+                    for (let i = 2; i <= Math.min(4, totalPages - 1); i++) {
+                      pageNumbers.push(i);
+                    }
+                    pageNumbers.push('ellipsis-end');
+                  } else if (currentPage >= totalPages - 2) {
+                    // Near the end
+                    pageNumbers.push('ellipsis-start');
+                    for (let i = Math.max(totalPages - 3, 2); i < totalPages; i++) {
+                      pageNumbers.push(i);
+                    }
+                  } else {
+                    // In the middle
+                    pageNumbers.push('ellipsis-start');
+                    pageNumbers.push(currentPage - 1);
+                    pageNumbers.push(currentPage);
+                    pageNumbers.push(currentPage + 1);
+                    pageNumbers.push('ellipsis-end');
+                  }
+
+                  // Always show last page
+                  pageNumbers.push(totalPages);
+                }
+
+                return pageNumbers.map((page, idx) => {
+                  if (typeof page === 'string') {
+                    // Render ellipsis
+                    return (
+                      <PaginationItem key={page}>
+                        <span className="px-2 text-muted-foreground">...</span>
+                      </PaginationItem>
+                    );
+                  }
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                });
+              })()}
 
               <PaginationItem>
                 <PaginationNext
