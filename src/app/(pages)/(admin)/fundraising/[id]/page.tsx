@@ -4,6 +4,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useNotifications } from '@/components/ui/notification';
 import { Progress } from '@/components/ui/progress';
 import { LoadingSkeleton } from '@/components/ui/skeleton-patterns';
 import type { FundraisingWithDonations } from '@/config/types/fundraising';
@@ -14,6 +23,7 @@ import {
   Heart,
   PhilippinePeso,
   QrCode,
+  Trash2,
   User,
   Users,
 } from 'lucide-react';
@@ -24,11 +34,15 @@ import { useEffect, useState } from 'react';
 const FundraisingPage = () => {
   const params = useParams();
   const router = useRouter();
+  const { success, error: showError } = useNotifications();
   const id = params.id as string;
   const [campaign, setCampaign] = useState<FundraisingWithDonations | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [deletingDonationId, setDeletingDonationId] = useState<number | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [donationToDelete, setDonationToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -61,6 +75,44 @@ const FundraisingPage = () => {
 
   const formatCurrency = (amount: number) => {
     return `₱${amount.toLocaleString()}`;
+  };
+
+  const handleDeleteDonation = async (donationId: number) => {
+    setDeletingDonationId(donationId);
+    try {
+      const response = await fetch(`/api/v1/fundraising/${id}/donations/${donationId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to delete donation');
+      }
+
+      // Refresh campaign data
+      const campaignResponse = await fetch(`/api/v1/fundraising/${id}`);
+      const data = await campaignResponse.json();
+      if (data.data) {
+        setCampaign(data.data);
+      }
+
+      success('Donation Deleted', 'The donation has been successfully removed from the campaign.');
+    } catch (error) {
+      console.error('Error deleting donation:', error);
+      showError(
+        'Failed to Delete Donation',
+        error instanceof Error ? error.message : 'Please try again later.',
+      );
+    } finally {
+      setDeletingDonationId(null);
+      setShowDeleteConfirm(false);
+      setDonationToDelete(null);
+    }
+  };
+
+  const confirmDeleteDonation = (donationId: number) => {
+    setDonationToDelete(donationId);
+    setShowDeleteConfirm(true);
   };
 
   if (loading) {
@@ -602,9 +654,24 @@ const FundraisingPage = () => {
                                   ? 'Anonymous'
                                   : donation.donor?.username || 'Anonymous'}
                               </span>
-                              <span className="font-bold text-lg text-green-500 flex-shrink-0">
-                                {formatCurrency(donation.amount)}
-                              </span>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="font-bold text-lg text-green-500">
+                                  {formatCurrency(donation.amount)}
+                                </span>
+                                {campaign.status !== 'COMPLETE' &&
+                                  campaign.status !== 'COMPLETED' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      onClick={() => confirmDeleteDonation(donation.id)}
+                                      disabled={deletingDonationId === donation.id}
+                                      title="Delete donation"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                              </div>
                             </div>
 
                             <div className="mt-1 flex items-center gap-1">
@@ -674,25 +741,6 @@ const FundraisingPage = () => {
                               </div>
                             </div>
                           )}
-
-                          {/* Verification Status */}
-                          <div className="flex items-center gap-2 pt-1">
-                            {donation.reference_number || donation.screenshot ? (
-                              <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-xs text-green-600 font-medium">
-                                  Verified Payment
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                <span className="text-xs text-yellow-600 font-medium">
-                                  Pending Verification
-                                </span>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
                     ))}
@@ -754,6 +802,48 @@ const FundraisingPage = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Donation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this donation reference? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 p-4 bg-red-50 rounded-md border border-red-200">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <p className="text-sm text-red-700">
+              Deleting this donation will permanently remove the record and update the campaign's
+              raised amount.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDonationToDelete(null);
+              }}
+              disabled={deletingDonationId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (donationToDelete) {
+                  handleDeleteDonation(donationToDelete);
+                }
+              }}
+              disabled={deletingDonationId !== null}
+            >
+              {deletingDonationId !== null ? 'Deleting...' : 'Delete Donation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

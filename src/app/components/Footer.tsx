@@ -19,7 +19,7 @@ const Footer = () => {
             FAQs
           </Link>
           <Link
-            href="https://maps.app.goo.gl/Z8ZRmqTa2gF4sz9GA"
+            href="https://maps.app.goo.gl/VJ4udY3NTk7kLXGy6"
             target="_blank"
             className="flex items-center hover:text-orange-400 font-semibold transition-colors"
           >

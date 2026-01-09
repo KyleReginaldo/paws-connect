@@ -230,7 +230,9 @@ const Page = () => {
         throw new Error(result.message || 'Failed to update post');
       }
 
+      // Fetch posts first to ensure UI is updated
       await fetchPosts();
+
       setSuccessMsg('Post updated successfully');
       setEditOpen(false);
       setEditingPost(null);
@@ -289,6 +291,10 @@ const Page = () => {
       }
 
       console.log('[posts] post created successfully');
+
+      // Fetch posts first to ensure UI is updated
+      await fetchPosts();
+
       setSuccessMsg('Post created successfully');
       setTitle('');
       setContent('');
@@ -301,7 +307,6 @@ const Page = () => {
     } finally {
       console.log('[posts] submit finished');
       setSubmitting(false);
-      await fetchPosts();
     }
   };
 
@@ -335,7 +340,9 @@ const Page = () => {
         throw new Error(result.message || 'Failed to delete post');
       }
 
+      // Fetch posts first to ensure UI is updated
       await fetchPosts();
+
       setSuccessMsg('Post deleted');
     } catch (err) {
       console.error('[posts] delete post error:', err);
@@ -466,7 +473,7 @@ const Page = () => {
             variant="outline"
             size="sm"
             onClick={async () => {
-              fetchPosts();
+              await fetchPosts();
             }}
             className="h-8"
           >

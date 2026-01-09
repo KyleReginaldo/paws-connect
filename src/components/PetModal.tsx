@@ -696,7 +696,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
             {/* Type */}
             <div className="space-y-2">
-              <Label htmlFor="type">Type *</Label>
+              <Label htmlFor="type">
+                Type <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={formData.type}
                 onValueChange={(value) => handleInputChange('type', value)}
@@ -1169,28 +1171,13 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
                 onChange={(e) => handleInputChange('special_needs', e.target.value)}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="request_status">Request Status</Label>
-              <Select
-                value={formData.request_status}
-                onValueChange={(value) => handleInputChange('request_status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select request status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Photo Upload */}
           <div className="space-y-2">
-            <Label>Pet Photos *</Label>
+            <Label>
+              Pet Photos <span className="text-red-500">*</span>
+            </Label>
             {/* Hidden file input - always present */}
             <input
               ref={fileInputRef}

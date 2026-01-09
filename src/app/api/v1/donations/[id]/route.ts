@@ -165,6 +165,8 @@ export async function DELETE(
       .select('id, amount, fundraising')
       .eq('id', donationId)
       .single();
+      console.log('Donation fetch error:', fetchError);
+      console.log('Donation to delete:', donation);
 
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
@@ -182,15 +184,6 @@ export async function DELETE(
     }
 
     // Delete the donation
-    const { error: deleteError } = await supabase.from('donations').delete().eq('id', donationId);
-
-    if (deleteError) {
-      console.error('Failed to delete donation:', deleteError.message);
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete donation', message: deleteError.message }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
 
     // Update fundraising raised_amount by subtracting the deleted donation
     if (donation.fundraising && donation.amount) {
@@ -216,6 +209,15 @@ export async function DELETE(
           // Non-fatal error - donation is already deleted
         }
       }
+    }
+    const { error: deleteError } = await supabase.from('donations').delete().eq('id', donationId);
+
+    if (deleteError) {
+      console.error('Failed to delete donation:', deleteError.message);
+      return new Response(
+        JSON.stringify({ error: 'Failed to delete donation', message: deleteError.message }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
     }
 
     return new Response(JSON.stringify({ message: 'Donation deleted successfully' }), {

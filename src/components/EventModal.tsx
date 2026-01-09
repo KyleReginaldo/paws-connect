@@ -294,7 +294,9 @@ export function EventModal({ open, onOpenChange, onSubmit, editingEvent }: Event
           {/* Title */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor="title">Event Title *</Label>
+              <Label htmlFor="title">
+                Event Title <span className="text-red-500">*</span>
+              </Label>
             </div>
             <Input
               id="title"

@@ -100,18 +100,7 @@ export function EventTableFiltered({
       options: filterOptions.statusOptions,
       placeholder: 'Select status',
     },
-    {
-      id: 'hasSuggestions',
-      label: 'Has AI Suggestions',
-      type: 'boolean',
-      placeholder: 'Show only events with AI suggestions',
-    },
-    {
-      id: 'hasImages',
-      label: 'Has Images',
-      type: 'boolean',
-      placeholder: 'Show only events with images',
-    },
+
     {
       id: 'createdDate',
       label: 'Created Date',

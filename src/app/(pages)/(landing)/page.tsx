@@ -164,7 +164,7 @@ export default function HomePage() {
         className="block dark:hidden max-w-[70%] mx-auto mb-16 mt-4"
         animationStyle="from-center"
         videoSrc="https://www.youtube.com/embed/YgDMA1HtnJQ?si=dVjhasKnoAvLmm0b"
-        thumbnailSrc="/pet_bg.png"
+        thumbnailSrc="/pet_bg.webp"
         thumbnailAlt="Dummy Video Thumbnail"
       />
       <div className="container mx-auto px-4 py-16 relative">

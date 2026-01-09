@@ -567,7 +567,9 @@ export function FundraisingModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Campaign Title *</Label>
+              <Label htmlFor="title">
+                Campaign Title <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -582,7 +584,9 @@ export function FundraisingModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description">
+                Description <span className="text-red-500">*</span>
+              </Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -678,7 +682,9 @@ export function FundraisingModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="target_amount">Target Amount (₱) *</Label>
+              <Label htmlFor="target_amount">
+                Target Amount (₱) <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="target_amount"
                 type="number"

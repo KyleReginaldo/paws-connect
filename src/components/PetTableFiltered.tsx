@@ -47,38 +47,101 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
   }>({ column: null, order: 'desc' });
 
   const filterOptions = useMemo(() => {
+    // Helper function to get base filtered pets (excluding the current filter category)
+    const getBaseFilteredPets = (excludeFilterKey: string) => {
+      return pets.filter((pet) => {
+        if (excludeFilterKey !== 'search' && filterValues.search) {
+          const searchTerm = filterValues.search.toLowerCase();
+          const searchableText = [
+            pet.name,
+            pet.breed,
+            pet.description,
+            pet.special_needs,
+            pet.rescue_address,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          if (!searchableText.includes(searchTerm)) return false;
+        }
+
+        if (excludeFilterKey !== 'type' && filterValues.type?.length > 0) {
+          if (!filterValues.type.includes(pet.type.toLowerCase())) return false;
+        }
+
+        if (excludeFilterKey !== 'breed' && filterValues.breed?.length > 0) {
+          if (!pet.breed || !filterValues.breed.includes(pet.breed.toLowerCase())) return false;
+        }
+
+        if (excludeFilterKey !== 'gender' && filterValues.gender?.length > 0) {
+          if (!filterValues.gender.includes(pet.gender.toLowerCase())) return false;
+        }
+
+        if (excludeFilterKey !== 'size' && filterValues.size?.length > 0) {
+          if (!filterValues.size.includes(pet.size.toLowerCase())) return false;
+        }
+
+        if (excludeFilterKey !== 'status' && filterValues.status?.length > 0) {
+          if (
+            !pet.request_status ||
+            !filterValues.status.includes(pet.request_status.toLowerCase())
+          )
+            return false;
+        }
+
+        if (excludeFilterKey !== 'vaccinated' && filterValues.vaccinated && !pet.is_vaccinated) {
+          return false;
+        }
+
+        if (excludeFilterKey !== 'spayed' && filterValues.spayed && !pet.is_spayed_or_neutured) {
+          return false;
+        }
+
+        if (excludeFilterKey !== 'adopted' && filterValues.adopted && !pet.adopted) {
+          return false;
+        }
+
+        return true;
+      });
+    };
+
+    const basePetsForType = getBaseFilteredPets('type');
     const typeOptions = [...new Set(pets.map((pet) => pet.type))].map((type) => ({
       label: type,
       value: type.toLowerCase(),
-      count: pets.filter((pet) => pet.type === type).length,
+      count: basePetsForType.filter((pet) => pet.type === type).length,
     }));
 
+    const basePetsForBreed = getBaseFilteredPets('breed');
     const breedOptions = [...new Set(pets.map((pet) => pet.breed).filter(Boolean))].map(
       (breed) => ({
         label: breed,
         value: breed.toLowerCase(),
-        count: pets.filter((pet) => pet.breed === breed).length,
+        count: basePetsForBreed.filter((pet) => pet.breed === breed).length,
       }),
     );
 
+    const basePetsForSize = getBaseFilteredPets('size');
     const sizeOptions = [...new Set(pets.map((pet) => pet.size))].map((size) => ({
       label: size.charAt(0).toUpperCase() + size.slice(1),
       value: size.toLowerCase(),
-      count: pets.filter((pet) => pet.size === size).length,
+      count: basePetsForSize.filter((pet) => pet.size === size).length,
     }));
 
+    const basePetsForStatus = getBaseFilteredPets('status');
     const statusOptions = [...new Set(pets.map((pet) => pet.request_status))]
       .filter(Boolean)
       .map((status) => ({
         label: status.charAt(0).toUpperCase() + status.slice(1),
         value: status.toLowerCase(),
-        count: pets.filter((pet) => pet.request_status === status).length,
+        count: basePetsForStatus.filter((pet) => pet.request_status === status).length,
       }));
 
+    const basePetsForGender = getBaseFilteredPets('gender');
     const genderOptions = [...new Set(pets.map((pet) => pet.gender))].map((gender) => ({
       label: gender.charAt(0).toUpperCase() + gender.slice(1),
       value: gender.toLowerCase(),
-      count: pets.filter((pet) => pet.gender === gender).length,
+      count: basePetsForGender.filter((pet) => pet.gender === gender).length,
     }));
 
     return {
@@ -88,7 +151,7 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       statusOptions,
       genderOptions,
     };
-  }, [pets]);
+  }, [pets, filterValues]);
 
   // Basic search and general filters
   const basicFilters: TableFilter[] = [
@@ -324,15 +387,35 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       <div className="flex flex-wrap gap-4 items-start">
         <TableFilters
           filters={basicFilters}
-          onFiltersChange={setFilterValues}
-          onClearAll={() => {}}
+          onFiltersChange={(newValues) => {
+            // Clean up empty arrays and falsy values
+            const cleaned = Object.fromEntries(
+              Object.entries(newValues).filter(([, value]) => {
+                if (Array.isArray(value)) return value.length > 0;
+                if (typeof value === 'boolean') return value === true;
+                return value !== undefined && value !== null && value !== '';
+              }),
+            );
+            setFilterValues(cleaned);
+          }}
+          onClearAll={() => setFilterValues({})}
           values={filterValues}
           label="General"
         />
         <TableFilters
           filters={healthFilters}
-          onFiltersChange={setFilterValues}
-          onClearAll={() => {}}
+          onFiltersChange={(newValues) => {
+            // Clean up empty arrays and falsy values
+            const cleaned = Object.fromEntries(
+              Object.entries(newValues).filter(([, value]) => {
+                if (Array.isArray(value)) return value.length > 0;
+                if (typeof value === 'boolean') return value === true;
+                return value !== undefined && value !== null && value !== '';
+              }),
+            );
+            setFilterValues(cleaned);
+          }}
+          onClearAll={() => setFilterValues({})}
           values={filterValues}
           label="Health Status"
           bgColor="bg-emerald-500"
@@ -341,8 +424,18 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
 
         <TableFilters
           filters={adoptionFilters}
-          onFiltersChange={setFilterValues}
-          onClearAll={() => {}}
+          onFiltersChange={(newValues) => {
+            // Clean up empty arrays and falsy values
+            const cleaned = Object.fromEntries(
+              Object.entries(newValues).filter(([, value]) => {
+                if (Array.isArray(value)) return value.length > 0;
+                if (typeof value === 'boolean') return value === true;
+                return value !== undefined && value !== null && value !== '';
+              }),
+            );
+            setFilterValues(cleaned);
+          }}
+          onClearAll={() => setFilterValues({})}
           values={filterValues}
           label="Adoption Info"
           bgColor="bg-orange-600"
