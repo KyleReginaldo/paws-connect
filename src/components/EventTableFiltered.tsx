@@ -86,13 +86,7 @@ export function EventTableFiltered({
       type: 'search',
       placeholder: 'Search events by title or description...',
     },
-    {
-      id: 'creator',
-      label: 'Creator',
-      type: 'multiselect',
-      options: filterOptions.creatorOptions,
-      placeholder: 'Select creators',
-    },
+
     {
       id: 'status',
       label: 'Status',
