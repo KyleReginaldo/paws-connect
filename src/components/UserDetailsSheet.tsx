@@ -42,7 +42,23 @@ type Identification = {
   created_at?: string;
 };
 
-type UserWithId = User & { user_identification?: Identification | null };
+type Address = {
+  id?: number;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
+  country?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  is_default?: boolean | null;
+  created_at?: string;
+};
+
+type UserWithId = User & {
+  user_identification?: Identification | null;
+  address?: Address[] | null;
+};
 
 interface UserDetailsApiResponse {
   message: string;
@@ -248,9 +264,25 @@ export function UserDetailsSheet({
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground text-xs">Address</div>
+                    <div className="text-muted-foreground text-xs">ID address</div>
                     <div className="font-medium break-words">
                       {u.user_identification?.address || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Current address</div>
+                    <div className="font-medium break-words">
+                      {u.address && u.address.length > 0 && u.address[0]
+                        ? [
+                            u.address[0].street,
+                            u.address[0].city,
+                            u.address[0].state,
+                            u.address[0].zip_code,
+                            u.address[0].country,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')
+                        : '—'}
                     </div>
                   </div>
                 </div>

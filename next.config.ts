@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
   },
   // This ensures that 404s are handled by the not-found.tsx page
   trailingSlash: false,
-  skipMiddlewareUrlNormalize: false,
+  skipProxyUrlNormalize: false,
 };
 
 export default nextConfig;

@@ -1,1 +1,1 @@
-export const USER_QUERY_WITH_ID = '*, user_identification(*)';
+export const USER_QUERY_WITH_ID = '*, user_identification(*), address(*)';

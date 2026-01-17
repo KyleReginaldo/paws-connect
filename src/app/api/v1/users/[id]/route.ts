@@ -15,6 +15,7 @@ async function parseJson(request: NextRequest) {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   console.log(request.url);
+  console.log(`get user by id called`);
 
   try {
     const { id } = await params;
