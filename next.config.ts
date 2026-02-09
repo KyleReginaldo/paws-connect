@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // output: 'standalone', // Only needed for Docker/self-hosted. Vercel handles this automatically.
   images: {
     remotePatterns: [
       {
