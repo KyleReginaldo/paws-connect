@@ -313,3 +313,88 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  console.log(request.url);
+  try {
+    const { id } = await params;
+    const fundraisingId = parseInt(id);
+
+    if (isNaN(fundraisingId)) {
+      return new Response(JSON.stringify({ error: 'Invalid fundraising ID' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if campaign exists first
+    const { data: existing, error: fetchError } = await supabase
+      .from('fundraising')
+      .select('id, images')
+      .eq('id', fundraisingId)
+      .single();
+
+    if (fetchError || !existing) {
+      return new Response(
+        JSON.stringify({
+          error: 'Not found',
+          message: 'Fundraising campaign not found',
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Delete associated donations first (foreign key constraint)
+    const { error: donationsError } = await supabase
+      .from('donations')
+      .delete()
+      .eq('fundraising', fundraisingId);
+
+    if (donationsError) {
+      console.error('❌ Error deleting associated donations:', donationsError.message);
+      return new Response(
+        JSON.stringify({
+          error: 'Database error',
+          message: `Failed to delete associated donations: ${donationsError.message}`,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Delete the fundraising campaign
+    const { error } = await supabase
+      .from('fundraising')
+      .delete()
+      .eq('id', fundraisingId);
+
+    if (error) {
+      console.error('❌ Error deleting fundraising campaign:', error.message);
+      return new Response(
+        JSON.stringify({
+          error: 'Database error',
+          message: `Failed to delete fundraising campaign: ${error.message}`,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    console.log('✅ Successfully deleted fundraising campaign:', fundraisingId);
+
+    return new Response(
+      JSON.stringify({ message: 'Fundraising campaign deleted successfully' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  } catch (err) {
+    console.error('❌ Fundraising DELETE error:', err);
+    return new Response(
+      JSON.stringify({
+        error: 'Internal Server Error',
+        message: err instanceof Error ? err.message : 'An unexpected error occurred',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+}
+

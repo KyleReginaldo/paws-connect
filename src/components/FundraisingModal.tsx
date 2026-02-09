@@ -1,5 +1,5 @@
 'use client';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -24,7 +24,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { Fundraising } from '@/config/types/fundraising';
 import {
-  AlertCircle,
   Calendar as CalendarIcon,
   HelpCircle,
   Loader2,
@@ -33,6 +32,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 // Extended interface for form data with file properties
@@ -101,7 +101,6 @@ export function FundraisingModal({
     e_wallets: [],
     links: [],
   });
-  const [error, setError] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -179,8 +178,7 @@ export function FundraisingModal({
       setEndDateMonth(undefined);
       setEndDateValue('');
     }
-    // Clear error when modal opens/closes or campaign changes
-    setError(null);
+
   }, [editingCampaign, open, currentUserId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -190,29 +188,28 @@ export function FundraisingModal({
     console.log('🖼️ Current image files:', imageFiles.length);
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
       // Validate required fields before submission
       console.log('🔍 Validating form fields...');
       if (!formData.title || formData.title.length < 2) {
         console.log('❌ Title validation failed');
-        setError('Title must be at least 2 characters');
+        toast.error('Title must be at least 2 characters');
         return;
       }
       if (!formData.description || formData.description.length < 10) {
         console.log('❌ Description validation failed');
-        setError('Description must be at least 10 characters');
+        toast.error('Description must be at least 10 characters');
         return;
       }
       if (!formData.target_amount || formData.target_amount < 100) {
         console.log('❌ Target amount validation failed');
-        setError('Target amount must be at least ₱100');
+        toast.error('Target amount must be at least ₱100');
         return;
       }
       if (!formData.created_by) {
         console.log('❌ User ID validation failed');
-        setError('User ID is required');
+        toast.error('User ID is required');
         return;
       }
 
@@ -224,7 +221,35 @@ export function FundraisingModal({
 
         if (endDate < today) {
           console.log('❌ End date validation failed - date is in the past');
-          setError('End date cannot be in the past');
+          toast.error('End date cannot be in the past');
+          return;
+        }
+      }
+
+      // Validate at least one bank account or e-wallet is provided
+      const bankAccounts = formData.bank_accounts || [];
+      const eWallets = formData.e_wallets || [];
+      if (bankAccounts.length === 0 && eWallets.length === 0) {
+        console.log('❌ No payment method provided');
+        toast.error('Please add at least one bank account or e-wallet as a payment method');
+        return;
+      }
+
+      // Validate bank accounts and e-wallets have complete entries
+      for (let i = 0; i < bankAccounts.length; i++) {
+        const account = bankAccounts[i];
+        if (!account.label.trim() || !account.account_number.trim()) {
+          console.log(`❌ Bank account ${i + 1} validation failed`);
+          toast.error(`Bank Account ${i + 1}: Both label and account number are required`);
+          return;
+        }
+      }
+
+      for (let i = 0; i < eWallets.length; i++) {
+        const wallet = eWallets[i];
+        if (!wallet.label.trim() || !wallet.account_number.trim()) {
+          console.log(`❌ E-wallet ${i + 1} validation failed`);
+          toast.error(`E-Wallet ${i + 1}: Both label and account number are required`);
           return;
         }
       }
@@ -311,14 +336,15 @@ export function FundraisingModal({
 
       if (result.success) {
         console.log('✅ Campaign submission successful');
+        toast.success(editingCampaign ? 'Campaign updated successfully' : 'Campaign created successfully');
         onOpenChange(false);
       } else {
         console.log('❌ Campaign submission failed:', result.error);
-        setError(result.error || 'An error occurred while saving the campaign');
+        toast.error(result.error || 'An error occurred while saving the campaign');
       }
     } catch (error) {
       console.error('❌ Error submitting campaign data:', error);
-      setError('An unexpected error occurred. Please try again.');
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
       console.log('=== FORM SUBMISSION END ===');
@@ -365,12 +391,12 @@ export function FundraisingModal({
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
       if (file.size > maxSize) {
-        setError(`QR code file is too large. Maximum size is 10MB.`);
+        toast.error('QR code file is too large. Maximum size is 10MB.');
         return;
       }
 
       if (!allowedTypes.includes(file.type)) {
-        setError(`QR code file format not supported. Please use JPEG, PNG, or WebP.`);
+        toast.error('QR code file format not supported. Please use JPEG, PNG, or WebP.');
         return;
       }
 
@@ -423,12 +449,12 @@ export function FundraisingModal({
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
       if (file.size > maxSize) {
-        setError(`QR code file is too large. Maximum size is 10MB.`);
+        toast.error('QR code file is too large. Maximum size is 10MB.');
         return;
       }
 
       if (!allowedTypes.includes(file.type)) {
-        setError(`QR code file format not supported. Please use JPEG, PNG, or WebP.`);
+        toast.error('QR code file format not supported. Please use JPEG, PNG, or WebP.');
         return;
       }
 
@@ -479,7 +505,6 @@ export function FundraisingModal({
       return;
     }
 
-    setError(null);
     const newFiles: File[] = [];
     const newPreviews: string[] = [];
 
@@ -489,13 +514,13 @@ export function FundraisingModal({
       // Validate file
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
-        setError(`File "${file.name}" is too large. Maximum size is 5MB.`);
+        toast.error(`File "${file.name}" is too large. Maximum size is 5MB.`);
         continue;
       }
 
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        setError(`File "${file.name}" is not supported. Please use JPEG, PNG, or WebP images.`);
+        toast.error(`File "${file.name}" is not supported. Please use JPEG, PNG, or WebP images.`);
         continue;
       }
 
@@ -531,7 +556,7 @@ export function FundraisingModal({
       }
 
       if (rejectedFiles.length > 0) {
-        setError(`Some files are too large (max 10MB): ${rejectedFiles.join(', ')}`);
+        toast.error(`Some files are too large (max 10MB): ${rejectedFiles.join(', ')}`);
       }
 
       if (filesToUpload.length > 0) {
@@ -556,13 +581,6 @@ export function FundraisingModal({
               : 'Fill in the information to create a new fundraising campaign.'}
           </DialogDescription>
         </DialogHeader>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
