@@ -86,7 +86,7 @@ export default function HomePage() {
                   <Mail /> Get In Touch
                 </Button>
               </Link>
-              <Link href="https://kylereginaldo.itch.io/pawsconnect">
+              <Link href="https://drive.google.com/file/d/1H2GJSQmOKMTc6OuyWEbrkrUkmjUITSCj/view?usp=sharing">
                 <Button
                   variant="default"
                   className="bg-teal-500 hover:bg-white/10 w-full xs:w-auto"

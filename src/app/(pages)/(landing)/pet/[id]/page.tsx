@@ -246,7 +246,7 @@ const Page = () => {
               </Button>
             </Link>
             <Link
-              href="https://kylereginaldo.itch.io/pawsconnect"
+              href="https://drive.google.com/file/d/1H2GJSQmOKMTc6OuyWEbrkrUkmjUITSCj/view?usp=sharing"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full"

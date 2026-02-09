@@ -6,7 +6,8 @@ import { Download, Heart, PawPrint, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotFound() {
-  const downloadUrl = 'https://kylereginaldo.itch.io/pawsconnect'; // You can replace this with your actual app download link
+  const downloadUrl =
+    'https://drive.google.com/file/d/1H2GJSQmOKMTc6OuyWEbrkrUkmjUITSCj/view?usp=sharing'; // You can replace this with your actual app download link
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex items-center justify-center p-4">
