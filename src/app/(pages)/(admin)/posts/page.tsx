@@ -56,6 +56,10 @@ const Page = () => {
   const [imageUploading, setImageUploading] = useState(false);
   const createFileInputRef = useRef<HTMLInputElement>(null);
   const [posts, setPosts] = useState<Post[] | null>(null);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsError, setPostsError] = useState<string | null>(null);
+  const fetchingRef = useRef(false);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -352,23 +356,81 @@ const Page = () => {
     }
   };
 
-  const fetchPosts = async () => {
-    const { data, error } = await supabase
-      .from('posts')
-      .select()
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('[posts] fetch posts error:', error);
-      setErrorMsg(error.message);
+  const fetchPosts = async (retryCount = 0) => {
+    // Prevent concurrent fetches
+    if (fetchingRef.current) {
+      console.log('[posts] fetch already in progress, skipping');
       return;
     }
-    if (data) {
-      console.log('[posts] fetched posts:', data);
-      setPosts(data);
+
+    fetchingRef.current = true;
+    setPostsLoading(true);
+    setPostsError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select()
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        console.log('[posts] fetched posts:', data.length, 'posts');
+        setPosts(data);
+        setPostsError(null);
+      }
+    } catch (error: any) {
+      console.error('[posts] fetch posts error:', error);
+      const errorMessage = error?.message || 'Failed to fetch posts';
+      setPostsError(errorMessage);
+
+      // Retry logic with exponential backoff (max 3 retries)
+      if (retryCount < 3) {
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        console.log(`[posts] retrying fetch in ${delay}ms (attempt ${retryCount + 1}/3)`);
+        retryTimeoutRef.current = setTimeout(() => {
+          fetchPosts(retryCount + 1);
+        }, delay);
+      } else {
+        setErrorMsg(errorMessage);
+      }
+    } finally {
+      fetchingRef.current = false;
+      setPostsLoading(false);
     }
   };
   useEffect(() => {
     fetchPosts();
+
+    // Set up real-time subscription for posts
+    const channel = supabase
+      .channel('posts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'posts',
+        },
+        (payload) => {
+          console.log('[posts] real-time update:', payload.eventType);
+          // Refetch posts on any change
+          fetchPosts();
+        },
+      )
+      .subscribe((status) => {
+        console.log('[posts] subscription status:', status);
+      });
+
+    // Cleanup
+    return () => {
+      console.log('[posts] cleaning up subscription');
+      channel.unsubscribe();
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
   }, []);
   return (
     <div className="flex flex-col items-center md:flex-row md:justify-center md:items-start gap-[16px]">
@@ -476,11 +538,36 @@ const Page = () => {
               await fetchPosts();
             }}
             className="h-8"
+            disabled={postsLoading}
           >
-            Refresh
+            {postsLoading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
-        {posts && posts.length > 0 ? (
+        {postsError && (
+          <div className="w-full p-3 mb-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-800">Failed to load posts</p>
+                <p className="text-xs text-red-600 mt-1">{postsError}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => fetchPosts()}
+                className="h-7 text-xs text-red-700 hover:text-red-800"
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+        {postsLoading && !posts ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-3"></div>
+            <p className="text-sm">Loading posts...</p>
+          </div>
+        ) : posts && posts.length > 0 ? (
           posts?.map((e) => {
             const imgs = Array.isArray(e.images) ? (e.images as string[]).filter(Boolean) : [];
             const created = e.created_at ? new Date(e.created_at).toLocaleString() : '';
@@ -631,9 +718,20 @@ const Page = () => {
               </div>
             );
           })
-        ) : (
-          <div className="text-center">No posts available</div>
-        )}
+        ) : !postsLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+            <p className="text-sm mb-2">No posts available</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fetchPosts()}
+              className="h-8 text-xs"
+            >
+              Refresh
+            </Button>
+          </div>
+        ) : null}
       </div>
       {/* Edit Post Modal */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
