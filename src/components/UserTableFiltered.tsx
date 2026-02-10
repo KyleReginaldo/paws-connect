@@ -70,6 +70,9 @@ export function UserTableFiltered({
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
+  const [addViolationOpen, setAddViolationOpen] = useState(false);
+  const [violationInput, setViolationInput] = useState('');
+  const [userForViolation, setUserForViolation] = useState<User | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
@@ -490,7 +493,7 @@ export function UserTableFiltered({
                                       onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
                                     >
                                       <UserCheck className="h-4 w-4 mr-2" />
-                                      Semi Verified
+                                      Semi Verify
                                     </DropdownMenuItem>
                                   )}
                                 {canManageUser() && user.status !== 'INDEFINITE' && (
@@ -504,10 +507,9 @@ export function UserTableFiltered({
                                 {currentUserRole === 1 && (
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      const violation = prompt('Enter violation description:');
-                                      if (violation && violation.trim()) {
-                                        onAddViolation?.(user.id, violation.trim());
-                                      }
+                                      setUserForViolation(user);
+                                      setViolationInput('');
+                                      setAddViolationOpen(true);
                                     }}
                                     className="text-orange-600"
                                   >
@@ -654,6 +656,63 @@ export function UserTableFiltered({
           onRemoveViolation={onRemoveViolation}
         />
       )}
+
+      {/* Add Violation Dialog */}
+      <Dialog open={addViolationOpen} onOpenChange={setAddViolationOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              Add Violation for {userForViolation?.username || 'User'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="violation-input" className="text-sm font-medium text-foreground mb-5">
+                Violation Description
+              </label>
+              <textarea
+                id="violation-input"
+                className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+                placeholder="Enter the violation description..."
+                value={violationInput}
+                onChange={(e) => setViolationInput(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                This will be added to the user's violation history.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddViolationOpen(false);
+                setViolationInput('');
+                setUserForViolation(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={() => {
+                if (violationInput.trim() && userForViolation) {
+                  onAddViolation?.(userForViolation.id, violationInput.trim());
+                  setAddViolationOpen(false);
+                  setViolationInput('');
+                  setUserForViolation(null);
+                }
+              }}
+              disabled={!violationInput.trim()}
+            >
+              Add Violation
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

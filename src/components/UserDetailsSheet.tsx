@@ -4,6 +4,7 @@ import type { User } from '@/components/../config/models/users';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNotifications } from '@/components/ui/notification';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -94,6 +95,8 @@ export function UserDetailsSheet({
   const [photoOpen, setPhotoOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [addViolationOpen, setAddViolationOpen] = useState(false);
+  const [violationInput, setViolationInput] = useState('');
   const { success, error: showError } = useNotifications();
 
   const canManageUser = useMemo(() => currentUserRole === 1, [currentUserRole]);
@@ -348,8 +351,8 @@ export function UserDetailsSheet({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const desc = prompt('Enter violation description:');
-                      if (desc && desc.trim()) onAddViolation?.(u.id, desc.trim());
+                      setViolationInput('');
+                      setAddViolationOpen(true);
                     }}
                   >
                     <AlertTriangle className="h-4 w-4 mr-2" /> Add violation
@@ -462,6 +465,61 @@ export function UserDetailsSheet({
           </div>
         )}
       </SheetContent>
+
+      {/* Add Violation Dialog */}
+      <Dialog open={addViolationOpen} onOpenChange={setAddViolationOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              Add Violation for {details?.username || user.username || 'User'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="violation-input" className="text-sm font-medium text-foreground">
+                Violation Description
+              </label>
+              <textarea
+                id="violation-input"
+                className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+                placeholder="Enter the violation description..."
+                value={violationInput}
+                onChange={(e) => setViolationInput(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                This will be added to the user's violation history.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddViolationOpen(false);
+                setViolationInput('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={() => {
+                if (violationInput.trim()) {
+                  onAddViolation?.(user.id, violationInput.trim());
+                  setAddViolationOpen(false);
+                  setViolationInput('');
+                }
+              }}
+              disabled={!violationInput.trim()}
+            >
+              Add Violation
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }

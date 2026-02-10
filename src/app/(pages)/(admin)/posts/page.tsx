@@ -48,6 +48,14 @@ interface Comment {
   profile_image?: string | null;
 }
 
+interface Reaction {
+  user_id: string;
+  username: string;
+  emoji: string;
+  created_at: string;
+  profile_image?: string | null;
+}
+
 const Page = () => {
   const [category, setCategory] = useState<PostCategory | undefined>(undefined);
   const [title, setTitle] = useState('');
@@ -318,13 +326,26 @@ const Page = () => {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [selectedPostComments, setSelectedPostComments] = useState<Comment[]>([]);
   const [selectedPostTitle, setSelectedPostTitle] = useState('');
+  const [reactionsOpen, setReactionsOpen] = useState(false);
+  const [selectedPostReactions, setSelectedPostReactions] = useState<Reaction[]>([]);
+  const [selectedReactionsTitle, setSelectedReactionsTitle] = useState('');
 
   const openComments = (post: Post) => {
     setSelectedPostTitle(post.title);
-    setSelectedPostComments(
-      Array.isArray(post.comments) ? (post.comments as unknown as Comment[]) : [],
-    );
+    const comments = Array.isArray(post.comments) ? (post.comments as unknown as Comment[]) : [];
+    console.log('[posts] comments data:', comments);
+    setSelectedPostComments(comments);
     setCommentsOpen(true);
+  };
+
+  const openReactions = (post: Post) => {
+    setSelectedReactionsTitle(post.title);
+    const reactions = Array.isArray(post.reactions)
+      ? (post.reactions as unknown as Reaction[])
+      : [];
+    console.log('[posts] reactions data:', reactions);
+    setSelectedPostReactions(reactions);
+    setReactionsOpen(true);
   };
 
   const handleDeletePost = async (id: number) => {
@@ -368,12 +389,16 @@ const Page = () => {
     setPostsError(null);
 
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select()
-        .order('created_at', { ascending: false });
+      // Use admin-specific API endpoint with user enrichment
+      const response = await fetch('/api/v1/posts/admin');
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch posts');
+      }
+
+      const result = await response.json();
+      const data = result.data;
 
       if (data) {
         console.log('[posts] fetched posts:', data.length, 'posts');
@@ -701,13 +726,17 @@ const Page = () => {
                 {/* Footer actions */}
                 <div className="px-4 py-2 border-t flex items-center justify-between text-sm text-gray-600">
                   <div className="flex items-center gap-4">
-                    <button type="button" className="text-orange-600">
+                    <button
+                      type="button"
+                      className="text-orange-600 hover:text-orange-700 hover:underline"
+                      onClick={() => openReactions(e)}
+                    >
                       {Array.isArray(e.reactions) ? e.reactions.length : 0} Reaction
                       {Array.isArray(e.reactions) && e.reactions.length !== 1 ? 's' : ''}
                     </button>
                     <button
                       type="button"
-                      className="text-orange-600"
+                      className="text-orange-600 hover:text-orange-700 hover:underline"
                       onClick={() => openComments(e)}
                     >
                       {Array.isArray(e.comments) ? e.comments.length : 0} Comment
@@ -830,6 +859,51 @@ const Page = () => {
           </form>
         </DialogContent>
       </Dialog>
+      {/* Reactions Modal */}
+      <Dialog open={reactionsOpen} onOpenChange={setReactionsOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reactions - {selectedReactionsTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            {selectedPostReactions.length > 0 ? (
+              selectedPostReactions.map((reaction: Reaction, idx: number) => (
+                <div key={idx} className="flex items-center gap-3 pb-3 border-b last:border-b-0">
+                  <div className="flex-shrink-0">
+                    {reaction.profile_image ? (
+                      <div className="relative size-10 rounded-full overflow-hidden">
+                        <Image
+                          src={reaction.profile_image}
+                          alt={reaction.username || 'User'}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="size-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-semibold">
+                        {(reaction.username || 'U').slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm">
+                        {reaction.username || reaction.user_id || 'Unknown User'}
+                      </p>
+                      <span className="text-xl">{reaction.emoji || '👍'}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {reaction.created_at ? new Date(reaction.created_at).toLocaleString() : ''}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-8">No reactions yet</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Comments Modal */}
       <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -858,7 +932,9 @@ const Page = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-semibold text-sm">{comment.username || 'Unknown'}</p>
+                      <p className="font-semibold text-sm">
+                        {comment.username || comment.user_id || 'Unknown User'}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}
                       </p>
