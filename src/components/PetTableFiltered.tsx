@@ -89,12 +89,22 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
             return false;
         }
 
-        if (excludeFilterKey !== 'vaccinated' && filterValues.vaccinated && !pet.is_vaccinated) {
-          return false;
+        if (excludeFilterKey !== 'vaccination_status' && filterValues.vaccination_status) {
+          if (filterValues.vaccination_status === 'vaccinated' && !pet.is_vaccinated) {
+            return false;
+          }
+          if (filterValues.vaccination_status === 'not_vaccinated' && pet.is_vaccinated) {
+            return false;
+          }
         }
 
-        if (excludeFilterKey !== 'spayed' && filterValues.spayed && !pet.is_spayed_or_neutured) {
-          return false;
+        if (excludeFilterKey !== 'spay_status' && filterValues.spay_status) {
+          if (filterValues.spay_status === 'spayed' && !pet.is_spayed_or_neutured) {
+            return false;
+          }
+          if (filterValues.spay_status === 'not_spayed' && pet.is_spayed_or_neutured) {
+            return false;
+          }
         }
 
         if (excludeFilterKey !== 'adopted' && filterValues.adopted && !pet.adopted) {
@@ -189,28 +199,36 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       options: filterOptions.sizeOptions,
       placeholder: 'Select sizes',
     },
-    {
-      id: 'status',
-      label: 'Status',
-      type: 'multiselect',
-      options: filterOptions.statusOptions,
-      placeholder: 'Select status',
-    },
+    // {
+    //   id: 'status',
+    //   label: 'Status',
+    //   type: 'multiselect',
+    //   options: filterOptions.statusOptions,
+    //   placeholder: 'Select status',
+    // },
   ];
 
   // Health-related filters
   const healthFilters: TableFilter[] = [
     {
-      id: 'vaccinated',
-      label: 'Vaccinated',
-      type: 'boolean',
-      placeholder: 'Show only vaccinated pets',
+      id: 'vaccination_status',
+      label: 'Vaccination Status',
+      type: 'select',
+      options: [
+        { label: 'Vaccinated', value: 'vaccinated' },
+        { label: 'Not Vaccinated', value: 'not_vaccinated' },
+      ],
+      placeholder: 'Select vaccination status',
     },
     {
-      id: 'spayed',
-      label: 'Spayed/Neutered',
-      type: 'boolean',
-      placeholder: 'Show only spayed/neutered pets',
+      id: 'spay_status',
+      label: 'Spay/Neuter Status',
+      type: 'select',
+      options: [
+        { label: 'Spayed/Neutered', value: 'spayed' },
+        { label: 'Not Spayed/Neutered', value: 'not_spayed' },
+      ],
+      placeholder: 'Select spay/neuter status',
     },
   ];
 
@@ -285,12 +303,22 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
         }
       }
 
-      if (filterValues.vaccinated && !pet.is_vaccinated) {
-        return false;
+      if (filterValues.vaccination_status) {
+        if (filterValues.vaccination_status === 'vaccinated' && !pet.is_vaccinated) {
+          return false;
+        }
+        if (filterValues.vaccination_status === 'not_vaccinated' && pet.is_vaccinated) {
+          return false;
+        }
       }
 
-      if (filterValues.spayed && !pet.is_spayed_or_neutured) {
-        return false;
+      if (filterValues.spay_status) {
+        if (filterValues.spay_status === 'spayed' && !pet.is_spayed_or_neutured) {
+          return false;
+        }
+        if (filterValues.spay_status === 'not_spayed' && pet.is_spayed_or_neutured) {
+          return false;
+        }
       }
 
       if (filterValues.adopted && !pet.adopted) {

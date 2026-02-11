@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useConfirmation } from '@/components/ui/confirmation';
 import { useNotifications } from '@/components/ui/notification';
 import { CardListSkeleton } from '@/components/ui/skeleton-patterns';
-import { Calendar, Download, Plus, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { Calendar, Download, Plus, TrendingUp, Users } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
@@ -282,11 +282,11 @@ const ManageEvents = () => {
         </div>
 
         {/* AI Enhanced Badge */}
-        <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">
+        {/* <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">
           <Sparkles className="h-3.5 w-3.5" />
           <span className="text-sm font-medium">{eventsWithSuggestions}</span>
           <span className="text-xs opacity-75">AI Enhanced</span>
-        </div>
+        </div> */}
 
         {/* Creators Badge */}
         <div className="inline-flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full border border-orange-200">

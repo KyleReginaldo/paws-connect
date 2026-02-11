@@ -104,16 +104,23 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Sanitize phone number before validation
+    // Sanitize phone number before validation - preserve + sign for international numbers
     if (body.phone_number) {
-      body.phone_number = String(body.phone_number).replace(/\D/g, '');
+      // Remove spaces, dashes, parentheses but keep + sign
+      body.phone_number = String(body.phone_number).replace(/[\s\-()]/g, '');
     }
 
     const result = createUserSchema.safeParse(body);
     if (!result.success) {
+      // Format validation errors for better readability
+      const errors = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
       return new Response(
-        JSON.stringify({ error: 'Invalid request data', issues: result.error.message }),
-        { status: 400 },
+        JSON.stringify({ 
+          error: 'Invalid request data', 
+          message: errors,
+          issues: result.error.errors 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 

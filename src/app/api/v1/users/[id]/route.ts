@@ -41,11 +41,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return createErrorResponse('Invalid JSON', 400);
     }
 
+    // Sanitize phone number before validation if present - preserve + sign for international numbers
+    if (body.phone_number) {
+      // Remove spaces, dashes, parentheses but keep + sign
+      body.phone_number = String(body.phone_number).replace(/[\s\-()]/g, '');
+    }
+
     // Validation schema for user updates
     
     const parsed = updateUserSchema.safeParse(body);
     if (!parsed.success) {
-      return createErrorResponse('Validation error', 400, parsed.error.issues);
+      // Format validation errors for better readability
+      const errors = parsed.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
+      return createErrorResponse('Validation error', 400, { message: errors, issues: parsed.error.errors });
     }
 
     const updateData = parsed.data;

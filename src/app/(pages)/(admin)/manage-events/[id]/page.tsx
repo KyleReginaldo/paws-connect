@@ -223,12 +223,6 @@ const EventDetailPage = () => {
                   >
                     {event.ended_at ? 'Completed' : 'Active'}
                   </Badge>
-                  {event.suggestions && event.suggestions.length > 0 && (
-                    <Badge variant="outline" className="text-sm font-medium">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      AI Enhanced
-                    </Badge>
-                  )}
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h1>
                 {event.description && (

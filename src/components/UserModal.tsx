@@ -42,7 +42,19 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const { userId, userRole } = useAuth();
+
+  // Phone number validation regex
+  const PHONE_REGEX = /^(\+?63|0)?9\d{9}$/; // Philippine format
+  const INTERNATIONAL_PHONE_REGEX = /^\+\d{1,3}\d{6,14}$/; // International format
+
+  // Validate phone number
+  const validatePhoneNumber = (phone: string): boolean => {
+    if (!phone) return false;
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    return PHONE_REGEX.test(cleaned) || INTERNATIONAL_PHONE_REGEX.test(cleaned);
+  };
 
   // Permission helper - Only admins can manage users
   const canManageUser = () => {
@@ -71,12 +83,23 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
       });
     }
     setFormError(null);
+    setPhoneError(null);
   }, [editingUser, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFormError(null);
+    setPhoneError(null);
+
+    // Validate phone number before submission
+    if (formData.phone_number && !validatePhoneNumber(formData.phone_number)) {
+      setPhoneError(
+        'Invalid phone number format. Use Philippine format (09XXXXXXXXX or +639XXXXXXXXX) or international format (+[country code][number])',
+      );
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (editingUser) {
@@ -140,6 +163,20 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
       ...prev,
       [field]: value,
     }));
+
+    // Clear phone error when user starts typing
+    if (field === 'phone_number') {
+      setPhoneError(null);
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    // Validate phone on blur
+    if (formData.phone_number && !validatePhoneNumber(formData.phone_number)) {
+      setPhoneError('Invalid phone number format');
+    } else {
+      setPhoneError(null);
+    }
   };
 
   return (
@@ -199,9 +236,17 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                 type="tel"
                 value={formData.phone_number}
                 onChange={(e) => handleInputChange('phone_number', e.target.value)}
-                placeholder="Enter phone number"
+                onBlur={handlePhoneBlur}
+                placeholder="09XXXXXXXXX or +639XXXXXXXXX"
                 required
+                className={phoneError ? 'border-red-500' : ''}
               />
+              {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
+              <p className="text-xs text-muted-foreground mt-1">
+                Philippine: 09XXXXXXXXX or +639XXXXXXXXX
+                <br />
+                International: +[country code][number]
+              </p>
             </div>
 
             {editingUser ? (
