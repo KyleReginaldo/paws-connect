@@ -52,8 +52,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const parsed = updateUserSchema.safeParse(body);
     if (!parsed.success) {
       // Format validation errors for better readability
-      const errors = parsed.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
-      return createErrorResponse('Validation error', 400, { message: errors, issues: parsed.error.errors });
+      const errors = parsed.error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
+      return createErrorResponse('Validation error', 400, { message: errors, issues: parsed.error.issues });
     }
 
     const updateData = parsed.data;

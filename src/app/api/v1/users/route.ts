@@ -113,12 +113,12 @@ export async function POST(request: NextRequest) {
     const result = createUserSchema.safeParse(body);
     if (!result.success) {
       // Format validation errors for better readability
-      const errors = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
+      const errors = result.error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
           message: errors,
-          issues: result.error.errors 
+          issues: result.error.issues 
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
