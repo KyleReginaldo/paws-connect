@@ -24,7 +24,7 @@ import {
   UserX,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { User } from '../config/models/users';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -34,6 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { useNotifications } from './ui/notification';
 import {
   Pagination,
   PaginationContent,
@@ -74,10 +75,22 @@ export function UserTableFiltered({
   const [violationInput, setViolationInput] = useState('');
   const [userForViolation, setUserForViolation] = useState<User | null>(null);
 
+  const { warning } = useNotifications();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
+
+  // Keep selectedUser in sync with the users array
+  useEffect(() => {
+    if (selectedUser && users) {
+      const updatedUser = users.find((u) => u.id === selectedUser.id);
+      if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(selectedUser)) {
+        setSelectedUser(updatedUser);
+      }
+    }
+  }, [users, selectedUser]);
 
   // Generate filter options based on available data
   const filterOptions = useMemo(() => {
@@ -479,7 +492,26 @@ export function UserTableFiltered({
                                 )}
                                 {canManageUser() && user.status !== 'FULLY_VERIFIED' && (
                                   <DropdownMenuItem
-                                    onClick={() => onStatusChange?.(user.id, 'FULLY_VERIFIED')}
+                                    onClick={() => {
+                                      // Check if user has identification and house images
+                                      const hasIdentification =
+                                        user.user_identification?.id_attachment_url;
+                                      const hasHouseImages =
+                                        user.house_images && user.house_images.length > 0;
+
+                                      if (!hasIdentification || !hasHouseImages) {
+                                        const missing = [];
+                                        if (!hasIdentification) missing.push('identification');
+                                        if (!hasHouseImages) missing.push('house images');
+
+                                        warning(
+                                          `Cannot fully verify user. Missing required: ${missing.join(' and ')}.`,
+                                        );
+                                        return;
+                                      }
+
+                                      onStatusChange?.(user.id, 'FULLY_VERIFIED');
+                                    }}
                                   >
                                     <UserCheck className="h-4 w-4 mr-2" />
                                     Fully Verify
@@ -490,7 +522,22 @@ export function UserTableFiltered({
                                   user.status !== 'SEMI_VERIFIED' &&
                                   user.status !== 'FULLY_VERIFIED' && (
                                     <DropdownMenuItem
-                                      onClick={() => onStatusChange?.(user.id, 'SEMI_VERIFIED')}
+                                      onClick={() => {
+                                        // Check if user has at least identification OR house images
+                                        const hasIdentification =
+                                          user.user_identification?.id_attachment_url;
+                                        const hasHouseImages =
+                                          user.house_images && user.house_images.length > 0;
+
+                                        if (!hasIdentification && !hasHouseImages) {
+                                          warning(
+                                            `Cannot semi verify user. User must have at least identification or house images.`,
+                                          );
+                                          return;
+                                        }
+
+                                        onStatusChange?.(user.id, 'SEMI_VERIFIED');
+                                      }}
                                     >
                                       <UserCheck className="h-4 w-4 mr-2" />
                                       Semi Verify

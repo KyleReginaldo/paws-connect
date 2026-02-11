@@ -10,4 +10,17 @@ export interface User {
   house_images: string[] | null; 
   onboarded?: boolean | null; // Whether the user has completed onboarding
   violations?: string[] | null; // Array of violation descriptions with timestamps
+  user_identification?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    middle_initial: string | null;
+    id_attachment_url: string;
+    id_type: string | null;
+    date_of_birth: string | null;
+    address: string | null;
+    status: string | null;
+    user: string | null;
+    created_at: string;
+  } | null;
 }

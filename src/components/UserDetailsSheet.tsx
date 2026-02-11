@@ -90,8 +90,7 @@ export function UserDetailsSheet({
   onRemoveViolation,
 }: UserDetailsSheetProps) {
   const [details, setDetails] = useState<UserWithId | null>(null);
-  // Track loading if needed for future enhancements
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -103,27 +102,36 @@ export function UserDetailsSheet({
 
   console.log('UserDetailsSheet render:', { open, user: user?.username || 'no user' });
 
+  // Clear details when sheet closes to ensure fresh data on reopen
+  useEffect(() => {
+    if (!open) {
+      setDetails(null);
+    }
+  }, [open]);
+
+  // Fetch details when sheet opens or user changes
   useEffect(() => {
     let ignore = false;
     const fetchDetails = async () => {
       if (!open) return;
-      // setLoading(true);
+      setLoading(true);
       try {
-        const res = await fetch(`/api/v1/users/${user.id}`);
+        // Add timestamp to prevent caching
+        const res = await fetch(`/api/v1/users/${user.id}?t=${Date.now()}`);
         if (!res.ok) throw new Error('Failed to fetch user details');
         const json: UserDetailsApiResponse = await res.json();
         if (!ignore) setDetails(json.data);
       } catch (e) {
         console.error(e);
       } finally {
-        // if (!ignore) setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchDetails();
     return () => {
       ignore = true;
     };
-  }, [open, user.id]);
+  }, [open, user.id, user.status]);
 
   const getRoleText = (role: number) => {
     switch (role) {
@@ -167,8 +175,8 @@ export function UserDetailsSheet({
   };
 
   const statusLabelMap: Record<string, string> = {
-    FULLY_VERIFIED: 'Fully verified',
-    SEMI_VERIFIED: 'Semi verified',
+    FULLY_VERIFIED: 'Fully Verified',
+    SEMI_VERIFIED: 'Semi Verified',
     INDEFINITE: 'Indefinite',
   };
 
@@ -183,6 +191,18 @@ export function UserDetailsSheet({
         // Small delay to show feedback even for sync handlers
         await new Promise((r) => setTimeout(r, 600));
       }
+
+      // Refetch fresh data before showing success and closing
+      try {
+        const res = await fetch(`/api/v1/users/${u.id}?t=${Date.now()}`);
+        if (res.ok) {
+          const json: UserDetailsApiResponse = await res.json();
+          setDetails(json.data);
+        }
+      } catch (err) {
+        console.error('Failed to refetch user details:', err);
+      }
+
       success(
         'User status updated',
         `${u.username || 'User'} is now ${statusLabelMap[newStatus]}.`,
@@ -207,239 +227,245 @@ export function UserDetailsSheet({
         </SheetHeader>
 
         <ScrollArea className="flex-1 overflow-auto">
-          <div className="px-4 pb-4 space-y-4">
-            {/* Header user summary */}
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage
-                  src={
-                    transformUrlForLocalhost(u.profile_image_link) ||
-                    `https://api.dicebear.com/7.x/initials/svg?seed=${u.username || 'Unknown'}`
-                  }
-                  alt={u.username || 'Unknown User'}
-                />
-                <AvatarFallback className="bg-muted">
-                  {(u.username || 'U').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <div className="font-semibold truncate">{u.username || 'Unknown User'}</div>
-                <div className="text-xs text-muted-foreground truncate">{u.email}</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="font-medium">
-                    {getRoleText(u.role)}
-                  </Badge>
-                  <Badge className={getStatusBadge(u.status)}>{u.status}</Badge>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="px-4 pb-4 space-y-4">
+              {/* Header user summary */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage
+                    src={
+                      transformUrlForLocalhost(u.profile_image_link) ||
+                      `https://api.dicebear.com/7.x/initials/svg?seed=${u.username || 'Unknown'}`
+                    }
+                    alt={u.username || 'Unknown User'}
+                  />
+                  <AvatarFallback className="bg-muted">
+                    {(u.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{u.username || 'Unknown User'}</div>
+                  <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="font-medium">
+                      {getRoleText(u.role)}
+                    </Badge>
+                    <Badge className={getStatusBadge(u.status)}>{statusLabelMap[u.status]}</Badge>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            {/* Identification */}
-            <div>
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Identification</h3>
-                {u?.user_identification?.status && (
-                  <Badge variant="outline">{u.user_identification.status}</Badge>
-                )}
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-muted-foreground text-xs">First name</div>
-                    <div className="font-medium">{u.user_identification?.first_name || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">Last name</div>
-                    <div className="font-medium">{u.user_identification?.last_name || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">Middle initial</div>
-                    <div className="font-medium">
-                      {u.user_identification?.middle_initial || '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">Birth date</div>
-                    <div className="font-medium">
-                      {formatDate(u.user_identification?.date_of_birth)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">ID address</div>
-                    <div className="font-medium break-words">
-                      {u.user_identification?.address || '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">Current address</div>
-                    <div className="font-medium break-words">
-                      {u.address && u.address.length > 0 && u.address[0]
-                        ? [
-                            u.address[0].street,
-                            u.address[0].city,
-                            u.address[0].state,
-                            u.address[0].zip_code,
-                            u.address[0].country,
-                          ]
-                            .filter(Boolean)
-                            .join(', ')
-                        : '—'}
-                    </div>
-                  </div>
+              {/* Identification */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Identification</h3>
+                  {u?.user_identification?.status && (
+                    <Badge variant="outline">{u.user_identification.status}</Badge>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (u.user_identification?.id_attachment_url) {
-                        setPhotoUrl(u.user_identification.id_attachment_url);
-                        setPhotoOpen(true);
-                      }
-                    }}
-                    disabled={!u.user_identification?.id_attachment_url}
-                  >
-                    <FileSearch className="h-4 w-4 mr-2" /> View ID attachment
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* House images */}
-            <div>
-              <h3 className="text-sm font-medium mb-2">Home assessment photos</h3>
-              {u.house_images && u.house_images.length > 0 ? (
-                <ScrollArea className="h-48 rounded border">
-                  <div className="flex flex-wrap gap-2 p-2">
-                    {transformUrlsForLocalhost(u.house_images).map((src, idx) => (
-                      <button
-                        key={idx}
-                        className="relative h-24 w-22 overflow-hidden rounded border"
-                        onClick={() => {
-                          setPhotoUrl(src);
-                          setPhotoOpen(true);
-                        }}
-                        aria-label={`Open home photo ${idx + 1}`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={src}
-                          alt={`Home photo ${idx + 1}`}
-                          className="h-full w-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-xs text-muted-foreground">No house images submitted</div>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Violations */}
-            <div>
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Violations</h3>
-                {canManageUser && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setViolationInput('');
-                      setAddViolationOpen(true);
-                    }}
-                  >
-                    <AlertTriangle className="h-4 w-4 mr-2" /> Add violation
-                  </Button>
-                )}
-              </div>
-              <div className="mt-2 space-y-2">
-                {u.violations && u.violations.length > 0 ? (
-                  u.violations.map((v, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start justify-between gap-2 rounded-md border p-2 bg-red-50 border-red-200"
-                    >
-                      <div className="text-sm text-red-800 flex-1">
-                        <span className="font-medium">#{i + 1}:</span> {v}
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-muted-foreground text-xs">First name</div>
+                      <div className="font-medium">{u.user_identification?.first_name || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs">Last name</div>
+                      <div className="font-medium">{u.user_identification?.last_name || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs">Middle initial</div>
+                      <div className="font-medium">
+                        {u.user_identification?.middle_initial || '—'}
                       </div>
-                      {canManageUser && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRemoveViolation?.(u.id, i)}
-                          className="h-6 px-2 text-red-600 hover:text-red-700"
-                          title="Remove violation"
-                        >
-                          Remove
-                        </Button>
-                      )}
                     </div>
-                  ))
+                    <div>
+                      <div className="text-muted-foreground text-xs">Birth date</div>
+                      <div className="font-medium">
+                        {formatDate(u.user_identification?.date_of_birth)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs">ID address</div>
+                      <div className="font-medium break-words">
+                        {u.user_identification?.address || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs">Current address</div>
+                      <div className="font-medium break-words">
+                        {u.address && u.address.length > 0 && u.address[0]
+                          ? [
+                              u.address[0].street,
+                              u.address[0].city,
+                              u.address[0].state,
+                              u.address[0].zip_code,
+                              u.address[0].country,
+                            ]
+                              .filter(Boolean)
+                              .join(', ')
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (u.user_identification?.id_attachment_url) {
+                          setPhotoUrl(u.user_identification.id_attachment_url);
+                          setPhotoOpen(true);
+                        }
+                      }}
+                      disabled={!u.user_identification?.id_attachment_url}
+                    >
+                      <FileSearch className="h-4 w-4 mr-2" /> View ID attachment
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* House images */}
+              <div>
+                <h3 className="text-sm font-medium mb-2">Home assessment photos</h3>
+                {u.house_images && u.house_images.length > 0 ? (
+                  <ScrollArea className="h-48 rounded border">
+                    <div className="flex flex-wrap gap-2 p-2">
+                      {transformUrlsForLocalhost(u.house_images).map((src, idx) => (
+                        <button
+                          key={idx}
+                          className="relative h-24 w-22 overflow-hidden rounded border"
+                          onClick={() => {
+                            setPhotoUrl(src);
+                            setPhotoOpen(true);
+                          }}
+                          aria-label={`Open home photo ${idx + 1}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={src}
+                            alt={`Home photo ${idx + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
-                  <div className="text-xs text-muted-foreground">No violations</div>
+                  <div className="text-xs text-muted-foreground">No house images submitted</div>
                 )}
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            {/* Quick actions */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Quick actions</h3>
-              <div className="flex flex-wrap gap-2">
-                {canManageUser && (
-                  <>
-                    {u.status !== 'FULLY_VERIFIED' && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleStatusChange('FULLY_VERIFIED')}
-                        disabled={isActionLoading}
+              {/* Violations */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Violations</h3>
+                  {canManageUser && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setViolationInput('');
+                        setAddViolationOpen(true);
+                      }}
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2" /> Add violation
+                    </Button>
+                  )}
+                </div>
+                <div className="mt-2 space-y-2">
+                  {u.violations && u.violations.length > 0 ? (
+                    u.violations.map((v, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start justify-between gap-2 rounded-md border p-2 bg-red-50 border-red-200"
                       >
-                        <ShieldCheck className="h-4 w-4 mr-2" /> Fully verify
-                      </Button>
-                    )}
-                    {u.role === 3 &&
-                      u.status !== 'SEMI_VERIFIED' &&
-                      u.status !== 'FULLY_VERIFIED' && (
+                        <div className="text-sm text-red-800 flex-1">
+                          <span className="font-medium">#{i + 1}:</span> {v}
+                        </div>
+                        {canManageUser && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRemoveViolation?.(u.id, i)}
+                            className="h-6 px-2 text-red-600 hover:text-red-700"
+                            title="Remove violation"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-muted-foreground">No violations</div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Quick actions */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Quick actions</h3>
+                <div className="flex flex-wrap gap-2">
+                  {canManageUser && (
+                    <>
+                      {u.status !== 'FULLY_VERIFIED' && (
                         <Button
-                          variant="secondary"
                           size="sm"
-                          onClick={() => handleStatusChange('SEMI_VERIFIED')}
+                          onClick={() => handleStatusChange('FULLY_VERIFIED')}
                           disabled={isActionLoading}
                         >
-                          <ShieldQuestion className="h-4 w-4 mr-2" /> Semi verify
+                          <ShieldCheck className="h-4 w-4 mr-2" /> Fully verify
                         </Button>
                       )}
-                    {u.status !== 'INDEFINITE' && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleStatusChange('INDEFINITE')}
-                        disabled={isActionLoading}
-                      >
-                        <UserX className="h-4 w-4 mr-2" /> Indefinite
-                      </Button>
-                    )}
-                  </>
-                )}
-                <Button variant="outline" size="sm" onClick={() => onEdit?.(user)}>
-                  <UserCheck className="h-4 w-4 mr-2" /> Edit
-                </Button>
-                {canManageUser && (
-                  <Button variant="outline" size="sm" onClick={() => onDelete?.(user.id)}>
-                    Delete
+                      {u.role === 3 &&
+                        u.status !== 'SEMI_VERIFIED' &&
+                        u.status !== 'FULLY_VERIFIED' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleStatusChange('SEMI_VERIFIED')}
+                            disabled={isActionLoading}
+                          >
+                            <ShieldQuestion className="h-4 w-4 mr-2" /> Semi verify
+                          </Button>
+                        )}
+                      {u.status !== 'INDEFINITE' && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleStatusChange('INDEFINITE')}
+                          disabled={isActionLoading}
+                        >
+                          <UserX className="h-4 w-4 mr-2" /> Indefinite
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => onEdit?.(user)}>
+                    <UserCheck className="h-4 w-4 mr-2" /> Edit
                   </Button>
-                )}
+                  {canManageUser && (
+                    <Button variant="outline" size="sm" onClick={() => onDelete?.(user.id)}>
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </ScrollArea>
 
         <SheetFooter className="flex-shrink-0 px-4">
