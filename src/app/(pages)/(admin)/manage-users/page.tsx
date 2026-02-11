@@ -13,7 +13,17 @@ import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/components/ui/notification';
 import { User } from '@/config/models/users';
 import { CreateUserDto, UpdateUserDto } from '@/config/schema/userChema';
-import { Download, Plus, RefreshCw, Shield, Upload, UserCheck, Users } from 'lucide-react';
+import {
+  Clock,
+  Download,
+  Plus,
+  RefreshCw,
+  Shield,
+  Upload,
+  UserLock,
+  Users,
+  Verified,
+} from 'lucide-react';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 
@@ -192,9 +202,11 @@ const ManageStaff = () => {
   };
 
   const totalUsers = users?.length || 0;
-  const activeUsers =
-    users?.filter((user) => user.status === 'ACTIVE' || user.status === 'FULLY_VERIFIED').length ||
-    0;
+  const fullyVerifiedUsers = users?.filter((user) => user.status === 'FULLY_VERIFIED').length || 0;
+  const semiVerifiedUsers = users?.filter((user) => user.status === 'SEMI_VERIFIED').length || 0;
+  const pendingUsers = users?.filter((user) => user.status === 'PENDING').length || 0;
+  const indefiniteUsers = users?.filter((user) => user.status === 'INDEFINITE').length || 0;
+
   const adminUsers = users?.filter((user) => user.role === 1).length || 0;
 
   const handleBulkSubmit = async (drafts: BulkUserDraft[]): Promise<BulkUploadResult> => {
@@ -308,9 +320,27 @@ const ManageStaff = () => {
           </div>
 
           <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
-            <UserCheck className="h-3.5 w-3.5" />
-            <span className="text-sm font-medium">{activeUsers}</span>
-            <span className="text-xs opacity-75">Active</span>
+            <Verified className="h-3.5 w-3.5" />
+            <span className="text-sm font-medium">{fullyVerifiedUsers}</span>
+            <span className="text-xs opacity-75">Fully Verified</span>
+          </div>
+
+          <div className="inline-flex items-center gap-2 bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full border border-yellow-200">
+            <Verified className="h-3.5 w-3.5" />
+            <span className="text-sm font-medium">{semiVerifiedUsers}</span>
+            <span className="text-xs opacity-75">Semi Verified</span>
+          </div>
+
+          <div className="inline-flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full border border-orange-200">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="text-sm font-medium">{pendingUsers}</span>
+            <span className="text-xs opacity-75">Pending</span>
+          </div>
+
+          <div className="inline-flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-200">
+            <UserLock className="h-3.5 w-3.5" />
+            <span className="text-sm font-medium">{indefiniteUsers}</span>
+            <span className="text-xs opacity-75">Indefinite</span>
           </div>
 
           <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">
