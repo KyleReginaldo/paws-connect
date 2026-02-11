@@ -122,6 +122,7 @@ const AdoptionsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [petTypeFilter, setPetTypeFilter] = useState('all');
   const [approving, setApproving] = useState<number | null>(null);
+  const [rejecting, setRejecting] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
   const router = useRouter();
@@ -256,7 +257,34 @@ const AdoptionsPage = () => {
     } catch (err) {
       console.error('Error approving adoption:', err);
       alert(err instanceof Error ? err.message : 'An unknown error occurred');
+      setApproving(null);
     }
+  };
+
+  const rejectAdoption = async (adoptionId: number) => {
+    try {
+      setRejecting(adoptionId);
+      const response = await fetch(`/api/v1/adoption/${adoptionId}/reject`, {
+        method: 'PUT',
+      });
+      if (!response.ok) throw new Error('Failed to reject adoption');
+
+      fetchAdoptions().then(() => {
+        setRejecting(null);
+      });
+    } catch (err) {
+      console.error('Error rejecting adoption:', err);
+      alert(err instanceof Error ? err.message : 'An unknown error occurred');
+      setRejecting(null);
+    }
+  };
+
+  // Check if a pet already has an approved adoption
+  const isPetAlreadyAdopted = (petId?: number) => {
+    if (!petId) return false;
+    return adoptions.some(
+      (adoption) => adoption.pet_details?.id === petId && adoption.status === 'APPROVED',
+    );
   };
 
   if (loading) {
@@ -506,30 +534,62 @@ const AdoptionsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs cursor-pointer bg-gray-800 text-white hover:bg-orange-400 hover:text-white"
-                            onClick={() => {
-                              router.push(`/adoptions/${adoption.id}`);
-                            }}
-                          >
-                            <Eye />
-                            View Details
-                          </Button>
-                          {adoption.status === 'PENDING' && (
-                            <Button
-                              size="sm"
-                              className="bg-orange-500 hover:bg-orange-600 text-xs cursor-pointer text-white"
-                              onClick={() => approveAdoption(adoption.id)}
+                        <div className="flex flex-col gap-2">
+                          {adoption.status === 'PENDING' &&
+                          isPetAlreadyAdopted(adoption.pet_details?.id) ? (
+                            <Badge
+                              variant="outline"
+                              className="bg-blue-50 text-blue-700 border-blue-300 text-xs w-fit"
                             >
-                              {approving === adoption.id ? (
-                                <Loader2 className="animate-spin" />
-                              ) : (
-                                'Approve'
+                              Pet already adopted
+                            </Badge>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs cursor-pointer bg-gray-800 text-white hover:bg-orange-400 hover:text-white"
+                                onClick={() => {
+                                  router.push(`/adoptions/${adoption.id}`);
+                                }}
+                                disabled={approving !== null || rejecting !== null}
+                              >
+                                <Eye />
+                                View
+                              </Button>
+                              {adoption.status === 'PENDING' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    className="bg-orange-500 hover:bg-orange-600 text-xs cursor-pointer text-white"
+                                    onClick={() => approveAdoption(adoption.id)}
+                                    disabled={approving !== null || rejecting !== null}
+                                  >
+                                    {approving === adoption.id ? (
+                                      <Loader2 className="animate-spin" />
+                                    ) : (
+                                      'Approve'
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="text-xs cursor-pointer"
+                                    onClick={() => rejectAdoption(adoption.id)}
+                                    disabled={approving !== null || rejecting !== null}
+                                  >
+                                    {rejecting === adoption.id ? (
+                                      <Loader2 className="animate-spin" />
+                                    ) : (
+                                      <>
+                                        <X className="h-3 w-3" />
+                                        Reject
+                                      </>
+                                    )}
+                                  </Button>
+                                </>
                               )}
-                            </Button>
+                            </div>
                           )}
                         </div>
                       </TableCell>
