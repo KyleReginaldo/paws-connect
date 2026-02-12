@@ -1016,6 +1016,7 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
               <Input
                 id="age"
                 value={formData.age}
+                placeholder="Enter pet age"
                 onChange={(e) => handleInputChange('age', e.target.value)}
               />
               {ageWarning && <p className="text-xs text-amber-600">{ageWarning}</p>}
