@@ -1,5 +1,6 @@
 import { pushNotification, storeNotification } from '@/app/api/helper';
 import { supabase } from '@/app/supabase/supabase';
+import { checkChatFilters, filterMessage } from '@/lib/chat-filter-utils';
 import { getStandardWarningMessage, moderateContent } from '@/lib/content-moderation';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -140,6 +141,7 @@ export async function GET(request: NextRequest) {
         sent_at: msg.sent_at,
         user_id: msg.sender,
         viewers: viewerDetails,
+        image_url: msg.image_url,
         user: msg.users
           ? {
               id: msg.users.id,
@@ -235,18 +237,81 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check message against chat filters
+    const filterResult = await checkChatFilters(message);
+
+    // Handle filter results based on severity
+    if (filterResult.isFiltered) {
+      switch (filterResult.action) {
+        case 'block':
+          // Block the message completely (severity 3)
+          console.log(`🚫 Message blocked for user ${user.username}:`, {
+            word: filterResult.matchedWord,
+            category: filterResult.category,
+            severity: filterResult.severity,
+          });
+          return new Response(
+            JSON.stringify({
+              error: 'Message blocked',
+              message: filterResult.message,
+              severity: filterResult.severity,
+              category: filterResult.category,
+            }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+
+        case 'filter':
+          // Filter the message content (severity 2) - replace with asterisks
+          console.log(`⚠️ Message filtered for user ${user.username}:`, {
+            word: filterResult.matchedWord,
+            category: filterResult.category,
+            severity: filterResult.severity,
+          });
+          // We'll still allow the message but with filtered content
+          // This will be handled below by filtering the message
+          break;
+
+        case 'warn':
+          // Allow but log warning (severity 1)
+          console.log(`⚠️ Warning issued for user ${user.username}:`, {
+            word: filterResult.matchedWord,
+            category: filterResult.category,
+            severity: filterResult.severity,
+          });
+          // Message will go through but we log it
+          break;
+
+        default:
+          // Allow message
+          break;
+      }
+    }
+
+    // If action is 'filter', replace filtered words with asterisks
+    let finalMessage = message;
+    if (filterResult.action === 'filter') {
+      finalMessage = await filterMessage(message);
+    }
+
     // Insert message into forum_chats using UTC ISO timestamp; client will localize.
     const { data: newMessage, error: insertError } = await supabase
       .from('forum_chats')
       .insert({
         forum: globalForum.id,
-        message,
+        message: finalMessage,
         sender: user_id,
         sent_at: new Date().toISOString(),
+        message_warning: filterResult.isFiltered && filterResult.action === 'warn' 
+          ? `⚠️ ${filterResult.message}` 
+          : null,
       })
       .select(`
         id,
         message,
+        message_warning,
         sent_at,
         sender,
         users!forum_chats_sender_fkey (
@@ -315,7 +380,7 @@ export async function POST(request: NextRequest) {
           .from('users')
           .select('id, username')
           .neq('id', user_id)
-          .neq('status', 'INDEFINITE'); // Exclude indefinitely suspended users
+          .neq('status', 'BANNED'); // Exclude banned users
 
         if (usersError || !users) {
           console.error('Error fetching users for global chat notification:', usersError);
@@ -369,6 +434,7 @@ export async function POST(request: NextRequest) {
     const formattedMessage = {
       id: newMessage.id,
       message: newMessage.message,
+      message_warning: newMessage.message_warning,
       sent_at: newMessage.sent_at,
       user_id: newMessage.sender,
       user: newMessage.users
@@ -376,6 +442,15 @@ export async function POST(request: NextRequest) {
             id: newMessage.users.id,
             username: newMessage.users.username,
             role: newMessage.users.role,
+          }
+        : null,
+      filter_info: filterResult.isFiltered
+        ? {
+            filtered: true,
+            action: filterResult.action,
+            severity: filterResult.severity,
+            category: filterResult.category,
+            message: filterResult.message,
           }
         : null,
     };

@@ -317,6 +317,15 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     setIsSubmitting(false);
   };
 
+  const clearFormCache = () => {
+    try {
+      sessionStorage.removeItem('pet_form_draft');
+      console.log('🗑️ Cleared pet form cache');
+    } catch (error) {
+      console.error('Failed to clear form cache:', error);
+    }
+  };
+
   const calculateSizeFromWeight = (weight: string, petType: string): string => {
     const numericWeight = parseFloat(weight.replace(/[^\d.]/g, ''));
 
@@ -468,6 +477,9 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
     } else {
       console.log('Setting up form for new pet');
 
+      // Clear cache when opening for new pet
+      clearFormCache();
+
       setFormData({
         name: '',
         type: '',
@@ -495,25 +507,18 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
       setPhotoFiles([]);
     }
     resetUploadStates();
-
-    try {
-      if (!editingPet) {
-        const draft = sessionStorage.getItem('pet_form_draft');
-        if (draft) {
-          const parsed = JSON.parse(draft);
-          setFormData((prev) => ({ ...prev, ...parsed }));
-        }
-      }
-    } catch {}
   }, [editingPet, open, userId, catBreeds.length, dogBreeds.length]);
 
   useEffect(() => {
     try {
-      sessionStorage.setItem('pet_form_draft', JSON.stringify(formData));
+      // Only save draft for new pets (not when editing existing pets)
+      if (!editingPet && open) {
+        sessionStorage.setItem('pet_form_draft', JSON.stringify(formData));
+      }
     } catch {}
 
     console.log('🗓️ Current formData.date_of_birth:', formData.date_of_birth);
-  }, [formData]);
+  }, [formData, editingPet, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -569,6 +574,12 @@ export function PetModal({ open, onOpenChange, onSubmit, editingPet }: PetModalP
 
     try {
       await onSubmit(petData, photoFiles);
+
+      // Clear cache after successful submission (for new pets only)
+      if (!editingPet) {
+        clearFormCache();
+      }
+
       onOpenChange(false);
     } catch (error) {
       console.error('Pet submission error:', error);

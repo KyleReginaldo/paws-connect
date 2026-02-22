@@ -244,7 +244,6 @@ export function UserTableFiltered({
       case 'inactive':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'banned':
-      case 'indefinite':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -261,8 +260,7 @@ export function UserTableFiltered({
       case 'inactive':
         return 'Inactive';
       case 'banned':
-      case 'indefinite':
-        return 'Indefinite';
+        return 'Banned';
       case 'pending':
         return 'Pending';
       default:
@@ -543,12 +541,12 @@ export function UserTableFiltered({
                                       Semi Verify
                                     </DropdownMenuItem>
                                   )}
-                                {canManageUser() && user.status !== 'INDEFINITE' && (
+                                {canManageUser() && user.status !== 'BANNED' && (
                                   <DropdownMenuItem
-                                    onClick={() => onStatusChange?.(user.id, 'INDEFINITE')}
+                                    onClick={() => onStatusChange?.(user.id, 'BANNED')}
                                   >
                                     <UserX className="h-4 w-4 mr-2" />
-                                    Indefinite
+                                    Ban User
                                   </DropdownMenuItem>
                                 )}
                                 {currentUserRole === 1 && (
@@ -565,7 +563,7 @@ export function UserTableFiltered({
                                   </DropdownMenuItem>
                                 )}
                                 {canManageUser() &&
-                                  (user.status === 'INDEFINITE' || user.status === 'PENDING') && (
+                                  (user.status === 'BANNED' || user.status === 'PENDING') && (
                                     <DropdownMenuItem
                                       onClick={() => onDelete?.(user.id)}
                                       className="text-destructive"

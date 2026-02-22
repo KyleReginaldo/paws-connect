@@ -154,7 +154,6 @@ export function UserDetailsSheet({
       semi_verified: 'bg-blue-100 text-blue-800 border-blue-200',
       inactive: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       banned: 'bg-red-100 text-red-800 border-red-200',
-      indefinite: 'bg-red-100 text-red-800 border-red-200',
       pending: 'bg-gray-100 text-gray-800 border-gray-200',
     };
     return map[s] || 'bg-gray-100 text-gray-800 border-gray-200';
@@ -177,10 +176,10 @@ export function UserDetailsSheet({
   const statusLabelMap: Record<string, string> = {
     FULLY_VERIFIED: 'Fully Verified',
     SEMI_VERIFIED: 'Semi Verified',
-    INDEFINITE: 'Indefinite',
+    BANNED: 'Banned',
   };
 
-  async function handleStatusChange(newStatus: 'FULLY_VERIFIED' | 'SEMI_VERIFIED' | 'INDEFINITE') {
+  async function handleStatusChange(newStatus: 'FULLY_VERIFIED' | 'SEMI_VERIFIED' | 'BANNED') {
     try {
       setIsActionLoading(true);
       const maybePromise = onStatusChange?.(u.id, newStatus);
@@ -442,14 +441,14 @@ export function UserDetailsSheet({
                             <ShieldQuestion className="h-4 w-4 mr-2" /> Semi verify
                           </Button>
                         )}
-                      {u.status !== 'INDEFINITE' && (
+                      {u.status !== 'BANNED' && (
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleStatusChange('INDEFINITE')}
+                          onClick={() => handleStatusChange('BANNED')}
                           disabled={isActionLoading}
                         >
-                          <UserX className="h-4 w-4 mr-2" /> Indefinite
+                          <UserX className="h-4 w-4 mr-2" /> Ban User
                         </Button>
                       )}
                     </>

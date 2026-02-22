@@ -205,7 +205,7 @@ const ManageStaff = () => {
   const fullyVerifiedUsers = users?.filter((user) => user.status === 'FULLY_VERIFIED').length || 0;
   const semiVerifiedUsers = users?.filter((user) => user.status === 'SEMI_VERIFIED').length || 0;
   const pendingUsers = users?.filter((user) => user.status === 'PENDING').length || 0;
-  const indefiniteUsers = users?.filter((user) => user.status === 'INDEFINITE').length || 0;
+  const bannedUsers = users?.filter((user) => user.status === 'BANNED').length || 0;
 
   const adminUsers = users?.filter((user) => user.role === 1).length || 0;
 
@@ -339,8 +339,8 @@ const ManageStaff = () => {
 
           <div className="inline-flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-200">
             <UserLock className="h-3.5 w-3.5" />
-            <span className="text-sm font-medium">{indefiniteUsers}</span>
-            <span className="text-xs opacity-75">Indefinite</span>
+            <span className="text-sm font-medium">{bannedUsers}</span>
+            <span className="text-xs opacity-75">Banned</span>
           </div>
 
           <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">

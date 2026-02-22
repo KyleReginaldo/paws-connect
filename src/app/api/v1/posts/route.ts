@@ -10,7 +10,7 @@ async function notifyAllUsersNewPost(postTitle: string, postId: number, category
         const { data: users, error } = await supabase
             .from('users')
             .select('id')
-            .neq('status', 'INDEFINITE');
+            .neq('status', 'BANNED');
 
         if (error || !users) {
             console.error('❌ Error fetching users for post notification:', error);

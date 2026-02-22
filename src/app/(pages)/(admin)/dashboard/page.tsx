@@ -13,8 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useNotifications } from '@/components/ui/notification';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useDashboardData, { type ChartDataPoint, type User } from '@/hooks/useDashboardData';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -22,12 +22,14 @@ import autoTable from 'jspdf-autotable';
 import {
   Activity,
   ArrowUpRight,
+  Calendar as CalendarIcon,
   Dog,
   FileText,
   Heart,
   PawPrint,
   PhilippinePeso,
   Shield,
+  TrendingUp,
   User as UserIcon,
   Users,
 } from 'lucide-react';
@@ -57,6 +59,26 @@ const chartConfig: ChartConfig = {
 };
 
 function EnhancedUserGrowthChart({ chartData }: { chartData: ChartDataPoint[] }) {
+  const hasData = chartData && chartData.length > 0 && chartData.some((d) => d.users || d.newUsers);
+
+  if (!hasData) {
+    return (
+      <div className="w-full h-[250px] sm:h-[300px] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center">
+            <TrendingUp className="h-6 w-6 text-orange-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-900">No user data available</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              User growth data will appear here once users start registering
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full overflow-hidden">
       <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
@@ -105,6 +127,33 @@ function EnhancedUserGrowthChart({ chartData }: { chartData: ChartDataPoint[] })
 }
 
 function EnhancedDonationTrendsChart({ chartData }: { chartData: ChartDataPoint[] }) {
+  const hasData =
+    chartData &&
+    chartData.length > 0 &&
+    chartData.some((d) => {
+      const donations =
+        typeof d.donations === 'number' ? d.donations : parseFloat(String(d.donations || 0));
+      return donations > 0;
+    });
+
+  if (!hasData) {
+    return (
+      <div className="w-full h-[250px] sm:h-[300px] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center">
+            <PhilippinePeso className="h-6 w-6 text-orange-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-900">No donation data available</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Donation trends will appear here once campaigns start receiving contributions
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full overflow-hidden">
       <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
@@ -151,6 +200,26 @@ function UserRoleAnalytics({ users }: { users: User[] }) {
     },
   ];
 
+  const totalUsers = roleData.reduce((sum, item) => sum + item.count, 0);
+
+  if (totalUsers === 0) {
+    return (
+      <div className="h-full flex items-center justify-center py-8">
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center">
+            <Users className="h-6 w-6 text-orange-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-900">No users yet</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              User distribution will appear here once users are added
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 sm:space-y-4">
       {roleData.map((item, index) => (
@@ -190,6 +259,20 @@ interface ActivityItem {
 }
 
 function RecentActivityComponent({ activities }: { activities: ActivityItem[] }) {
+  if (!activities || activities.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+          <Activity className="h-6 w-6 text-orange-400" />
+        </div>
+        <h3 className="text-sm font-medium text-gray-900 mb-1">No recent activity</h3>
+        <p className="text-xs text-muted-foreground">
+          Activity will appear here as users interact with the system
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {activities.map((it) => (
@@ -239,14 +322,10 @@ const Page = () => {
   } = useDashboardData();
 
   const { success, error: showError, info } = useNotifications();
-  const [dateRange] = useState<DateRange | undefined>(undefined);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState('monthly');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState<DateRange | undefined>(undefined);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>(undefined);
-  // const [dateRange, setDateRange] = useState<DateRange | undefined>({
-  //   from: new Date(2025, 5, 12),
-  //   to: new Date(2025, 6, 15),
-  // });
 
   const handleGenerateReport = async (selectedDateRange?: DateRange) => {
     try {
@@ -750,14 +829,17 @@ const Page = () => {
         .slice(0, 15);
 
       const adoptionDetails = recentAdoptions.map(
-        (a: {
-          id?: number;
-          created_at?: string;
-          status?: string;
-          pets?: { name?: string; type?: string };
-          users?: { username?: string };
-        }) => [
-          a.id?.toString() || 'N/A',
+        (
+          a: {
+            id?: number;
+            created_at?: string;
+            status?: string;
+            pets?: { name?: string; type?: string };
+            users?: { username?: string };
+          },
+          index: number,
+        ) => [
+          (index + 1).toString(),
           new Date(a.created_at || '').toLocaleDateString(),
           (a.pets?.name || 'Unknown').substring(0, 15),
           a.pets?.type || 'N/A',
@@ -767,7 +849,7 @@ const Page = () => {
       );
 
       autoTable(doc, {
-        head: [['ID', 'Date', 'Pet Name', 'Type', 'Adopter', 'Status']],
+        head: [['#', 'Date', 'Pet Name', 'Type', 'Adopter', 'Status']],
         body: adoptionDetails,
         startY:
           (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
@@ -861,13 +943,16 @@ const Page = () => {
         .slice(0, 10);
 
       const campaignDetails = topCampaigns.map(
-        (c: {
-          id?: number;
-          title?: string;
-          status?: string;
-          target_amount?: number;
-          raised_amount?: number;
-        }) => {
+        (
+          c: {
+            id?: number;
+            title?: string;
+            status?: string;
+            target_amount?: number;
+            raised_amount?: number;
+          },
+          index: number,
+        ) => {
           const progress = c.target_amount
             ? (((c.raised_amount || 0) / c.target_amount) * 100).toFixed(0)
             : '0';
@@ -875,7 +960,7 @@ const Page = () => {
             (d: { fundraising?: number }) => d.fundraising === c.id,
           ).length;
           return [
-            c.id?.toString() || 'N/A',
+            (index + 1).toString(),
             (c.title || 'Untitled').substring(0, 30) + ((c.title?.length || 0) > 30 ? '...' : ''),
             c.status || 'N/A',
             (c.target_amount || 0).toLocaleString(),
@@ -887,7 +972,7 @@ const Page = () => {
       );
 
       autoTable(doc, {
-        head: [['ID', 'Campaign Title', 'Status', 'Target', 'Raised', 'Progress', 'Donors']],
+        head: [['#', 'Campaign Title', 'Status', 'Target', 'Raised', 'Progress', 'Donors']],
         body: campaignDetails,
         startY:
           (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
@@ -986,15 +1071,18 @@ const Page = () => {
         .slice(0, 20);
 
       const userDetails = recentUsers.map(
-        (u: {
-          id?: number;
-          username?: string;
-          email?: string;
-          created_at?: string;
-          status?: string;
-          role?: number;
-        }) => [
-          u.id?.toString() || 'N/A',
+        (
+          u: {
+            id?: number;
+            username?: string;
+            email?: string;
+            created_at?: string;
+            status?: string;
+            role?: number;
+          },
+          index: number,
+        ) => [
+          (index + 1).toString(),
           (u.username || 'Unknown').substring(0, 25),
           (u.email || 'No email').substring(0, 30),
           new Date(u.created_at || '').toLocaleDateString(),
@@ -1013,7 +1101,7 @@ const Page = () => {
       );
 
       autoTable(doc, {
-        head: [['ID', 'Username', 'Email', 'Registered', 'Status', 'Role']],
+        head: [['#', 'Username', 'Email', 'Registered', 'Status', 'Role']],
         body: userDetails,
         startY:
           (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20,
@@ -1260,36 +1348,129 @@ const Page = () => {
           <div className="min-w-0 flex-1">
             <h3 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900">Analytics</h3>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              Comprehensive insights with weekly, monthly, and annual breakdowns
+              {analyticsDateRange?.from
+                ? `Showing data from ${format(analyticsDateRange.from, 'MMM dd, yyyy')}${analyticsDateRange.to ? ` to ${format(analyticsDateRange.to, 'MMM dd, yyyy')}` : ''}`
+                : 'All time data'}
             </p>
           </div>
-          <Tabs
-            id="pc-dash-analytics-tabs"
-            value={analyticsPeriod}
-            onValueChange={setAnalyticsPeriod}
-            className="w-auto flex-shrink-0"
-          >
-            <TabsList className="grid w-full grid-cols-3 bg-orange-50">
-              <TabsTrigger
-                value="weekly"
-                className="data-[state=active]:bg-orange-400 data-[state=active]:text-white text-xs sm:text-sm"
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="min-w-fit justify-start text-left font-normal border-orange-200 hover:bg-orange-50/50 hover:border-orange-300 transition-colors"
               >
-                Weekly
-              </TabsTrigger>
-              <TabsTrigger
-                value="monthly"
-                className="data-[state=active]:bg-orange-400 data-[state=active]:text-white text-xs sm:text-sm"
-              >
-                Monthly
-              </TabsTrigger>
-              <TabsTrigger
-                value="annual"
-                className="data-[state=active]:bg-orange-400 data-[state=active]:text-white text-xs sm:text-sm"
-              >
-                Annual
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+                <CalendarIcon className="mr-2 h-4 w-4 text-orange-600" />
+                {analyticsDateRange?.from ? (
+                  analyticsDateRange.to ? (
+                    <span className="text-gray-900">
+                      {format(analyticsDateRange.from, 'LLL dd, y')} -{' '}
+                      {format(analyticsDateRange.to, 'LLL dd, y')}
+                    </span>
+                  ) : (
+                    <span className="text-gray-900">
+                      {format(analyticsDateRange.from, 'LLL dd, y')}
+                    </span>
+                  )
+                ) : (
+                  <span className="text-muted-foreground">Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex">
+                {/* Quick Presets */}
+                <div className="border-r px-3 py-4 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 px-2">
+                    Quick Select
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start font-normal"
+                    onClick={() => {
+                      const today = new Date();
+                      setAnalyticsDateRange({ from: today, to: today });
+                    }}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start font-normal"
+                    onClick={() => {
+                      const today = new Date();
+                      const lastWeek = new Date();
+                      lastWeek.setDate(today.getDate() - 7);
+                      setAnalyticsDateRange({ from: lastWeek, to: today });
+                    }}
+                  >
+                    Last 7 days
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start font-normal"
+                    onClick={() => {
+                      const today = new Date();
+                      const lastMonth = new Date();
+                      lastMonth.setDate(today.getDate() - 30);
+                      setAnalyticsDateRange({ from: lastMonth, to: today });
+                    }}
+                  >
+                    Last 30 days
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start font-normal"
+                    onClick={() => {
+                      const today = new Date();
+                      const last90 = new Date();
+                      last90.setDate(today.getDate() - 90);
+                      setAnalyticsDateRange({ from: last90, to: today });
+                    }}
+                  >
+                    Last 90 days
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start font-normal"
+                    onClick={() => {
+                      const today = new Date();
+                      const yearStart = new Date(today.getFullYear(), 0, 1);
+                      setAnalyticsDateRange({ from: yearStart, to: today });
+                    }}
+                  >
+                    This year
+                  </Button>
+                  <div className="border-t pt-1 mt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start font-normal text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      onClick={() => setAnalyticsDateRange(undefined)}
+                    >
+                      All time
+                    </Button>
+                  </div>
+                </div>
+                {/* Calendar */}
+                <div className="p-3">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={analyticsDateRange?.from}
+                    selected={analyticsDateRange}
+                    onSelect={(range) => setAnalyticsDateRange(range as DateRange | undefined)}
+                    numberOfMonths={2}
+                    disabled={(date) => date > new Date()}
+                    toDate={new Date()}
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3 xl:grid-cols-3">
@@ -1310,7 +1491,7 @@ const Page = () => {
             <CardContent className="overflow-hidden">
               <div className="w-full min-h-0">
                 <EnhancedUserGrowthChart
-                  chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
+                  chartData={generateChartData('monthly', analyticsDateRange)}
                 />
               </div>
             </CardContent>
@@ -1349,7 +1530,7 @@ const Page = () => {
             <CardContent className="overflow-hidden">
               <div className="w-full min-h-0">
                 <EnhancedDonationTrendsChart
-                  chartData={generateChartData(analyticsPeriod as 'weekly' | 'monthly' | 'annual')}
+                  chartData={generateChartData('monthly', analyticsDateRange)}
                 />
               </div>
             </CardContent>
@@ -1479,44 +1660,56 @@ const Page = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-hidden">
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {ongoingCampaigns.map((campaign) => (
-              <Card
-                key={campaign.id}
-                className="border-l-4 border-l-orange-200 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-25 to-white"
-              >
-                <CardContent className="p-2 sm:p-6">
-                  <div className="space-y-4">
-                    <div className="min-w-0">
-                      <h4 className="font-semibold text-gray-900 truncate">{campaign.title}</h4>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {campaign.description}
-                      </p>
-                    </div>
+          {ongoingCampaigns.length > 0 ? (
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {ongoingCampaigns.map((campaign) => (
+                <Card
+                  key={campaign.id}
+                  className="border-l-4 border-l-orange-200 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-25 to-white"
+                >
+                  <CardContent className="p-2 sm:p-6">
+                    <div className="space-y-4">
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-gray-900 truncate">{campaign.title}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {campaign.description}
+                        </p>
+                      </div>
 
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm font-medium">
-                        <span className="text-orange-500 truncate">
-                          ₱{campaign.raised.toLocaleString()}
-                        </span>
-                        <span className="text-gray-600 truncate">
-                          ₱{campaign.target.toLocaleString()}
-                        </span>
-                      </div>
-                      <Progress
-                        value={(campaign.raised / campaign.target) * 100}
-                        className="h-2 bg-orange-50"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span className="truncate">{campaign.supporters} supporters</span>
-                        <span className="truncate">{campaign.daysLeft} days left</span>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm font-medium">
+                          <span className="text-orange-500 truncate">
+                            ₱{campaign.raised.toLocaleString()}
+                          </span>
+                          <span className="text-gray-600 truncate">
+                            ₱{campaign.target.toLocaleString()}
+                          </span>
+                        </div>
+                        <Progress
+                          value={(campaign.raised / campaign.target) * 100}
+                          className="h-2 bg-orange-50"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span className="truncate">{campaign.supporters} supporters</span>
+                          <span className="truncate">{campaign.daysLeft} days left</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <div className="mx-auto w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+                <Heart className="h-6 w-6 text-orange-400" />
+              </div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">No active campaigns</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Fundraising campaigns will appear here once they are created and approved
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -111,36 +111,57 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
           return false;
         }
 
+        if (excludeFilterKey !== 'unnamed' && filterValues.unnamed) {
+          const hasName = pet.name && pet.name.trim().length > 0;
+          if (!hasName) {
+            // Pet is unnamed, keep it if filter is active
+          } else {
+            // Pet has a name, exclude it when unnamed filter is active
+            return false;
+          }
+        }
+
         return true;
       });
     };
 
     const basePetsForType = getBaseFilteredPets('type');
-    const typeOptions = [...new Set(pets.map((pet) => pet.type))].map((type) => ({
-      label: type,
-      value: type.toLowerCase(),
-      count: basePetsForType.filter((pet) => pet.type === type).length,
-    }));
+    const typeOptions = [...new Set(pets.map((pet) => pet.type))]
+      .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+      .map((type) => ({
+        label: type,
+        value: type.toLowerCase(),
+        count: basePetsForType.filter((pet) => pet.type === type).length,
+      }));
 
     const basePetsForBreed = getBaseFilteredPets('breed');
-    const breedOptions = [...new Set(pets.map((pet) => pet.breed).filter(Boolean))].map(
-      (breed) => ({
+    // Filter breeds based on selected pet type
+    const petsForBreedOptions =
+      filterValues.type?.length > 0
+        ? basePetsForBreed.filter((pet) => filterValues.type.includes(pet.type.toLowerCase()))
+        : basePetsForBreed;
+
+    const breedOptions = [...new Set(petsForBreedOptions.map((pet) => pet.breed).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+      .map((breed) => ({
         label: breed,
         value: breed.toLowerCase(),
         count: basePetsForBreed.filter((pet) => pet.breed === breed).length,
-      }),
-    );
+      }));
 
     const basePetsForSize = getBaseFilteredPets('size');
-    const sizeOptions = [...new Set(pets.map((pet) => pet.size))].map((size) => ({
-      label: size.charAt(0).toUpperCase() + size.slice(1),
-      value: size.toLowerCase(),
-      count: basePetsForSize.filter((pet) => pet.size === size).length,
-    }));
+    const sizeOptions = [...new Set(pets.map((pet) => pet.size))]
+      .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+      .map((size) => ({
+        label: size.charAt(0).toUpperCase() + size.slice(1),
+        value: size.toLowerCase(),
+        count: basePetsForSize.filter((pet) => pet.size === size).length,
+      }));
 
     const basePetsForStatus = getBaseFilteredPets('status');
     const statusOptions = [...new Set(pets.map((pet) => pet.request_status))]
       .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
       .map((status) => ({
         label: status.charAt(0).toUpperCase() + status.slice(1),
         value: status.toLowerCase(),
@@ -148,11 +169,13 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       }));
 
     const basePetsForGender = getBaseFilteredPets('gender');
-    const genderOptions = [...new Set(pets.map((pet) => pet.gender))].map((gender) => ({
-      label: gender.charAt(0).toUpperCase() + gender.slice(1),
-      value: gender.toLowerCase(),
-      count: basePetsForGender.filter((pet) => pet.gender === gender).length,
-    }));
+    const genderOptions = [...new Set(pets.map((pet) => pet.gender))]
+      .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+      .map((gender) => ({
+        label: gender.charAt(0).toUpperCase() + gender.slice(1),
+        value: gender.toLowerCase(),
+        count: basePetsForGender.filter((pet) => pet.gender === gender).length,
+      }));
 
     return {
       typeOptions,
@@ -240,6 +263,12 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
       type: 'boolean',
       placeholder: 'Show only adopted pets',
     },
+    {
+      id: 'unnamed',
+      label: 'Unnamed Pets',
+      type: 'boolean',
+      placeholder: 'Show only unnamed pets',
+    },
   ];
 
   const getStatusColor = (adopted: boolean) => {
@@ -323,6 +352,13 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
 
       if (filterValues.adopted && !pet.adopted) {
         return false;
+      }
+
+      if (filterValues.unnamed) {
+        const hasName = pet.name && pet.name.trim().length > 0;
+        if (hasName) {
+          return false;
+        }
       }
 
       return true;
@@ -424,6 +460,30 @@ export function PetTableFiltered({ pets, onEdit, onDelete }: PetTableProps) {
                 return value !== undefined && value !== null && value !== '';
               }),
             );
+
+            // If pet type changed, clear breed filter if current breeds don't match the new type
+            if (newValues.type && filterValues.breed?.length > 0) {
+              const typeChanged =
+                JSON.stringify(newValues.type) !== JSON.stringify(filterValues.type);
+              if (typeChanged) {
+                const matchingBreeds = pets
+                  .filter((pet) => newValues.type.includes(pet.type.toLowerCase()))
+                  .map((pet) => pet.breed?.toLowerCase())
+                  .filter(Boolean);
+
+                const validBreeds = filterValues.breed.filter((breed: string) =>
+                  matchingBreeds.includes(breed),
+                );
+
+                if (validBreeds.length !== filterValues.breed.length) {
+                  cleaned.breed = validBreeds.length > 0 ? validBreeds : undefined;
+                  if (!cleaned.breed) {
+                    delete cleaned.breed;
+                  }
+                }
+              }
+            }
+
             setFilterValues(cleaned);
           }}
           onClearAll={() => setFilterValues({})}

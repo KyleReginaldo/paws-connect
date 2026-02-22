@@ -29,7 +29,7 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
           color: '#F59E0B', // amber
           icon: '⏳'
         };
-      case 'INDEFINITE':
+      case 'BANNED':
         return {
           title: '🚫 Account Suspended',
           message: 'Your account has been suspended.',
@@ -249,7 +249,7 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
                 ${statusInfo.message} ${statusInfo.icon}
             </div>
             
-            ${newStatus !== 'INDEFINITE' ? `
+            ${newStatus !== 'BANNED' ? `
             <div class="next-steps">
                 <h3>What's Next?</h3>
                 <p>${getNextStepsText(newStatus)}</p>
@@ -257,8 +257,8 @@ export function getStatusChangeEmailTemplate(dto: StatusChangeEmailDto): { subje
             ` : ''}
             
             <div style="text-align: center;">
-                <a href=${newStatus === 'INDEFINITE' ? 'mailto:pawsconnecttof@gmail.com' : 'https://paws-connect-rho.vercel.app/signin'} class="cta-button">
-                    ${newStatus === 'INDEFINITE' ? 'Contact Support' : 'Access Your Account'}
+                <a href=${newStatus === 'BANNED' ? 'mailto:pawsconnecttof@gmail.com' : 'https://paws-connect-rho.vercel.app/signin'} class="cta-button">
+                    ${newStatus === 'BANNED' ? 'Contact Support' : 'Access Your Account'}
                 </a>
             </div>
         </div>

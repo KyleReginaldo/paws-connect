@@ -23,14 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CreateFundraisingDto, UpdateFundraisingDto } from '@/config/schema/fundraisingSchema';
 import { Fundraising } from '@/config/types/fundraising';
-import {
-  Calendar as CalendarIcon,
-  HelpCircle,
-  Loader2,
-  Plus,
-  QrCode,
-  X,
-} from 'lucide-react';
+import { Calendar as CalendarIcon, HelpCircle, Loader2, Plus, QrCode, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -178,7 +171,6 @@ export function FundraisingModal({
       setEndDateMonth(undefined);
       setEndDateValue('');
     }
-
   }, [editingCampaign, open, currentUserId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -205,6 +197,11 @@ export function FundraisingModal({
       if (!formData.target_amount || formData.target_amount < 100) {
         console.log('❌ Target amount validation failed');
         toast.error('Target amount must be at least ₱100');
+        return;
+      }
+      if (formData.target_amount > 10000) {
+        console.log('❌ Target amount exceeds maximum');
+        toast.error('Target amount must not exceed ₱10,000');
         return;
       }
       if (!formData.created_by) {
@@ -336,7 +333,9 @@ export function FundraisingModal({
 
       if (result.success) {
         console.log('✅ Campaign submission successful');
-        toast.success(editingCampaign ? 'Campaign updated successfully' : 'Campaign created successfully');
+        toast.success(
+          editingCampaign ? 'Campaign updated successfully' : 'Campaign created successfully',
+        );
         onOpenChange(false);
       } else {
         console.log('❌ Campaign submission failed:', result.error);
@@ -706,14 +705,25 @@ export function FundraisingModal({
               <Input
                 id="target_amount"
                 type="number"
-                value={formData.target_amount}
-                onChange={(e) => handleInputChange('target_amount', parseInt(e.target.value) || 0)}
+                step="0.01"
+                value={formData.target_amount === 0 ? '' : formData.target_amount}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  if (inputValue === '') {
+                    handleInputChange('target_amount', 0);
+                    return;
+                  }
+                  const value = parseFloat(inputValue);
+                  if (!isNaN(value)) {
+                    handleInputChange('target_amount', Math.min(value, 10000));
+                  }
+                }}
                 placeholder="Enter target amount"
                 required
                 min={100}
-                max={10000000}
+                max={10000}
               />
-              <p className="text-xs text-muted-foreground">Minimum: ₱100, Maximum: ₱10,000,000</p>
+              <p className="text-xs text-muted-foreground">Minimum: ₱100, Maximum: ₱10,000</p>
             </div>
 
             <div className="space-y-2">

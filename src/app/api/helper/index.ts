@@ -118,7 +118,7 @@ export async function notifyAllUsersNewEvent(eventTitle: string, eventId: string
         const { data: users, error } = await supabase
             .from('users')
             .select('id')
-            .neq('status', 'INDEFINITE'); 
+            .neq('status', 'BANNED'); 
 
         if (error || !users) {
             console.error('❌ Error fetching users for event notification:', error);
@@ -175,7 +175,7 @@ export async function notifyAllUsersNewFundraising(campaignTitle: string, campai
         const { data: users, error } = await supabase
             .from('users')
             .select('id')
-            .neq('status', 'INDEFINITE');
+            .neq('status', 'BANNED');
 
         if (error || !users) {
             console.error('Error fetching users for fundraising notification:', error);
@@ -221,7 +221,7 @@ export async function notifyAllUsersNewPet(petName: string, petId: number, added
         const { data: users, error } = await supabase
             .from('users')
             .select('id')
-            .neq('status', 'INDEFINITE');
+            .neq('status', 'BANNED');
 
         if (error || !users) {
             console.error('Error fetching users for pet notification:', error);
@@ -269,7 +269,7 @@ export async function notifyAllUsersNewCapstoneLink(linkTitle: string, linkId: n
         const { data: users, error } = await supabase
             .from('users')
             .select('id')
-            .neq('status', 'INDEFINITE');
+            .neq('status', 'BANNED');
 
         if (error || !users) {
             console.error('❌ Error fetching users for capstone link notification:', error);
@@ -393,7 +393,7 @@ export async function notifyAllUsersGlobalChat(
             .from('users')
             .select('id, username')
             .neq('id', senderId)
-            .neq('status', 'INDEFINITE'); 
+            .neq('status', 'BANNED'); 
 
         if (error || !users) {
             console.error('Error fetching users for global chat notification:', error);

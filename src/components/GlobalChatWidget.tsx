@@ -9,6 +9,7 @@ import {
 } from '@/lib/content-moderation';
 import { formatManilaHM } from '@/lib/utils';
 import { Eye, EyeOff, Globe2, MessageCircle, Send, X } from 'lucide-react';
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -18,13 +19,13 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
-
 type ChatMessage = {
   id: number;
   message: string;
   message_warning?: string | null;
   user_id: string | null;
   sent_at: string;
+  image_url?: string | null;
   viewers?: Viewer[];
   user: {
     id: string;
@@ -218,8 +219,37 @@ export default function GlobalChatWidget({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        // Handle chat filter blocking (403 status)
+        if (response.status === 403 && errorData.error === 'Message blocked') {
+          setMessages((prev) => prev.filter((msg) => msg.id !== optimisticMessage.id));
+          setText(content);
+
+          // Show user-friendly alert
+          alert(
+            `⚠️ ${errorData.message || 'Your message contains inappropriate content and has been blocked.'}\n\nCategory: ${errorData.category || 'N/A'}`,
+          );
+          setLoading(false);
+          return;
+        }
+
         const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json();
+
+      // Check if message was filtered or warned
+      if (responseData.data?.filter_info) {
+        const { action, message: filterMessage } = responseData.data.filter_info;
+
+        if (action === 'warn') {
+          // Show warning to user
+          console.warn('⚠️ Content warning:', filterMessage);
+        } else if (action === 'filter') {
+          // Inform user their message was filtered
+          console.info('ℹ️ Message filtered:', filterMessage);
+        }
       }
 
       await fetchMessages();
@@ -488,9 +518,21 @@ export default function GlobalChatWidget({
                             </div>
                           ) : (
                             <div className="bg-gray-50 hover:bg-gray-100 transition-colors rounded-md px-2.5 py-1.5 w-fit max-w-[300px] border border-gray-100">
-                              <p className="text-xs text-gray-900 break-words leading-snug">
-                                {msg.message}
-                              </p>
+                              {msg.image_url ? (
+                                <div>
+                                  <Image
+                                    src={msg.image_url}
+                                    width={300}
+                                    height={200}
+                                    alt="Message image"
+                                    className="rounded-md"
+                                  />
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-900 break-words leading-snug">
+                                  {msg.message}
+                                </p>
+                              )}
                             </div>
                           )}
                           {messages.indexOf(msg) === messages.length - 1 &&

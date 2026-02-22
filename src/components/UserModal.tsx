@@ -45,15 +45,13 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const { userId, userRole } = useAuth();
 
-  // Phone number validation regex
-  const PHONE_REGEX = /^(\+?63|0)?9\d{9}$/; // Philippine format
-  const INTERNATIONAL_PHONE_REGEX = /^\+\d{1,3}\d{6,14}$/; // International format
+  // Phone number validation regex - expects +639XXXXXXXXX format (10 digits after +63)
+  const PHONE_REGEX = /^\+639\d{9}$/; // Philippine format with +63 prefix
 
   // Validate phone number
   const validatePhoneNumber = (phone: string): boolean => {
     if (!phone) return false;
-    const cleaned = phone.replace(/[^\d+]/g, '');
-    return PHONE_REGEX.test(cleaned) || INTERNATIONAL_PHONE_REGEX.test(cleaned);
+    return PHONE_REGEX.test(phone);
   };
 
   // Permission helper - Only admins can manage users
@@ -94,9 +92,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
 
     // Validate phone number before submission
     if (formData.phone_number && !validatePhoneNumber(formData.phone_number)) {
-      setPhoneError(
-        'Invalid phone number format. Use Philippine format (09XXXXXXXXX or +639XXXXXXXXX) or international format (+[country code][number])',
-      );
+      setPhoneError('Invalid phone number. Must be 10 digits starting with 9.');
       setIsSubmitting(false);
       return;
     }
@@ -128,7 +124,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
             | 'PENDING'
             | 'SEMI_VERIFIED'
             | 'FULLY_VERIFIED'
-            | 'INDEFINITE';
+            | 'BANNED';
         }
         // Only include password if it's provided and has minimum length
         if (formData.password && formData.password.length >= 6) {
@@ -159,14 +155,26 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
   };
 
   const handleInputChange = (field: keyof CreateUserDto, value: string | number) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear phone error when user starts typing
-    if (field === 'phone_number') {
+    // Special handling for phone number to ensure +63 prefix
+    if (field === 'phone_number' && typeof value === 'string') {
+      // Only allow digits, limit to 10 characters
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData((prev) => ({
+        ...prev,
+        phone_number: digitsOnly ? `+63${digitsOnly}` : '',
+      }));
       setPhoneError(null);
+    } else if (field === 'email' && typeof value === 'string') {
+      // Convert email to lowercase
+      setFormData((prev) => ({
+        ...prev,
+        email: value.toLowerCase(),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
     }
   };
 
@@ -231,21 +239,25 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
               <Label htmlFor="phone">
                 Phone Number<span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone_number}
-                onChange={(e) => handleInputChange('phone_number', e.target.value)}
-                onBlur={handlePhoneBlur}
-                placeholder="09XXXXXXXXX or +639XXXXXXXXX"
-                required
-                className={phoneError ? 'border-red-500' : ''}
-              />
+              <div className="flex items-stretch">
+                <span className="flex items-center px-3 bg-muted border border-r-0 border-input rounded-l-md text-sm">
+                  +63
+                </span>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone_number.replace(/^\+63/, '')}
+                  onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                  onBlur={handlePhoneBlur}
+                  maxLength={10}
+                  placeholder="9XXXXXXXXX"
+                  required
+                  className={`rounded-l-none ${phoneError ? 'border-red-500' : ''}`}
+                />
+              </div>
               {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
               <p className="text-xs text-muted-foreground mt-1">
-                Philippine: 09XXXXXXXXX or +639XXXXXXXXX
-                <br />
-                International: +[country code][number]
+                Enter 10 digits starting with 9 (e.g., 9123456789)
               </p>
             </div>
 
@@ -311,7 +323,7 @@ export function UserModal({ open, onOpenChange, onSubmit, editingUser }: UserMod
                 <SelectContent>
                   <SelectItem value="FULLY_VERIFIED">Fully Verified</SelectItem>
                   <SelectItem value="SEMI_VERIFIED">Semi Verified</SelectItem>
-                  <SelectItem value="INDEFINITE">Indefinite</SelectItem>
+                  <SelectItem value="BANNED">Banned</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
                 </SelectContent>
               </Select>

@@ -21,6 +21,7 @@ import {
 import {
   Calendar,
   Dog,
+  Filter,
   HandCoins,
   Heart,
   LayoutDashboard,
@@ -42,6 +43,7 @@ const menuItems = [
   { title: 'Manage Users', icon: UsersRound, path: '/manage-users' },
   { title: 'Manage Pets', icon: Dog, path: '/manage-pet' },
   { title: 'Manage Events', icon: Calendar, path: '/manage-events' },
+  { title: 'Chat Filters', icon: Filter, path: '/manage-chat-filters' },
   { title: 'Fundraising', icon: HandCoins, path: '/fundraising' },
   { title: 'Posts', icon: MessageCircleHeart, path: '/posts' },
 ];
@@ -63,6 +65,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         return 'Manage Pets';
       case '/manage-events':
         return 'Manage Events';
+      case '/manage-chat-filters':
+        return 'Chat Filters';
       case '/fundraising':
         return 'Fundraising';
       case '/posts':
@@ -86,6 +90,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         return 'Add, update, or remove pet profiles';
       case '/manage-events':
         return 'Create and manage community events and posts';
+      case '/manage-chat-filters':
+        return 'Manage filtered words and phrases for chat moderation';
       case '/fundraising':
         return 'Oversee fundraising campaigns and donations';
       case '/posts':

@@ -244,6 +244,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_filters: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          severity: number
+          updated_at: string | null
+          word: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          severity?: number
+          updated_at?: string | null
+          word: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          severity?: number
+          updated_at?: string | null
+          word?: string
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number | null
@@ -1133,7 +1163,7 @@ export type Database = {
         | "rescue_stories"
         | "health_alerts"
       user_role: "CUSTOMER" | "ADMIN" | "STAFF"
-      user_status: "SEMI_VERIFIED" | "FULLY_VERIFIED" | "INDEFINITE" | "PENDING"
+      user_status: "SEMI_VERIFIED" | "FULLY_VERIFIED" | "BANNED" | "PENDING"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1309,7 +1339,7 @@ export const Constants = {
         "health_alerts",
       ],
       user_role: ["CUSTOMER", "ADMIN", "STAFF"],
-      user_status: ["SEMI_VERIFIED", "FULLY_VERIFIED", "INDEFINITE", "PENDING"],
+      user_status: ["SEMI_VERIFIED", "FULLY_VERIFIED", "BANNED", "PENDING"],
     },
   },
 } as const

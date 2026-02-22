@@ -113,6 +113,11 @@ export interface ChartDataPoint {
   [key: string]: string | number;
 }
 
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
+
 const useDashboardData = () => {
   const [pets, setPets] = useState<Pet[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -182,8 +187,86 @@ const useDashboardData = () => {
   };
 
   // Generate chart data for different time periods
-  const generateChartData = (period: 'weekly' | 'monthly' | 'annual') => {
+  const generateChartData = (period: 'weekly' | 'monthly' | 'annual', dateRange?: DateRange) => {
     const now = new Date();
+    
+    // If date range is provided, filter data by that range
+    if (dateRange?.from) {
+      const startDate = new Date(dateRange.from);
+      const endDate = dateRange.to ? new Date(dateRange.to) : new Date();
+      
+      // Calculate the number of days in the range
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Determine the appropriate interval based on the range
+      let intervalDays: number;
+      let intervalLabel: string;
+      
+      if (daysDiff <= 14) {
+        // Daily intervals for ranges up to 2 weeks
+        intervalDays = 1;
+        intervalLabel = 'day';
+      } else if (daysDiff <= 90) {
+        // Weekly intervals for ranges up to 3 months
+        intervalDays = 7;
+        intervalLabel = 'week';
+      } else {
+        // Monthly intervals for longer ranges
+        intervalDays = 30;
+        intervalLabel = 'month';
+      }
+      
+      const customData: ChartDataPoint[] = [];
+      let currentDate = new Date(startDate);
+      let periodIndex = 1;
+      
+      while (currentDate <= endDate) {
+        const periodEnd = new Date(currentDate);
+        periodEnd.setDate(periodEnd.getDate() + intervalDays);
+        
+        const periodPets = pets.filter(pet => {
+          const petDate = new Date(pet.created_at);
+          return petDate >= currentDate && petDate < periodEnd;
+        });
+        
+        const periodUsers = users.filter(user => {
+          const userDate = new Date(user.created_at);
+          return userDate >= currentDate && userDate < periodEnd;
+        });
+        
+        const periodCampaigns = campaigns.filter(campaign => {
+          const campaignDate = new Date(campaign.created_at);
+          return campaignDate >= currentDate && campaignDate < periodEnd;
+        });
+        
+        let periodLabelText: string;
+        if (intervalLabel === 'day') {
+          periodLabelText = `${currentDate.getMonth() + 1}/${currentDate.getDate()}`;
+        } else if (intervalLabel === 'week') {
+          periodLabelText = `Week ${periodIndex}`;
+        } else {
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          periodLabelText = months[currentDate.getMonth()];
+        }
+        
+        customData.push({
+          period: periodLabelText,
+          pets: periodPets.length,
+          dogs: periodPets.filter(p => p.type.toLowerCase().includes('dog')).length,
+          cats: periodPets.filter(p => p.type.toLowerCase().includes('cat')).length,
+          users: periodUsers.length,
+          newUsers: periodUsers.length,
+          donations: periodCampaigns.reduce((sum, c) => sum + (c.raised_amount || 0), 0),
+          campaigns: periodCampaigns.length,
+          total: periodPets.length,
+        });
+        
+        currentDate = new Date(periodEnd);
+        periodIndex++;
+      }
+      
+      return customData;
+    }
     
     if (period === 'weekly') {
       // Generate last 4 weeks data

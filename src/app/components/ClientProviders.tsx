@@ -4,6 +4,7 @@ import { ConfirmationProvider } from '@/components/ui/confirmation';
 import { NotificationProvider } from '@/components/ui/notification';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '../context/AuthContext';
+import { ChatFiltersProvider } from '../context/ChatFiltersContext';
 import { FundraisingProvider } from '../context/FundraisingContext';
 import { PetsProvider } from '../context/PetsContext';
 import { UsersProvider } from '../context/UsersContext';
@@ -20,8 +21,10 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
           <PetsProvider>
             <UsersProvider>
               <FundraisingProvider>
-                {children}
-                <Toaster richColors position="top-right" />
+                <ChatFiltersProvider>
+                  {children}
+                  <Toaster richColors position="top-right" />
+                </ChatFiltersProvider>
               </FundraisingProvider>
             </UsersProvider>
           </PetsProvider>

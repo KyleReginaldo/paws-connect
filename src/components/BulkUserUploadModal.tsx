@@ -47,7 +47,7 @@ interface BulkUserUploadModalProps {
   existingUsers?: ExistingUserIdentifier[];
 }
 
-const SUPPORTED_STATUSES = ['PENDING', 'SEMI_VERIFIED', 'FULLY_VERIFIED', 'INDEFINITE'];
+const SUPPORTED_STATUSES = ['PENDING', 'SEMI_VERIFIED', 'FULLY_VERIFIED', 'BANNED'];
 
 const TEMPLATE_ROWS: BulkUserDraft[] = [
   {
