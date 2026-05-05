@@ -34,6 +34,12 @@ const Footer = () => {
           >
             Terms & Conditions
           </Link>
+          <Link
+            href="/privacy-policy"
+            className="hover:text-orange-400 font-semibold transition-colors"
+          >
+            Privacy Policy
+          </Link>
         </div>
         <div className="flex flex-col gap-[8px]">
           <p className="font-bold text-xl">Social Medias</p>
