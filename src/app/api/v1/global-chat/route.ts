@@ -22,7 +22,6 @@ async function getOrCreateGlobalForum() {
     .from('forum')
     .select('id')
     .eq('forum_name', 'Global Chat')
-    .eq('private', false)
     .single();
 
   if (existingForum) {
